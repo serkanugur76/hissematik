@@ -2012,9 +2012,8 @@ window.saveApiKey = async () => {
   // Hem kullanıcı doc'una hem config/global'e kaydet
   await updateDoc(doc(db, 'users', currentUser.uid), { apiKey: key });
   try {
-    const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await setDoc(doc(db, 'config', 'global'), { anthropicKey: key }, { merge: true });
-  } catch(e) {}
+  } catch(e) { console.error('Config kayıt hatası:', e); }
   showToast('API anahtarı kaydedildi ✓');
   document.getElementById('apiStatus').textContent = key ? '✓ Tanımlı' : 'Tanımlı değil';
   document.getElementById('apiStatus').style.color = key ? 'var(--accent)' : 'var(--muted)';
