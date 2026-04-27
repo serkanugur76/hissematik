@@ -1995,15 +1995,10 @@ window.haberleriYenile = async () => {
 
     haberler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
 
-    // Önce haberleri göster, sonra AI analizi yap
-    renderHaberler(haberler, {});
+    // Haberleri göster - AI analizi isteğe bağlı
+    renderHaberler(haberler);
     haberlerYuklendi = true;
     showToast(`${haberler.length} haber yüklendi ✓`);
-
-    // AI ile haber analizi yap
-    if (havuzKey || anthropicKey) {
-      await haberAiAnalizYap(haberler, el);
-    }
 
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">
@@ -2015,11 +2010,13 @@ window.haberleriYenile = async () => {
 };
 
 // Haberleri render et
-function renderHaberler(haberler, analizler) {
+let haberlerData = [];
+function renderHaberler(haberler) {
+  haberlerData = haberler;
   const el = document.getElementById('haberListesi');
-  
+  const apiVar = havuzKey || anthropicKey;
+
   el.innerHTML = haberler.map((h, idx) => {
-    const analiz = analizler[idx];
     const tarihStr = h.tarih ? new Date(h.tarih).toLocaleString('tr-TR', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     }) : '';
@@ -2027,52 +2024,114 @@ function renderHaberler(haberler, analizler) {
                       h.kaynak?.includes('bloomberg') ? 'Bloomberg HT' :
                       h.kaynak?.includes('bbc') ? 'BBC Türkçe' : 'Finans';
 
-    let analizHTML = '';
-    if (analiz) {
-      analizHTML = `
-        <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.12);border-radius:8px">
-          <div style="font-size:0.68rem;color:var(--accent);font-family:var(--mono);letter-spacing:0.08em;margin-bottom:0.5rem">⬡ AI ETKİ ANALİZİ</div>
-          ${analiz.hisseler && analiz.hisseler.length > 0 ? `
-            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem">
-              ${analiz.hisseler.map(h => `
-                <div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:${h.etki === 'olumlu' ? 'rgba(0,229,160,0.12)' : h.etki === 'olumsuz' ? 'rgba(255,69,96,0.12)' : 'rgba(255,209,102,0.12)'};border:1px solid ${h.etki === 'olumlu' ? 'rgba(0,229,160,0.3)' : h.etki === 'olumsuz' ? 'rgba(255,69,96,0.3)' : 'rgba(255,209,102,0.3)'}">
-                  <span style="font-size:0.7rem">${h.etki === 'olumlu' ? '🟢' : h.etki === 'olumsuz' ? '🔴' : '🟡'}</span>
-                  <span style="font-family:var(--mono);font-size:0.72rem;font-weight:500">${h.kod}</span>
-                  <span style="font-size:0.65rem;color:var(--muted)">${h.tip === 'direkt' ? 'Doğrudan' : 'Dolaylı'}</span>
-                </div>
-              `).join('')}
-            </div>` : ''}
-          <div style="font-size:0.78rem;color:#b0d8c8;line-height:1.6">${analiz.yorum || ''}</div>
-          ${analiz.sure ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.4rem;font-family:var(--mono)">⏱ Etki süresi: ${analiz.sure}</div>` : ''}
-        </div>`;
-      
-      // Takip edilen hisseler etkileniyorsa uyar
-      if (analiz.hisseler) {
-        const etkilenenTakip = analiz.hisseler.filter(h => takipEdilen.has(h.kod));
-        if (etkilenenTakip.length > 0) {
-          const olumsuz = etkilenenTakip.filter(h => h.etki === 'olumsuz');
-          const olumlu = etkilenenTakip.filter(h => h.etki === 'olumlu');
-          if (olumsuz.length > 0) showToast(`⚠️ ${olumsuz.map(h=>h.kod).join(', ')} olumsuz etkilenebilir!`, 'error');
-          if (olumlu.length > 0) showToast(`💡 ${olumlu.map(h=>h.kod).join(', ')} olumlu etkilenebilir!`);
-        }
-      }
-    } else if (havuzKey || anthropicKey) {
-      analizHTML = `<div id="analiz-${idx}" style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted);font-family:var(--mono)">⏳ AI analiz ediliyor...</div>`;
-    }
-
     return `<div class="haber-card" id="haber-${idx}">
       <div class="haber-baslik">
         ${h.link ? `<a href="${h.link}" target="_blank" rel="noopener">${h.baslik}</a>` : h.baslik}
       </div>
       ${h.aciklama ? `<div class="haber-aciklama">${h.aciklama}...</div>` : ''}
-      <div class="haber-meta">
-        <span>📰 ${kaynakAdi}</span>
-        ${tarihStr ? `<span>🕐 ${tarihStr}</span>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.5rem">
+        <div class="haber-meta">
+          <span>📰 ${kaynakAdi}</span>
+          ${tarihStr ? `<span>🕐 ${tarihStr}</span>` : ''}
+        </div>
+        ${apiVar ? `<button class="btn" onclick="tekHaberAnalizEt(${idx})" id="analiz-btn-${idx}" 
+          style="font-size:0.7rem;padding:0.25rem 0.6rem;color:var(--accent);border-color:rgba(0,229,160,0.3)">
+          ⬡ AI Analiz
+        </button>` : ''}
       </div>
-      ${analizHTML}
+      <div id="analiz-${idx}"></div>
     </div>`;
   }).join('');
 }
+
+// Tek haber analizi
+window.tekHaberAnalizEt = async (idx) => {
+  const h = haberlerData[idx];
+  if (!h) return;
+
+  const btn = document.getElementById(`analiz-btn-${idx}`);
+  const analizEl = document.getElementById(`analiz-${idx}`);
+  
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...'; }
+
+  const key = havuzKey || anthropicKey;
+  if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
+
+  try {
+    const bistKodlari = BIST.map(b => b[0]).join(', ');
+    const takipKodlari = [...takipEdilen].join(', ') || 'Yok';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        messages: [{
+          role: 'user',
+          content: `BIST hisse senedi haberi analizi yap. Sadece JSON formatında yanıt ver, başka hiçbir şey yazma.
+
+Haber: "${h.baslik}"
+${h.aciklama ? `Detay: "${h.aciklama}"` : ''}
+Kullanıcının takip ettiği hisseler: ${takipKodlari}
+Tüm BIST kodları (sadece bunlardan seç): ${bistKodlari}
+
+{"hisseler":[{"kod":"THYAO","etki":"olumlu","tip":"direkt"}],"yorum":"2 cümle max Türkçe","sure":"Kısa/Orta/Uzun vadeli"}`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data?.content?.[0]?.text || '';
+    const kullanilanToken = (data?.usage?.input_tokens||0)+(data?.usage?.output_tokens||0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+
+    let analiz = null;
+    try {
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) analiz = JSON.parse(m[0]);
+    } catch(e) {}
+
+    if (analiz && analizEl) {
+      analizEl.innerHTML = `
+        <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.12);border-radius:8px">
+          <div style="font-size:0.68rem;color:var(--accent);font-family:var(--mono);margin-bottom:0.5rem">⬡ AI ETKİ ANALİZİ</div>
+          ${analiz.hisseler?.length > 0 ? `
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem">
+              ${analiz.hisseler.map(x => `
+                <div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;
+                  background:${x.etki==='olumlu'?'rgba(0,229,160,0.12)':x.etki==='olumsuz'?'rgba(255,69,96,0.12)':'rgba(255,209,102,0.12)'};
+                  border:1px solid ${x.etki==='olumlu'?'rgba(0,229,160,0.3)':x.etki==='olumsuz'?'rgba(255,69,96,0.3)':'rgba(255,209,102,0.3)'}">
+                  <span>${x.etki==='olumlu'?'🟢':x.etki==='olumsuz'?'🔴':'🟡'}</span>
+                  <span style="font-family:var(--mono);font-size:0.72rem;font-weight:500">${x.kod}</span>
+                  <span style="font-size:0.65rem;color:var(--muted)">${x.tip==='direkt'?'Doğrudan':'Dolaylı'}</span>
+                </div>`).join('')}
+            </div>` : ''}
+          <div style="font-size:0.78rem;color:#b0d8c8;line-height:1.6">${analiz.yorum||''}</div>
+          ${analiz.sure?`<div style="font-size:0.68rem;color:var(--muted);margin-top:0.4rem;font-family:var(--mono)">⏱ ${analiz.sure}</div>`:''}
+        </div>`;
+
+      // Takip edilenler etkileniyorsa bildirim
+      analiz.hisseler?.forEach(x => {
+        if (takipEdilen.has(x.kod)) {
+          if (x.etki==='olumsuz') showToast(`⚠️ ${x.kod} olumsuz etkilenebilir!`, 'error');
+          else if (x.etki==='olumlu') showToast(`💡 ${x.kod} olumlu etkilenebilir!`);
+        }
+      });
+    }
+
+    if (btn) btn.remove();
+
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '⬡ AI Analiz'; }
+    showToast('Analiz hatası: ' + e.message, 'error');
+  }
+};
 
 // AI ile haber analizi
 async function haberAiAnalizYap(haberler, el) {
