@@ -992,8 +992,11 @@ window.verileriGuncelle = async () => {
   setStatus('live', 'Canlı');
   renderDashboard();
   renderPortfoy();
-  filterHisseler();
+  filterHisseler(); // Hisse kartlarını renklendir
   updateSummary();
+  // Aktif paneli yenile
+  const aktifPanel = document.querySelector('.panel.active');
+  if (aktifPanel?.id === 'panel-hisseler') filterHisseler();
   showToast(`${Object.keys(veriler).length} hisse güncellendi ✓`);
 };
 
