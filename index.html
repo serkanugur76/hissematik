@@ -772,45 +772,30 @@ window.verileriGuncelle = async () => {
 
 async function fetchYahoo(sembol) {
   try {
-    // Bigpara API - Türk kaynağı, CORS sorunu yok
-    const url = `https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseyuzeysel/${sembol}`;
-    const res = await fetch(url, {signal: AbortSignal.timeout(10000)});
+    // Cloudflare Worker proxy - CORS sorunu yok
+    const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?sembol=${sembol}`;
+    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
     if (!res.ok) return null;
     const json = await res.json();
-    const d = json?.data;
-    if (!d) return null;
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
 
-    const fiyat = parseFloat(d.KAPANIS || d.SON || 0);
-    const onceki = parseFloat(d.DUNKUKAPANIS || 0);
-    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : parseFloat(d.YUZDE || 0);
-    const hacimSon = parseFloat(d.HACIM || 0);
+    const meta = result.meta;
+    const kapanis = (result.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
+    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
+    if (kapanis.length < 20) return null;
 
-    // Geçmiş veri için Yahoo proxy
-    let kapanis = [];
-    let hacimler = [];
-    try {
-      const gecmisUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + sembol + '.IS?interval=1d&range=3mo')}`;
-      const gr = await fetch(gecmisUrl, {signal: AbortSignal.timeout(15000)});
-      if (gr.ok) {
-        const gw = await gr.json();
-        const gj = JSON.parse(gw.contents);
-        kapanis = (gj?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
-        hacimler = (gj?.chart?.result?.[0]?.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
-      }
-    } catch(e) {}
-
-    // Geçmiş yoksa bigpara fiyatından tahmin et
-    if (kapanis.length < 20) {
-      kapanis = Array(20).fill(fiyat);
-    }
-    if (hacimler.length < 2) hacimler = [hacimSon, hacimSon];
+    const fiyat = meta.regularMarketPrice || kapanis.at(-1);
+    const onceki = meta.chartPreviousClose || kapanis.at(-2);
+    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+    const hacimOrt = avg(hacimler.slice(-20));
+    const hacimSon = hacimler.at(-1) || 0;
+    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
 
     const rsi = calcRSI(kapanis, 14);
     const macd = calcMACD(kapanis);
     const ma20 = avg(kapanis.slice(-20));
     const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
-    const hacimOrt = avg(hacimler.slice(-20));
-    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
     const sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
 
     return {
