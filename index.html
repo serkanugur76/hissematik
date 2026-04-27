@@ -366,6 +366,30 @@ tr:last-child td { border-bottom:none; }
 
   <!-- DASHBOARD -->
   <div class="panel active" id="panel-dashboard">
+    <!-- Piyasa Genel Durum -->
+    <div class="grid-4" style="margin-bottom:0.75rem" id="piyasaKartlari">
+      <div class="card">
+        <div class="card-title">BIST 100</div>
+        <div class="card-value" id="xu100Deger">—</div>
+        <div id="xu100Degisim" style="font-size:0.75rem;font-family:var(--mono);margin-top:2px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">USD/TRY</div>
+        <div class="card-value" id="usdtryDeger">—</div>
+        <div id="usdtryDegisim" style="font-size:0.75rem;font-family:var(--mono);margin-top:2px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">EUR/TRY</div>
+        <div class="card-value" id="eurtryDeger">—</div>
+        <div id="eurtryDegisim" style="font-size:0.75rem;font-family:var(--mono);margin-top:2px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Piyasa Yönü</div>
+        <div class="card-value" id="piyasaYonu">—</div>
+        <div id="piyasaYonuAciklama" style="font-size:0.72rem;color:var(--muted);margin-top:2px"></div>
+      </div>
+    </div>
+
     <div class="grid-4" id="summaryCards">
       <div class="card"><div class="card-title">Takip Edilen</div><div class="card-value" id="sumTakip">—</div></div>
       <div class="card"><div class="card-title">Güçlü AL</div><div class="card-value green" id="sumAl">—</div></div>
@@ -627,6 +651,7 @@ let takipEdilen = new Set();
 let portfoy = {};
 let veriler = {};
 let sinyalGecmisi = [];
+let piyasaVerisi = {}; // XU100, USDTRY, XBANK vb.
 let aktifFilter = 'tum';
 let portfoyKod = null;
 let anthropicKey = ''; // Admin havuz key - kullanıcı görmez
@@ -782,6 +807,8 @@ onAuthStateChanged(auth, async (user) => {
     }
   } catch(e) { console.error('Config yükleme hatası:', e); }
 
+  // Piyasa genel verisini yükle
+  piyasaVerisiCek();
   // Push mesajları kontrol et
   checkPushMesajlar();
   // Sinyalleri yükle
@@ -936,8 +963,12 @@ window.verileriGuncelle = async () => {
   showLoading('Veriler çekiliyor...');
   setStatus('loading', 'Güncelleniyor...');
 
-  // 1. Bigpara - tüm anlık fiyatlar tek seferde
-  setLoadingMsg("Bigpara'dan anlık fiyatlar alınıyor...");
+  // 0. Piyasa genel verisi (XU100, USDTRY)
+  setLoadingMsg('Piyasa genel verisi çekiliyor...');
+  await piyasaVerisiCek();
+
+  // 1. Yahoo - tüm hisseler
+  setLoadingMsg("Hisse verileri çekiliyor...");
   try {
     const bpRes = await fetch(
       'https://hissematik-proxy.ugurserkan.workers.dev/?tumhisseler=1',
@@ -1041,7 +1072,8 @@ function parseYahooVeri(sembol, json) {
     const macd = calcMACD(kapanis);
     const ma20 = avg(kapanis.slice(-20));
     const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
-    const sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
+    const ham_sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
+    const sinyal = sinyalPiyasaAyarla(ham_sinyal, degisim);
     return {
       fiyat: +fiyat.toFixed(2), degisim,
       rsi: +rsi.toFixed(1),
@@ -1318,7 +1350,15 @@ async function aiAnalizYap() {
     .map(([k,v]) => `${k}: Fiyat=${v.fiyat}₺, RSI=${v.rsi}, MACD_hist=${v.macdHist?.toFixed(3)}, Hacim=${v.hacimFark>0?'+':''}${v.hacimFark}%, MA20=${v.ma20}, MA50=${v.ma50}, Sinyal=${v.sinyal}`)
     .join('\n');
 
-  const prompt = `Sen tecrübeli bir BIST teknik analiz uzmanısın. Geçmiş sinyal performansına ve mevcut piyasa verilerine dayanarak analiz yap.
+  // Piyasa bağlamı
+  const piyasaBaglam = piyasaVerisi.xu100 ? 
+    `BIST100: ${piyasaVerisi.xu100.fiyat?.toLocaleString()} (${piyasaVerisi.xu100.degisim >= 0 ? '+' : ''}${piyasaVerisi.xu100.degisim}%), USD/TRY: ${piyasaVerisi.usdtry?.fiyat?.toFixed(2)}` : '';
+
+  const prompt = `Sen tecrübeli bir BIST teknik analiz uzmanısın. Geçmiş sinyal performansına, piyasa koşullarına ve mevcut hisse verilerine dayanarak analiz yap.
+
+${piyasaBaglam ? `GENEL PİYASA DURUMU:
+${piyasaBaglam}
+` : ''}
 
 ${toplam > 0 ? `GEÇMIŞ SİNYAL PERFORMANSI:
 Toplam değerlendirilen: ${toplam} sinyal | İsabet: %${isabet}
@@ -1605,6 +1645,116 @@ window.kullanicisil = async (uid) => {
     loadAdminPanel();
   } catch(e) { showToast('Hata: '+e.message,'error'); }
 };
+
+// ══════════════════════════════════════════════
+// PİYASA GENEL VERİSİ
+// ══════════════════════════════════════════════
+
+async function piyasaVerisiCek() {
+  try {
+    const res = await fetch(
+      'https://hissematik-proxy.ugurserkan.workers.dev/?piyasa=1',
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // XU100
+    const xu100 = data['^XU100']?.chart?.result?.[0];
+    if (xu100) {
+      const meta = xu100.meta;
+      const fiyat = meta.regularMarketPrice || 0;
+      const onceki = meta.chartPreviousClose || 0;
+      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+      piyasaVerisi.xu100 = { fiyat, degisim };
+
+      document.getElementById('xu100Deger').textContent = fiyat.toLocaleString('tr-TR', {maximumFractionDigits: 0});
+      const xu100DegEl = document.getElementById('xu100Degisim');
+      xu100DegEl.textContent = `${degisim >= 0 ? '+' : ''}${degisim}%`;
+      xu100DegEl.style.color = degisim >= 0 ? 'var(--accent)' : 'var(--red)';
+    }
+
+    // USDTRY
+    const usdtry = data['USDTRY=X']?.chart?.result?.[0];
+    if (usdtry) {
+      const meta = usdtry.meta;
+      const fiyat = meta.regularMarketPrice || 0;
+      const onceki = meta.chartPreviousClose || 0;
+      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+      piyasaVerisi.usdtry = { fiyat, degisim };
+
+      document.getElementById('usdtryDeger').textContent = fiyat.toFixed(2) + ' ₺';
+      const usdDegEl = document.getElementById('usdtryDegisim');
+      usdDegEl.textContent = `${degisim >= 0 ? '+' : ''}${degisim}%`;
+      usdDegEl.style.color = degisim >= 0 ? 'var(--red)' : 'var(--accent)'; // TL için ters
+    }
+
+    // EURTRY
+    const eurtry = data['EURTRY=X']?.chart?.result?.[0];
+    if (eurtry) {
+      const meta = eurtry.meta;
+      const fiyat = meta.regularMarketPrice || 0;
+      const onceki = meta.chartPreviousClose || 0;
+      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+      piyasaVerisi.eurtry = { fiyat, degisim };
+
+      document.getElementById('eurtryDeger').textContent = fiyat.toFixed(2) + ' ₺';
+      const eurDegEl = document.getElementById('eurtryDegisim');
+      eurDegEl.textContent = `${degisim >= 0 ? '+' : ''}${degisim}%`;
+      eurDegEl.style.color = degisim >= 0 ? 'var(--red)' : 'var(--accent)';
+    }
+
+    // Piyasa yönü hesapla
+    hesaplaPiyasaYonu();
+
+  } catch(e) { console.error('Piyasa verisi hatası:', e); }
+}
+
+function hesaplaPiyasaYonu() {
+  const xu100 = piyasaVerisi.xu100;
+  if (!xu100) return;
+
+  let yon = '', aciklama = '', renk = 'var(--muted)';
+
+  if (xu100.degisim >= 1.5) {
+    yon = '🟢 Güçlü Yükseliş';
+    aciklama = 'AL sinyalleri güçlü';
+    renk = 'var(--accent)';
+  } else if (xu100.degisim >= 0) {
+    yon = '🟡 Yatay/Hafif +';
+    aciklama = 'Seçici alım yapılabilir';
+    renk = 'var(--yellow)';
+  } else if (xu100.degisim >= -1.5) {
+    yon = '🟠 Hafif Düşüş';
+    aciklama = 'AL sinyallerine dikkat';
+    renk = 'var(--yellow)';
+  } else {
+    yon = '🔴 Güçlü Düşüş';
+    aciklama = 'SAT baskısı var';
+    renk = 'var(--red)';
+  }
+
+  piyasaVerisi.yon = xu100.degisim;
+  document.getElementById('piyasaYonu').textContent = yon;
+  document.getElementById('piyasaYonu').style.fontSize = '0.9rem';
+  document.getElementById('piyasaYonuAciklama').textContent = aciklama;
+}
+
+// Piyasa yönüne göre sinyali ayarla
+function sinyalPiyasaAyarla(sinyal, hisseDegisim) {
+  const piyasaYon = piyasaVerisi.yon;
+  if (piyasaYon === undefined) return sinyal;
+
+  // Piyasa güçlü düşüyorken AL sinyali → BEKLE'ye çevir
+  if (piyasaYon < -2 && sinyal === 'AL') return 'BEKLE';
+  if (piyasaYon < -3 && sinyal === 'GÜÇLÜ AL') return 'AL';
+
+  // Piyasa güçlü yükseliyorken SAT sinyali → BEKLE'ye çevir
+  if (piyasaYon > 2 && sinyal === 'SAT') return 'BEKLE';
+  if (piyasaYon > 3 && sinyal === 'GÜÇLÜ SAT') return 'SAT';
+
+  return sinyal;
+}
 
 // Token istatistiklerini yükle
 window.loadTokenIstatistik = async () => {
