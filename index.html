@@ -1,59 +1,2066 @@
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    const headers = {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    };
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HisseMatik</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060608;
+  --bg2: #0e0e12;
+  --bg3: #16161c;
+  --bg4: #1e1e26;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e2e2ec;
+  --muted: #6b6b80;
+  --accent: #00e5a0;
+  --accent-dim: rgba(0,229,160,0.12);
+  --red: #ff4560;
+  --red-dim: rgba(255,69,96,0.12);
+  --yellow: #ffd166;
+  --yellow-dim: rgba(255,209,102,0.12);
+  --blue: #4cc9f0;
+  --purple: #7c3aed;
+  --font: 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; min-height:100vh; overflow-x:hidden; }
 
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: {...headers, 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Allow-Headers': 'Content-Type'} });
+/* ── LOADING ── */
+#loadingScreen {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:9999; transition:opacity 0.5s;
+}
+#loadingScreen.hide { opacity:0; pointer-events:none; }
+.load-logo { font-size:2rem; font-weight:700; letter-spacing:-1px; margin-bottom:1.5rem; }
+.load-logo span { color:var(--accent); }
+.load-bar { width:200px; height:2px; background:var(--border2); border-radius:1px; overflow:hidden; }
+.load-fill { height:100%; background:var(--accent); border-radius:1px; animation:loadAnim 2s ease forwards; }
+@keyframes loadAnim { from{width:0} to{width:100%} }
+
+/* ── AUTH SCREEN ── */
+#authScreen {
+  display:none; min-height:100vh;
+  align-items:center; justify-content:center;
+  background: radial-gradient(ellipse at 20% 50%, rgba(0,229,160,0.05) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 50%, rgba(76,201,240,0.04) 0%, transparent 60%),
+              var(--bg);
+}
+.auth-card {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--radius-lg); padding:2.5rem;
+  width:100%; max-width:420px; text-align:center;
+  box-shadow: 0 0 60px rgba(0,0,0,0.5);
+}
+.auth-logo { font-size:1.8rem; font-weight:700; letter-spacing:-1px; margin-bottom:0.25rem; }
+.auth-logo span { color:var(--accent); }
+.auth-tagline { color:var(--muted); font-size:0.82rem; margin-bottom:2rem; }
+.google-btn {
+  display:flex; align-items:center; justify-content:center; gap:0.75rem;
+  width:100%; padding:0.875rem; background:white; color:#333;
+  border:none; border-radius:var(--radius); font-family:var(--font);
+  font-size:0.9rem; font-weight:500; cursor:pointer;
+  transition:all 0.2s; margin-bottom:1rem;
+}
+.google-btn:hover { background:#f5f5f5; transform:translateY(-1px); box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+.google-icon { width:20px; height:20px; }
+.auth-note { font-size:0.75rem; color:var(--muted); line-height:1.6; }
+.auth-note a { color:var(--accent); text-decoration:none; }
+
+/* ── APP SHELL ── */
+#appShell { display:none; }
+
+/* TOPBAR */
+.topbar {
+  position:sticky; top:0; z-index:100;
+  background:rgba(6,6,8,0.9); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0.75rem 1.5rem; gap:1rem;
+}
+.topbar-logo { font-size:1.1rem; font-weight:700; letter-spacing:-0.5px; }
+.topbar-logo span { color:var(--accent); }
+.topbar-center { display:flex; gap:0.25rem; }
+.nav-tab {
+  padding:0.4rem 0.9rem; border-radius:8px;
+  font-size:0.8rem; color:var(--muted); cursor:pointer;
+  transition:all 0.2s; border:none; background:none; font-family:var(--font);
+}
+.nav-tab:hover { color:var(--text); background:var(--bg3); }
+.nav-tab.active { color:var(--accent); background:var(--accent-dim); }
+.topbar-right { display:flex; align-items:center; gap:0.75rem; }
+.user-pill {
+  display:flex; align-items:center; gap:0.5rem;
+  padding:0.35rem 0.75rem 0.35rem 0.35rem;
+  background:var(--bg3); border:1px solid var(--border2);
+  border-radius:20px; font-size:0.75rem; color:var(--muted);
+}
+.user-avatar {
+  width:22px; height:22px; border-radius:50%; background:var(--accent-dim);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.65rem; color:var(--accent); font-weight:600;
+}
+.admin-badge {
+  background:rgba(124,58,237,0.2); color:#a78bfa;
+  border:1px solid rgba(124,58,237,0.3);
+  padding:2px 8px; border-radius:4px; font-size:0.65rem;
+  font-family:var(--mono); letter-spacing:0.05em;
+}
+.btn { padding:0.4rem 0.9rem; border-radius:8px; font-family:var(--font); font-size:0.78rem; cursor:pointer; transition:all 0.2s; border:1px solid var(--border2); background:var(--bg3); color:var(--text); }
+.btn:hover { background:var(--bg4); }
+.btn.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:600; }
+.btn.primary:hover { background:#00ffb3; }
+.btn.danger { background:var(--red-dim); color:var(--red); border-color:rgba(255,69,96,0.2); }
+
+/* STATUS */
+.status-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); display:inline-block; margin-right:4px; }
+.status-dot.live { background:var(--accent); box-shadow:0 0 8px var(--accent); animation:blink 2s infinite; }
+.status-dot.loading { background:var(--yellow); animation:blink 0.7s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* PANELS */
+.panel { display:none; padding:1.5rem; max-width:1400px; margin:0 auto; }
+.panel.active { display:block; }
+
+/* CARDS */
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; }
+.card-title { font-size:0.72rem; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.4rem; }
+.card-value { font-family:var(--mono); font-size:1.6rem; font-weight:500; }
+.card-value.green { color:var(--accent); }
+.card-value.red { color:var(--red); }
+.card-value.yellow { color:var(--yellow); }
+
+.grid-4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.75rem; margin-bottom:1.5rem; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+th { text-align:left; padding:0.6rem 0.75rem; color:var(--muted); font-weight:400; border-bottom:1px solid var(--border); font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase; white-space:nowrap; }
+td { padding:0.6rem 0.75rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+tr:hover td { background:rgba(255,255,255,0.02); }
+tr:last-child td { border-bottom:none; }
+
+/* SİNYAL */
+.pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:0.68rem; font-family:var(--mono); white-space:nowrap; }
+.pill.al { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(0,229,160,0.2); }
+.pill.guclu-al { background:rgba(0,229,160,0.2); color:var(--accent); border:1px solid rgba(0,229,160,0.4); font-weight:600; }
+.pill.sat { background:var(--red-dim); color:var(--red); border:1px solid rgba(255,69,96,0.2); }
+.pill.guclu-sat { background:rgba(255,69,96,0.2); color:var(--red); border:1px solid rgba(255,69,96,0.4); font-weight:600; }
+.pill.bekle { background:var(--yellow-dim); color:var(--yellow); border:1px solid rgba(255,209,102,0.2); }
+.pill.dogrulandi { background:var(--accent-dim); color:var(--accent); }
+.pill.yanlis { background:var(--red-dim); color:var(--red); }
+.pill.bekliyor { background:var(--yellow-dim); color:var(--yellow); }
+
+/* RSI BAR */
+.rsi-wrap { display:flex; align-items:center; gap:6px; }
+.rsi-bar { width:50px; height:3px; background:var(--bg4); border-radius:2px; overflow:hidden; flex-shrink:0; }
+.rsi-fill { height:100%; border-radius:2px; }
+
+/* MONO */
+.mono { font-family:var(--mono); }
+.pos { color:var(--accent); }
+.neg { color:var(--red); }
+.muted { color:var(--muted); }
+
+/* AI BOX */
+.ai-box {
+  background:linear-gradient(135deg, rgba(0,229,160,0.04), rgba(76,201,240,0.04));
+  border:1px solid rgba(0,229,160,0.15); border-radius:var(--radius);
+  padding:1.25rem; margin-bottom:1.5rem;
+}
+.ai-box-header { display:flex; align-items:center; gap:8px; margin-bottom:0.75rem; }
+.ai-icon { width:24px; height:24px; border-radius:6px; background:var(--accent-dim); display:flex; align-items:center; justify-content:center; font-size:0.7rem; }
+.ai-box-title { font-size:0.72rem; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; font-family:var(--mono); }
+.ai-box-time { font-size:0.68rem; color:var(--muted); margin-left:auto; font-family:var(--mono); }
+.ai-content { font-size:0.82rem; line-height:1.8; color:#b0d8c8; white-space:pre-wrap; }
+
+/* SECTION HEADER */
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+.section-title { font-size:0.9rem; font-weight:600; }
+.section-sub { font-size:0.75rem; color:var(--muted); margin-top:2px; }
+
+/* SEARCH */
+.search-row { display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
+.search-input {
+  flex:1; min-width:180px; background:var(--bg3); border:1px solid var(--border2);
+  border-radius:8px; padding:0.55rem 0.9rem; color:var(--text);
+  font-family:var(--font); font-size:0.82rem; outline:none;
+}
+.search-input:focus { border-color:var(--accent); }
+.chip { padding:0.3rem 0.75rem; border-radius:20px; font-size:0.72rem; cursor:pointer; border:1px solid var(--border2); color:var(--muted); transition:all 0.15s; background:none; }
+.chip.active { background:var(--accent-dim); border-color:rgba(0,229,160,0.3); color:var(--accent); }
+
+/* HİSSE GRID */
+.hisse-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.5rem; }
+.hisse-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+  padding:0.75rem; cursor:pointer; transition:all 0.15s; position:relative;
+}
+.hisse-card:hover { border-color:var(--border2); transform:translateY(-1px); }
+.hisse-card.takip { border-color:rgba(0,229,160,0.3); background:rgba(0,229,160,0.04); }
+.hisse-card.portfoy { border-color:rgba(255,209,102,0.3); background:rgba(255,209,102,0.04); }
+.h-kod { font-family:var(--mono); font-size:0.82rem; font-weight:500; margin-bottom:2px; }
+.h-ad { font-size:0.68rem; color:var(--muted); line-height:1.3; margin-bottom:0.4rem; }
+.h-check { position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:8px; transition:all 0.15s; }
+.hisse-card.takip .h-check { background:var(--accent); border-color:var(--accent); color:#000; }
+
+/* MODAL */
+.modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  z-index:500; align-items:center; justify-content:center; padding:1rem;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius-lg);
+  padding:2rem; width:100%; max-width:480px; animation:modalIn 0.2s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal-title { font-size:1.1rem; font-weight:600; margin-bottom:0.25rem; }
+.modal-sub { font-size:0.78rem; color:var(--muted); margin-bottom:1.5rem; }
+.form-group { margin-bottom:1rem; }
+.form-label { font-size:0.72rem; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; display:block; margin-bottom:0.4rem; }
+.form-input {
+  width:100%; background:var(--bg3); border:1px solid var(--border2);
+  border-radius:8px; padding:0.65rem 0.9rem; color:var(--text);
+  font-family:var(--font); font-size:0.85rem; outline:none;
+}
+.form-input:focus { border-color:var(--accent); }
+.modal-actions { display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1.5rem; }
+
+/* GLOBAL LOADING */
+#globalLoading {
+  display:none; position:fixed; inset:0; background:rgba(6,6,8,0.85);
+  z-index:400; flex-direction:column; align-items:center; justify-content:center; gap:1rem;
+}
+#globalLoading.show { display:flex; }
+.spinner { width:36px; height:36px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading-msg { font-family:var(--mono); font-size:0.78rem; color:var(--accent); }
+
+/* ADMIN PANEL */
+.admin-bar { background:rgba(124,58,237,0.08); border:1px solid rgba(124,58,237,0.2); border-radius:var(--radius); padding:0.75rem 1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.75rem; font-size:0.8rem; }
+.admin-bar-icon { color:#a78bfa; font-size:1rem; }
+
+/* SINYAL GEÇMİŞİ */
+.sinyal-row { display:flex; flex-direction:column; gap:0.5rem; }
+.sinyal-item { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:0.875rem 1rem; }
+.sinyal-item-top { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; }
+.sinyal-item-meta { display:flex; gap:1.5rem; font-size:0.72rem; color:var(--muted); }
+.sinyal-item-meta span { display:flex; gap:4px; align-items:center; }
+.accuracy-bar-wrap { display:flex; align-items:center; gap:8px; margin-top:0.75rem; }
+.accuracy-bar { flex:1; height:4px; background:var(--bg4); border-radius:2px; overflow:hidden; }
+.accuracy-fill { height:100%; border-radius:2px; background:var(--accent); transition:width 1s ease; }
+
+/* PORTFÖY ÖZET */
+.portfoy-summary { background:linear-gradient(135deg, var(--bg2), var(--bg3)); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1.5rem; }
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:1.5rem; right:1.5rem; z-index:600;
+  background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius);
+  padding:0.75rem 1rem; font-size:0.82rem; display:flex; align-items:center; gap:0.5rem;
+  transform:translateX(120%); transition:transform 0.3s ease;
+  max-width:300px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { transform:translateX(0); }
+.toast.success { border-color:rgba(0,229,160,0.3); }
+.toast.error { border-color:rgba(255,69,96,0.3); }
+
+/* SÖZLÜK */
+.terim-card {
+  background:var(--bg3); border:1px solid var(--border); border-radius:10px;
+  padding:1rem; margin-bottom:0.75rem; cursor:pointer; transition:all 0.2s;
+}
+.terim-card:hover { border-color:var(--border2); }
+.terim-card.acik { border-color:rgba(0,229,160,0.3); }
+.terim-baslik { font-weight:600; font-size:0.9rem; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.5rem; }
+.terim-aciklama { font-size:0.82rem; line-height:1.7; color:#b0d0c0; margin-top:0.5rem; }
+.terim-meta { font-size:0.68rem; color:var(--muted); margin-top:0.5rem; display:flex; gap:1rem; }
+.terim-chip {
+  padding:0.3rem 0.75rem; border-radius:20px; font-size:0.75rem;
+  cursor:pointer; border:1px solid var(--border2); color:var(--text);
+  transition:all 0.15s; background:var(--bg3);
+}
+.terim-chip:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+/* PUSH MODAL */
+.push-preview {
+  background:var(--bg3); border:1px solid var(--border2); border-radius:12px;
+  padding:1rem; margin-top:1rem; font-size:0.82rem; line-height:1.6;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* MOBILE */
+@media (max-width:640px) {
+  .topbar-center { display:none; }
+  .panel { padding:1rem; }
+  .grid-2 { grid-template-columns:1fr; }
+  .grid-4 { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="load-logo">Hisse<span>MATİK</span></div>
+  <div class="load-bar"><div class="load-fill"></div></div>
+</div>
+
+<!-- AUTH -->
+<div id="authScreen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">Hisse<span>MATİK</span></div>
+    <div class="auth-tagline">BIST Karar Destek Sistemi</div>
+    <button class="google-btn" onclick="googleLogin()">
+      <svg class="google-icon" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Google ile Giriş Yap
+    </button>
+    <div class="auth-note">Sadece yetkili e-posta adresleri giriş yapabilir.<br>Erişim için <a href="mailto:admin@hissematik.com">yöneticiye</a> başvurun.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div class="topbar">
+    <div class="topbar-logo">Hisse<span>MATİK</span></div>
+    <div class="topbar-center">
+      <button class="nav-tab active" onclick="switchTab('dashboard')">Dashboard</button>
+      <button class="nav-tab" onclick="switchTab('hisseler')">Hisseler</button>
+      <button class="nav-tab" onclick="switchTab('sinyaller')">Sinyal Geçmişi</button>
+      <button class="nav-tab" onclick="switchTab('portfoy')">Portföy</button>
+      <button class="nav-tab" onclick="switchTab('sozluk')">📚 Sözlük</button>
+      <button class="nav-tab admin-only" onclick="switchTab('admin')" style="display:none">⚙ Admin</button>
+    </div>
+    <div class="topbar-right">
+      <span id="statusIndicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText" style="font-size:0.72rem;color:var(--muted)">Bekleniyor</span>
+      </span>
+      <button class="btn primary" onclick="verileriGuncelle()" id="updateBtn">⟳ Güncelle</button>
+      <div class="user-pill">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userName" style="font-size:0.75rem">...</span>
+        <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
+      </div>
+      <button class="btn" onclick="logout()">Çıkış</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="grid-4" id="summaryCards">
+      <div class="card"><div class="card-title">Takip Edilen</div><div class="card-value" id="sumTakip">—</div></div>
+      <div class="card"><div class="card-title">Güçlü AL</div><div class="card-value green" id="sumAl">—</div></div>
+      <div class="card"><div class="card-title">Güçlü SAT</div><div class="card-value red" id="sumSat">—</div></div>
+      <div class="card"><div class="card-title">Sinyal İsabeti</div><div class="card-value yellow" id="sumIsabet">—</div></div>
+    </div>
+    <div id="aiBoxContainer"></div>
+    <div class="card">
+      <div class="section-header">
+        <div><div class="section-title">Takip Edilen Hisseler</div><div class="section-sub">Sinyaller ve teknik göstergeler</div></div>
+      </div>
+      <div class="table-wrap">
+        <table id="dashTable">
+          <thead><tr>
+            <th>Hisse</th><th>Fiyat</th><th>Değişim</th>
+            <th>RSI</th><th>MACD</th><th>Hacim</th><th>Sinyal</th><th>Güncelleme</th>
+          </tr></thead>
+          <tbody id="dashTableBody">
+            <tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--muted)">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle'ye bas.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- HİSSELER -->
+  <div class="panel" id="panel-hisseler">
+    <div class="section-header">
+      <div><div class="section-title">Tüm BIST Hisseleri</div><div class="section-sub">Tıkla → takibe al &nbsp;|&nbsp; Sağ tıkla → portföye ekle</div></div>
+      <button class="btn" onclick="takibiKaldir()">Seçimi Temizle</button>
+    </div>
+    <div class="search-row">
+      <input class="search-input" id="searchInput" placeholder="Hisse kodu veya şirket ara..." oninput="filterHisseler()">
+      <button class="chip active" onclick="setFilter('tum',this)">Tümü</button>
+      <button class="chip" onclick="setFilter('takip',this)">Takip</button>
+      <button class="chip" onclick="setFilter('portfoy',this)">Portföy</button>
+    </div>
+    <div class="hisse-grid" id="hisseGrid"></div>
+  </div>
+
+  <!-- SİNYAL GEÇMİŞİ -->
+  <div class="panel" id="panel-sinyaller">
+    <div class="section-header">
+      <div><div class="section-title">Sinyal Geçmişi & Doğrulama</div><div class="section-sub">AI kararları gerçek piyasa sonuçlarıyla karşılaştırır ve öğrenir</div></div>
+      <button class="btn primary" onclick="sinyalleriGuncelle()">Sonuçları Kontrol Et</button>
+    </div>
+    <div class="grid-4" style="margin-bottom:1.5rem">
+      <div class="card"><div class="card-title">Toplam Sinyal</div><div class="card-value mono" id="sinTopToplam">—</div></div>
+      <div class="card"><div class="card-title">Doğrulanan</div><div class="card-value green mono" id="sinTopDogru">—</div></div>
+      <div class="card"><div class="card-title">Yanlışlanan</div><div class="card-value red mono" id="sinTopYanlis">—</div></div>
+      <div class="card"><div class="card-title">İsabet Oranı</div><div class="card-value yellow mono" id="sinTopIsabet">—</div></div>
+    </div>
+    <div class="card">
+      <div class="sinyal-row" id="sinyalListesi">
+        <div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok. Veri güncellendiğinde sinyaller burada birikir.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PORTFÖY -->
+  <div class="panel" id="panel-portfoy">
+    <div id="portfoyContent"></div>
+  </div>
+
+  <!-- SÖZLÜK -->
+  <div class="panel" id="panel-sozluk">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📚 Finans Terimleri Sözlüğü</div>
+        <div class="section-sub">Anlamını merak ettiğin terime tıkla → Claude açıklar → Listene eklenir</div>
+      </div>
+      <div style="display:flex;gap:0.5rem" id="adminSozlukBtns" style="display:none">
+        <button class="btn primary" onclick="pushGonder()">📢 Push Gönder</button>
+      </div>
+    </div>
+
+    <!-- Terim arama -->
+    <div class="search-row" style="margin-bottom:1.5rem">
+      <input class="search-input" id="sozlukSearch" placeholder="Terim ara veya yaz..." oninput="filterTerimler()">
+      <button class="btn primary" onclick="terimiSor()">+ Sormak İstiyorum</button>
+    </div>
+
+    <!-- Popüler terimler -->
+    <div style="margin-bottom:1.5rem">
+      <div style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Sık Kullanılan Terimler</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem" id="popularTerimler"></div>
+    </div>
+
+    <!-- Terim listesi -->
+    <div class="card">
+      <div id="sozlukListesi">
+        <div style="text-align:center;padding:3rem;color:var(--muted)">
+          <div style="font-size:2rem;margin-bottom:1rem">📖</div>
+          <div style="color:var(--text);margin-bottom:0.5rem">Sözlüğün henüz boş</div>
+          <div style="font-size:0.8rem">Yukarıdan terim ara veya dashboard'daki sinyallerde terimlere tıkla</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin: istatistikler -->
+    <div id="adminSozlukStats" style="display:none;margin-top:1.5rem">
+      <div class="section-title" style="margin-bottom:1rem">📊 Kullanıcı İstatistikleri</div>
+      <div class="card">
+        <div id="terimIstatistik"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="panel" id="panel-admin">
+    <div class="admin-bar">
+      <span class="admin-bar-icon">⚙</span>
+      <span>Admin Paneli — Sadece sen görüyorsun bu ekranı</span>
+    </div>
+    <div class="grid-2" style="margin-bottom:1.5rem">
+      <div class="card">
+        <div class="section-header" style="margin-bottom:1rem">
+          <div class="section-title">Kullanıcılar</div>
+          <button class="btn primary" onclick="showAddUser()">+ Kullanıcı Ekle</button>
+        </div>
+        <div id="kullaniciListesi"><div style="color:var(--muted);font-size:0.8rem">Yükleniyor...</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title" style="margin-bottom:1rem">Sistem Durumu</div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.82rem">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Firebase</span><span style="color:var(--accent)">✓ Bağlı</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Anthropic API</span><span id="apiStatus" style="color:var(--muted)">Kontrol ediliyor...</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Yahoo Finance</span><span style="color:var(--accent)">✓ Aktif (15dk gecikme)</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Toplam Kullanıcı</span><span id="adminTotalUser" class="mono">—</span></div>
+        </div>
+        <div style="margin-top:1.25rem">
+          <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">Veri Temizliği</div>
+          <button class="btn danger" style="width:100%;margin-bottom:0.75rem" onclick="mukerrerTemizle()">🧹 Mükerrer Sinyalleri Temizle</button>
+        </div>
+        <div style="margin-top:1.25rem">
+          <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">🔑 Havuz API Anahtarı</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">Kullanıcılar bu anahtarı göremez. Tüm AI işlemleri buradan yapılır.</div>
+          <div class="form-group">
+            <input class="form-input" id="adminApiKey" type="password" placeholder="sk-ant-api03-...">
+          </div>
+          <button class="btn primary" style="width:100%" onclick="saveApiKey()">Kaydet</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="portfoyModal">
+  <div class="modal">
+    <div class="modal-title" id="portfoyModalTitle">Portföye Ekle</div>
+    <div class="modal-sub" id="portfoyModalSub"></div>
+    <div class="form-group"><label class="form-label">Adet</label><input class="form-input" id="pAdet" type="number" placeholder="100"></div>
+    <div class="form-group"><label class="form-label">Alış Fiyatı (₺)</label><input class="form-input" id="pFiyat" type="number" step="0.01" placeholder="45.20"></div>
+    <div class="form-group"><label class="form-label">Alış Tarihi</label><input class="form-input" id="pTarih" type="date"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('portfoyModal')">İptal</button>
+      <button class="btn primary" onclick="portfoyKaydet()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal">
+    <div class="modal-title">Kullanıcı Ekle</div>
+    <div class="modal-sub">Bu e-posta sisteme erişim izni alacak.</div>
+    <div class="form-group"><label class="form-label">Ad Soyad</label><input class="form-input" id="newUserName" placeholder="Ahmet Yılmaz"></div>
+    <div class="form-group"><label class="form-label">Gmail Adresi</label><input class="form-input" id="newUserEmail" type="email" placeholder="kullanici@gmail.com"></div>
+    <div class="form-group"><label class="form-label">Anthropic API Anahtarı</label><input class="form-input" id="newUserApiKey" type="password" placeholder="sk-ant-api03-..."></div>
+    <div class="form-group">
+      <label class="form-label">Plan</label>
+      <select class="form-input" id="newUserPlan">
+        <option value="web">Web (Aylık)</option>
+        <option value="mobil">Mobil (Aylık)</option>
+        <option value="full">Web + Mobil (Aylık)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addUserModal')">İptal</button>
+      <button class="btn primary" onclick="kullaniciEkle()">Ekle</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pushModal">
+  <div class="modal">
+    <div class="modal-title">📢 Push Mesajı Gönder</div>
+    <div class="modal-sub">Tüm aktif kullanıcılara anlık bildirim gönder</div>
+    <div class="form-group">
+      <label class="form-label">Başlık</label>
+      <input class="form-input" id="pushBaslik" placeholder="📚 Bugünün Terimi: RSI">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mesaj</label>
+      <textarea class="form-input" id="pushMesaj" rows="4" placeholder="RSI, hissenin aşırı alınıp alınmadığını gösteren bir göstergedir..." style="resize:vertical"></textarea>
+    </div>
+    <div class="push-preview" id="pushPreview">
+      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem">ÖNİZLEME</div>
+      <div style="font-weight:600;font-size:0.85rem">📚 Bugünün Terimi</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem">Mesaj burada görünecek...</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('pushModal')">İptal</button>
+      <button class="btn primary" onclick="pushGonderOnay()">📢 Gönder</button>
+    </div>
+  </div>
+</div>
+
+<div id="globalLoading"><div class="spinner"></div><div class="loading-msg" id="loadingMsg">İşleniyor...</div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ══════════════════════════════════════════════
+// FİREBASE CONFIG — kendi bilgilerinle değiştir
+// ══════════════════════════════════════════════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection,
+  getDocs, addDoc, query, where, orderBy, limit, serverTimestamp, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAuKxk5ftUNjlbFtrKMwFmT_AAvrleOdPE",
+  authDomain: "hissematik-d6691.firebaseapp.com",
+  projectId: "hissematik-d6691",
+  storageBucket: "hissematik-d6691.firebasestorage.app",
+  messagingSenderId: "674361520711",
+  appId: "1:674361520711:web:5ddd6db6a7d8b1a314f762"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// ══════════════════════════════════════════════
+// GLOBAL STATE
+// ══════════════════════════════════════════════
+let currentUser = null;
+let isAdmin = false;
+let userDoc = null;
+let takipEdilen = new Set();
+let portfoy = {};
+let veriler = {};
+let sinyalGecmisi = [];
+let aktifFilter = 'tum';
+let portfoyKod = null;
+let anthropicKey = ''; // Admin havuz key - kullanıcı görmez
+let havuzKey = ''; // Firestore'dan yüklenen admin key
+
+// Admin e-posta listesi — buraya kendi e-postanı yaz
+const ADMIN_EMAILS = ['ugurserkan@gmail.com'];
+
+// ══════════════════════════════════════════════
+// BIST HİSSELERİ
+// ══════════════════════════════════════════════
+const BIST = [
+  ["ACSEL","Açıselsan"],["ADEL","Adel Kalemcilik"],["ADESE","Adese AVM"],
+  ["AEFES","Anadolu Efes"],["AFYON","Afyon Çimento"],["AGESA","AgeS Emeklilik"],
+  ["AGHOL","AG Anadolu Grubu"],["AGYO","Atakule GYO"],["AHGAZ","Ahlatcı Doğalgaz"],
+  ["AKBNK","Akbank"],["AKCNS","Akçansa"],["AKENR","Ak Enerji"],
+  ["AKFGY","Akfen GYO"],["AKFIN","Akfen Holding"],["AKGRT","Aksigorta"],
+  ["AKMGY","Akmerkez GYO"],["AKSA","Aksa Akrilik"],["AKSEN","Aksa Enerji"],
+  ["AKSGY","Akiş GYO"],["AKTAE","Aktaş Elektrik"],["ALARK","Alarko Holding"],
+  ["ALBRK","Albaraka Türk"],["ALCAR","Alarko Carrier"],["ALFAS","Alfa Solar"],
+  ["ALGYO","Alarko GYO"],["ALKA","Alkim Alkali"],["ALKIM","Alkim Kağıt"],
+  ["ALKLC","Alkim Kimya"],["ALMAD","Altın Madeni"],["ALYAG","Aliağa Petrokimya"],
+  ["ANELE","Anel Elektrik"],["ANGEN","Anadolu Genetik"],["ANHYT","Anadolu Hayat"],
+  ["ANSGR","Anadolu Sigorta"],["ARCLK","Arçelik"],["ARDYZ","Ardyz"],
+  ["ARENA","Arena Bilgisayar"],["ARSAN","Arsan Tekstil"],["ARTMS","Artemas"],
+  ["ARZUM","Arzum"],["ASELS","Aselsan"],["ASTOR","Astor Enerji"],
+  ["ASUZU","Anadolu Isuzu"],["ATAKP","Atak Perakende"],["ATEKS","Altınyıldız Tekstil"],
+  ["AVGYO","Avrasya GYO"],["AVHOL","Avrasya Holding"],["AVOD","A.V.O.D."],
+  ["AYCES","Altınyunus Çeşme"],["AYDEM","Aydem Enerji"],["AYEN","Ayen Enerji"],
+  ["AZTEK","Aztek"],["BAGFS","Bagfas Gübre"],["BAKAB","Bak Ambalaj"],
+  ["BANVT","Banvit"],["BASCM","Başkent Çimento"],["BASGZ","Başkentgaz"],
+  ["BERA","Bera Holding"],["BFREN","Bosch Fren"],["BIMAS","BIM Birleşik Mağazalar"],
+  ["BIOEN","Bioenerji"],["BIZIM","Bizim Toptan"],["BJKAS","Beşiktaş JK"],
+  ["BLCYT","Bilici Yatırım"],["BMSTL","Bometal Çelik"],["BNTAS","Bantaş"],
+  ["BOBET","Bobet"],["BORSK","Borçelik"],["BOSSA","Bossa Ticaret"],
+  ["BRKAY","Berkay Madencilik"],["BRKSN","Birleşik Koyuncu"],["BRMEN","Birmen"],
+  ["BRSAN","Borusan Mannesmann"],["BRYAT","Borusan Yatırım"],["BSOKE","Batısöke Çimento"],
+  ["BTCIM","Batı Çimento"],["BUCIM","Bursa Çimento"],["BURCE","Burçelik Vana"],
+  ["BURVA","Bursa Beton"],["BVSAN","Baştaş"],["CANTE","Çan 2 Termik"],
+  ["CASA","Casa GYO"],["CATES","Çates Elektrik"],["CCOLA","Coca Cola İçecek"],
+  ["CELHA","Çelik Halat"],["CEMAS","Çemaş Döküm"],["CEMTS","Çemtaş Çelik"],
+  ["CEOEM","CEO Event"],["CIMSA","Çimsa"],["CLEBI","Çelebi Hava"],
+  ["CMBTN","Çimbeton"],["CONSE","Consus Enerji"],["CRFSA","Carrefoursa"],
+  ["CUSAN","Cusan"],["CVKMD","CVK Madencilik"],["CWENE","CW Enerji"],
+  ["DAGHL","Dağ Holding"],["DAGI","Dagi Giyim"],["DAPGM","Dap Gayrimenkul"],
+  ["DARDL","Dardanel"],["DENGE","Denge Yatırım"],["DESA","Desa Deri"],
+  ["DESPC","Despec Bilgisayar"],["DEVA","Deva Holding"],["DGATE","Datagate"],
+  ["DGNMO","Doğanlar Mobilya"],["DITAS","Ditaş"],["DMSAS","Demisaş"],
+  ["DOAS","Doğuş Otomotiv"],["DOBUR","Doğal Boya"],["DOCO","Do&Co"],
+  ["DOHOL","Doğan Holding"],["DOKTA","Döktaş"],["DURDO","Duran Doğan"],
+  ["DYOBY","DYO Boya"],["DZGYO","Deniz GYO"],["EBEBK","Ebebek"],
+  ["ECILC","Eczacıbaşı İlaç"],["ECZYT","Eczacıbaşı Yatırım"],["EDIP","Edip İplik"],
+  ["EGEEN","Ege Endüstri"],["EGEPO","Ege Profil"],["EGGUB","Ege Gübre"],
+  ["EGSER","Ege Seramik"],["EKGYO","Emlak Konut GYO"],["EKSUN","Eksun Gıda"],
+  ["ELITE","Elite Naturel"],["EMKEL","Emkel"],["EMNIS","Eminiş Ambalaj"],
+  ["ENJSA","Enerjisa Enerji"],["ENKAI","Enka İnşaat"],["EPLAS","Egeplast"],
+  ["ERBOS","Erbosan"],["EREGL","Ereğli Demir Çelik"],["ERSU","Ersu Meyve"],
+  ["ESCOM","Escom"],["ETYAT","Et Yatırım"],["EUPWR","European Power"],
+  ["EUREN","Eur Enerji"],["EUYO","Euro Yatırım"],["FADE","Fade"],
+  ["FENER","Fenerbahçe"],["FLAP","Flap Kongre"],["FMIZP","Filli Boya"],
+  ["FONET","Fonet"],["FRIGO","Frigo Pak"],["FROTO","Ford Otosan"],
+  ["GARAN","Garanti BBVA"],["GARFA","Garanti Faktoring"],["GEDIK","Gedik Yatırım"],
+  ["GEDZA","Gediz Ambalaj"],["GENIL","Gen İlaç"],["GENTS","Gentaş"],
+  ["GEREL","Gersan Elektrik"],["GESAN","Gesan"],["GIPTA","Gipta"],
+  ["GLBMD","Global Menkul"],["GLYHO","Global Yatırım"],["GMTAS","Gümüştaş"],
+  ["GOLTS","Göltaş Çimento"],["GOODY","Goodyear"],["GOZDE","Gözde Girişim"],
+  ["GRNYO","Garanti GYO"],["GSRAY","Galatasaray"],["GUBRF","Gübre Fabrikaları"],
+  ["GUSGR","Güneş Sigorta"],["GWIND","Güney Rüzgar"],["HALKB","Halkbank"],
+  ["HATEK","Hateks"],["HEDEF","Hedef Girişim"],["HEKTS","Hektaş"],
+  ["HLGYO","Halk GYO"],["HTTBT","Hattat Holding"],["HUBVC","Hub Venture"],
+  ["HUNER","Hun Enerji"],["HURGZ","Hürriyet Gazetecilik"],["ICBCT","ICBC Turkey"],
+  ["IDEAS","İdeas"],["IDGYO","İnder GYO"],["IHEVA","İheva"],
+  ["IHGZT","İhlas Gazetecilik"],["IHLGM","İhlas Gayrimenkul"],["IHLAS","İhlas Holding"],
+  ["IHYAY","İhlas Yayın"],["IMASM","İmas Makina"],["INDES","İndeks Bilgisayar"],
+  ["INFO","İnfo Yatırım"],["INTEM","İntema"],["INVEO","Inveo Yatırım"],
+  ["INVES","İnvestAZ"],["IPEKE","İpek Doğal Enerji"],["ISCTR","İş Bankası C"],
+  ["ISGYO","İş GYO"],["ISKPL","İskenderun Demir"],["ISKUR","İş Kuleleri"],
+  ["ISMEN","İş Menkul"],["ISYAT","İş Yatırım"],["ITTFH","İttifak Holding"],
+  ["IZMDC","İzmir Demir Çelik"],["IZOCM","İzocam"],["JANTS","Jantsa Jant"],
+  ["KAPLM","Kaplamin Ambalaj"],["KAREL","Karel Elektronik"],["KARSN","Karsan"],
+  ["KARTN","Kartonsan"],["KATMR","Katmerciler"],["KAYSE","Kayseri Şeker"],
+  ["KCAER","Kocaer Çelik"],["KCHOL","Koç Holding"],["KENT","Kent Gıda"],
+  ["KERVN","Kervansaray"],["KLKIM","Kalekim"],["KLSER","Kale Seramik"],
+  ["KMPUR","Kimpur"],["KNFRT","Konfrut"],["KONKA","Konka"],
+  ["KONTR","Kontrolmatik"],["KONYO","Konya Çimento"],["KORDS","Kordsa"],
+  ["KOTON","Koton"],["KOZAA","Koza Altın"],["KOZAL","Koza Altın İşletmeleri"],
+  ["KRDMA","Kardemir A"],["KRDMB","Kardemir B"],["KRDMD","Kardemir D"],
+  ["KRONT","Kron Telekom"],["KSTUR","Kastamonu Orman"],["KUTPO","Kütahya Porselen"],
+  ["LIDER","Lider Faktoring"],["LILAK","Lila Kağıt"],["LNKBM","Link Bilgisayar"],
+  ["LOGO","Logo Yazılım"],["LUKSK","Lüks Kadife"],["MAGEN","Magen Enerji"],
+  ["MAKIM","Makina Takım"],["MANAS","Manas Enerji"],["MARKA","Marka GYO"],
+  ["MARTI","Martı Otel"],["MAVI","Mavi Giyim"],["MEDTR","Meditrend"],
+  ["MEGAP","Mega Polietilen"],["MEPET","Mepet Petrol"],["MERCN","Mercan"],
+  ["MERKO","Merko Gıda"],["METRO","Metro Ticaret"],["MFGYO","MF GYO"],
+  ["MIGROS","Migros Ticaret"],["MPARK","Medical Park"],["MRSHL","Marshall Boya"],
+  ["MTRKS","Matriks Bilgi"],["NETAS","Netaş"],["NTHOL","Net Holding"],
+  ["NTTUR","Net Turizm"],["NUHCM","Nuh Çimento"],["OBAMS","Oba Makarna"],
+  ["ODAS","Odaş Elektrik"],["ONRYT","Onuryurt"],["ORGE","Orge Enerji"],
+  ["ORMA","Orma Orman"],["OSTIM","Ostim Endüstri"],["OTKAR","Otokar"],
+  ["OYAKC","Oyak Çimento"],["OYLUM","Oylum Sınai"],["OZGYO","Özak GYO"],
+  ["PAMEL","Pamel"],["PARSN","Parsan"],["PEKGY","Peker GYO"],
+  ["PENGD","Penguen Gıda"],["PENTA","Penta Teknoloji"],["PETKM","Petkim"],
+  ["PETUN","Pınar Et"],["PGSUS","Pegasus Hava"],["PINSU","Pınar Su"],
+  ["PKART","P-Kart"],["POLHO","Polisan Holding"],["POLTK","Politeknik Metal"],
+  ["PRDGS","Paradox GYO"],["PRKAB","Pınar Kablo"],["PRZMA","Prizma"],
+  ["PSGYO","Panora GYO"],["PTOFS","Petrol Ofisi"],["PUREN","Pür Enerji"],
+  ["RAYSG","Ray Sigorta"],["RGYAS","Rüya GYO"],["RNPOL","Ren Polimer"],
+  ["RTALB","Rota Alüminyum"],["RYSAS","Rönesans Holding"],["SAFKR","Safkar"],
+  ["SAHOL","Sabancı Holding"],["SANEL","Sanel Elektrik"],["SANKO","Sanko"],
+  ["SARKY","Sarkuysan"],["SASA","Sasa Polyester"],["SDTTR","SDT Uzay"],
+  ["SEGMN","Segmen"],["SEKUR","Sek Süt"],["SELEC","Selçuk Ecza"],
+  ["SELGD","Selçuk Gıda"],["SENIC","Senici"],["SISE","Şişe Cam"],
+  ["SKBNK","Şekerbank"],["SMART","Smart Güneş"],["SNGYO","Sinpaş GYO"],
+  ["SOKM","Şok Marketler"],["SONME","Sönmez Filament"],["SUWEN","Suwen İç Giyim"],
+  ["TATGD","Tat Gıda"],["TAVHL","TAV Havalimanları"],["TBORG","Türk Tuborg"],
+  ["TCELL","Turkcell"],["THYAO","Türk Hava Yolları"],["TKFEN","Tekfen Holding"],
+  ["TKNSA","Teknosa"],["TOASO","Tofaş Otomobil"],["TRCAS","Türkiye Reasürans"],
+  ["TRGYO","Torunlar GYO"],["TSKB","TSKB"],["TSPOR","Trabzonspor"],
+  ["TTKOM","Türk Telekom"],["TTRAK","Türk Traktör"],["TUKAS","Tükaş Gıda"],
+  ["TUPRS","Tüpraş"],["TURSG","Türk Sigorta"],["ULKER","Ülker Bisküvi"],
+  ["ULUSE","Ulusoy Elektrik"],["UNLU","Ünlü Tekstil"],["USAK","Uşak Seramik"],
+  ["VAKBN","Vakıfbank"],["VAKGM","Vakıf GYO"],["VESBE","Vestel Beyaz Eşya"],
+  ["VESTL","Vestel Elektronik"],["VKGYO","Vakıf GYO"],["WINTA","Wintax"],
+  ["YATAS","Yataş"],["YKBNK","Yapı Kredi"],["YONGA","Yonga Mobilya"],
+  ["YUNSA","Yünsa"],["ZOREN","Zorlu Enerji"],["ZRGYO","Ziraat GYO"],
+];
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+window.googleLogin = async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) { showToast('Giriş başarısız: ' + e.message, 'error'); }
+};
+
+window.logout = async () => {
+  await signOut(auth);
+  location.reload();
+};
+
+onAuthStateChanged(auth, async (user) => {
+  document.getElementById('loadingScreen').classList.add('hide');
+  if (!user) {
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appShell').style.display = 'none';
+    return;
+  }
+
+  // Yetkili mi?
+  const userRef = doc(db, 'users', user.uid);
+  const userSnap = await getDoc(userRef);
+
+  isAdmin = ADMIN_EMAILS.includes(user.email);
+
+  if (!isAdmin && !userSnap.exists()) {
+    showToast('Bu e-posta ile erişim izniniz yok.', 'error');
+    await signOut(auth);
+    document.getElementById('authScreen').style.display = 'flex';
+    return;
+  }
+
+  currentUser = user;
+  userDoc = userSnap.exists() ? userSnap.data() : {};
+
+  // Admin ise kendi kaydını oluştur
+  if (isAdmin && !userSnap.exists()) {
+    await setDoc(userRef, {
+      email: user.email, name: user.displayName || 'Admin',
+      isAdmin: true, plan: 'full', active: true,
+      createdAt: serverTimestamp()
+    });
+  }
+
+  // Kullanıcı verilerini yükle
+  anthropicKey = userDoc.apiKey || '';
+  takipEdilen = new Set(userDoc.takipEdilen || []);
+  portfoy = userDoc.portfoy || {};
+  veriler = userDoc.veriler || {};
+
+  // UI
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('userName').textContent = (user.displayName || user.email).split(' ')[0];
+  document.getElementById('userAvatar').textContent = (user.displayName || user.email)[0].toUpperCase();
+
+  if (isAdmin) {
+    document.getElementById('adminBadge').style.display = 'inline';
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+    loadAdminPanel();
+  }
+
+  // Havuz API key yükle (admin key - kullanıcı göremez)
+  try {
+    const configSnap = await getDoc(doc(db, 'config', 'global'));
+    if (configSnap.exists()) {
+      havuzKey = configSnap.data().anthropicKey || '';
+      anthropicKey = havuzKey; // Tüm AI işlemleri havuz key kullanır
+    }
+  } catch(e) { console.error('Config yükleme hatası:', e); }
+
+  // Push mesajları kontrol et
+  checkPushMesajlar();
+  // Sinyalleri yükle
+  await loadSinyalGecmisi();
+  renderHisseler();
+  renderDashboard();
+  renderPortfoy();
+  updateSummary();
+});
+
+// ══════════════════════════════════════════════
+// VERİ KAYDET
+// ══════════════════════════════════════════════
+async function saveUserData() {
+  if (!currentUser) return;
+  const ref = doc(db, 'users', currentUser.uid);
+  await updateDoc(ref, {
+    takipEdilen: [...takipEdilen],
+    portfoy,
+    veriler,
+  });
+}
+
+// ══════════════════════════════════════════════
+// TAB
+// ══════════════════════════════════════════════
+window.switchTab = (name) => {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'sinyaller') renderSinyalGecmisi();
+  if (name === 'portfoy') renderPortfoy();
+  if (name === 'admin') loadAdminPanel();
+  if (name === 'sozluk') loadSozluk();
+};
+
+// ══════════════════════════════════════════════
+// HİSSE LİSTESİ
+// ══════════════════════════════════════════════
+window.filterHisseler = () => {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const grid = document.getElementById('hisseGrid');
+  grid.innerHTML = '';
+  BIST.filter(([k,a]) => {
+    if (aktifFilter === 'takip' && !takipEdilen.has(k)) return false;
+    if (aktifFilter === 'portfoy' && !portfoy[k]) return false;
+    if (q && !k.toLowerCase().includes(q) && !a.toLowerCase().includes(q)) return false;
+    return true;
+  }).forEach(([k, a]) => {
+    const isTakip = takipEdilen.has(k), isPF = !!portfoy[k];
+    const card = document.createElement('div');
+    const v = veriler[k];
+    const degisim = v ? v.degisim : null;
+    const fiyat = v ? v.fiyat : null;
+    const sinyal = v ? v.sinyal : null;
+
+    // Tüm hisseler için renk ve fiyat göster
+    let cardStyle = '';
+    let degisimHTML = '';
+    if (v) {
+      if (degisim > 0) cardStyle = 'border-color:rgba(0,229,160,0.4);background:rgba(0,229,160,0.05)';
+      else if (degisim < 0) cardStyle = 'border-color:rgba(255,69,96,0.4);background:rgba(255,69,96,0.05)';
+      degisimHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem">
+          <span style="font-family:var(--mono);font-size:0.78rem;font-weight:500">${fiyat} ₺</span>
+          <span style="font-family:var(--mono);font-size:0.7rem;color:${degisim>=0?'var(--accent)':'var(--red)'}">${degisim>=0?'+':''}${degisim}%</span>
+        </div>`;
     }
 
-    const semboller = url.searchParams.get('semboller');
-    const tumhisseler = url.searchParams.get('tumhisseler');
+    card.className = 'hisse-card' + (isTakip?' takip':'') + (isPF?' portfoy':'');
+    if (cardStyle) card.setAttribute('style', cardStyle);
+    
+    card.innerHTML = `
+      <div class="h-check">${isTakip?'✓':''}</div>
+      <div class="h-kod">${k}</div>
+      <div class="h-ad">${a}</div>
+      ${degisimHTML}
+      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:0.3rem">
+        ${isTakip ? `<span class="pill ${sinyal?(sinyal.includes('AL')?'al':sinyal.includes('SAT')?'sat':'bekle'):'al'}" style="font-size:0.6rem">${sinyal||'TAKİP'}</span>` : ''}
+        ${isPF?'<span class="pill bekle" style="font-size:0.6rem">PORTFÖY</span>':''}
+        ${v && !isTakip && sinyal ? `<span class="pill ${sinyal.includes('AL')?'guclu-al':sinyal.includes('SAT')?'guclu-sat':'bekle'}" style="font-size:0.58rem">${sinyal}</span>` : ''}
+      </div>`;
+    card.onclick = () => toggleTakip(k);
+    card.oncontextmenu = (e) => { e.preventDefault(); portfoyModal(k, a); };
+    grid.appendChild(card);
+  });
+};
 
-    // Tüm hisseler - Bigpara sayfalı çekme
-    if (tumhisseler === '1') {
-      const tumHisseler = {};
-      const sayfalar = [1, 2, 3, 4, 5]; // 5 sayfa = ~500 hisse
-      await Promise.all(sayfalar.map(async (sayfa) => {
-        try {
-          const res = await fetch(
-            `https://bigpara.hurriyet.com.tr/api/v1/borsa/hisseler?order=HACIM&orderType=desc&pageNumber=${sayfa}&pageSize=100`,
-            { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://bigpara.hurriyet.com.tr' } }
-          );
-          const data = await res.json();
-          const liste = data?.data || [];
-          liste.forEach(h => {
-            const kod = h.KOD || h.kod;
-            if (kod) tumHisseler[kod] = h;
-          });
-        } catch(e) {}
-      }));
-      return new Response(JSON.stringify({ data: Object.values(tumHisseler) }), { headers });
-    }
+window.renderHisseler = window.filterHisseler;
 
-    // Yahoo - toplu geçmiş veri
-    if (semboller) {
-      const liste = semboller.split(',').slice(0, 100);
-      const sonuclar = await Promise.allSettled(
-        liste.map(async (s) => {
-          const res = await fetch(
-            `https://query1.finance.yahoo.com/v8/finance/chart/${s.trim()}.IS?interval=1d&range=3mo`,
-            { headers: { 'User-Agent': 'Mozilla/5.0' } }
-          );
-          const data = await res.json();
-          return { sembol: s.trim(), data };
-        })
-      );
-      const cevap = {};
-      sonuclar.forEach((r, i) => {
-        if (r.status === 'fulfilled') cevap[liste[i]] = r.value.data;
+window.setFilter = (f, el) => {
+  aktifFilter = f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  filterHisseler();
+};
+
+function toggleTakip(k) {
+  if (takipEdilen.has(k)) {
+    if (!confirm(`${k} takipten çıkarılsın mı?`)) return;
+    takipEdilen.delete(k);
+    // Verilerden de sil
+    delete veriler[k];
+  } else {
+    takipEdilen.add(k);
+  }
+  saveUserData();
+  filterHisseler();
+  updateSummary();
+}
+
+window.takibiKaldir = () => { takipEdilen.clear(); saveUserData(); filterHisseler(); updateSummary(); };
+
+// ══════════════════════════════════════════════
+// PORTFÖY MODAL
+// ══════════════════════════════════════════════
+window.portfoyModal = (k, a) => {
+  portfoyKod = k;
+  document.getElementById('portfoyModalTitle').textContent = k + ' — Portföye Ekle';
+  document.getElementById('portfoyModalSub').textContent = a;
+  document.getElementById('pTarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('portfoyModal').classList.add('show');
+};
+
+window.portfoyKaydet = async () => {
+  const adet = Number(document.getElementById('pAdet').value);
+  const fiyat = Number(document.getElementById('pFiyat').value);
+  const tarih = document.getElementById('pTarih').value;
+  if (!adet || !fiyat) { showToast('Adet ve fiyat zorunlu!', 'error'); return; }
+  portfoy[portfoyKod] = { adet, alisFiyati: fiyat, alisTarihi: tarih, ad: BIST.find(b=>b[0]===portfoyKod)?.[1] || '' };
+  if (!takipEdilen.has(portfoyKod)) takipEdilen.add(portfoyKod);
+  await saveUserData();
+  closeModal('portfoyModal');
+  filterHisseler();
+  renderPortfoy();
+  showToast(portfoyKod + ' portföye eklendi ✓');
+};
+
+window.closeModal = (id) => document.getElementById(id).classList.remove('show');
+
+// ══════════════════════════════════════════════
+// VERİ ÇEKME
+// ══════════════════════════════════════════════
+window.verileriGuncelle = async () => {
+  showLoading('Veriler çekiliyor...');
+  setStatus('loading', 'Güncelleniyor...');
+
+  // 1. Bigpara - tüm anlık fiyatlar tek seferde
+  setLoadingMsg("Bigpara'dan anlık fiyatlar alınıyor...");
+  try {
+    const bpRes = await fetch(
+      'https://hissematik-proxy.ugurserkan.workers.dev/?tumhisseler=1',
+      {signal: AbortSignal.timeout(15000)}
+    );
+    if (bpRes.ok) {
+      const bpData = await bpRes.json();
+      const hisseler = bpData?.data || [];
+      hisseler.forEach(h => {
+        const kod = h.KOD || h.kod || h.SEMBOL;
+        if (!kod) return;
+        const fiyat = parseFloat(h.KAPANIS || h.SON || h.kapanis || 0);
+        const degisim = parseFloat(h.YUZDE || h.yuzde || 0);
+        const hacim = parseFloat(h.HACIM || h.hacim || 0);
+        if (fiyat > 0) {
+          if (!veriler[kod]) veriler[kod] = {};
+          veriler[kod].fiyat = +fiyat.toFixed(2);
+          veriler[kod].degisim = +degisim.toFixed(2);
+          veriler[kod].hacim = hacim;
+          veriler[kod].ts = Date.now();
+          veriler[kod].sinyal = veriler[kod].sinyal || 'BEKLE';
+        }
       });
-      return new Response(JSON.stringify(cevap), { headers });
+      setLoadingMsg(`${hisseler.length} hisse fiyatı alındı...`);
     }
+  } catch(e) { console.error('Bigpara hatası:', e); }
 
-    return new Response(JSON.stringify({ error: 'parametre gerekli' }), { headers });
+  // Anlık fiyatları hemen göster
+  filterHisseler();
+
+  // 2. Yahoo - sadece takip edilenler için geçmiş veri (RSI/MACD)
+  const takipKodlar = [...takipEdilen];
+  if (takipKodlar.length > 0) {
+    setLoadingMsg('Teknik analiz için geçmiş veri çekiliyor...');
+    const grupBoyutu = 100;
+    for (let i = 0; i < takipKodlar.length; i += grupBoyutu) {
+      const grup = takipKodlar.slice(i, i + grupBoyutu);
+      try {
+        const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?semboller=${grup.join(',')}`;
+        const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(30000)});
+        if (res.ok) {
+          const topluVeri = await res.json();
+          for (const [sembol, json] of Object.entries(topluVeri)) {
+            const v = parseYahooVeri(sembol, json);
+            if (v) {
+              veriler[sembol] = {
+                ...veriler[sembol],
+                rsi: v.rsi, macd: v.macd, macdSignal: v.macdSignal,
+                macdHist: v.macdHist, ma20: v.ma20, ma50: v.ma50,
+                kapanis: v.kapanis, sinyal: v.sinyal,
+                hacimFark: v.hacimFark,
+              };
+            }
+          }
+        }
+      } catch(e) { console.error('Yahoo grup hatası:', e); }
+    }
+  }
+
+  filterHisseler();
+
+  // 3. AI analiz
+  let aiYorum = '';
+  if (aiGerekliMi()) {
+    setLoadingMsg('AI analiz yapılıyor...');
+    try {
+      aiYorum = await Promise.race([
+        aiAnalizYap(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
+      ]).catch(() => '');
+    } catch(e) { aiYorum = ''; }
+  }
+
+  await sinyalKaydet(aiYorum);
+  await saveUserData();
+  hideLoading();
+  setStatus('live', 'Canlı');
+  renderDashboard();
+  renderPortfoy();
+  filterHisseler();
+  updateSummary();
+  showToast(`${Object.keys(veriler).filter(k => veriler[k].fiyat).length} hisse güncellendi ✓`);
+};
+
+
+function parseYahooVeri(sembol, json) {
+  try {
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
+    const meta = result.meta;
+    const kapanis = (result.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
+    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
+    if (kapanis.length < 5) return null;
+    const fiyat = meta.regularMarketPrice || kapanis.at(-1);
+    const onceki = meta.chartPreviousClose || kapanis.at(-2);
+    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+    const hacimOrt = avg(hacimler.slice(-20));
+    const hacimSon = hacimler.at(-1) || 0;
+    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
+    const rsi = calcRSI(kapanis, 14);
+    const macd = calcMACD(kapanis);
+    const ma20 = avg(kapanis.slice(-20));
+    const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
+    const sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
+    return {
+      fiyat: +fiyat.toFixed(2), degisim,
+      rsi: +rsi.toFixed(1),
+      macd: +macd.macd.toFixed(4),
+      macdSignal: +macd.sinyal.toFixed(4),
+      macdHist: +macd.histogram.toFixed(4),
+      ma20: +ma20.toFixed(2), ma50: +ma50.toFixed(2),
+      hacim: hacimSon, hacimFark,
+      sinyal, kapanis: kapanis.slice(-60),
+      ts: Date.now()
+    };
+  } catch(e) { return null; }
+}
+
+async function fetchYahoo(sembol) {
+  try {
+    // Cloudflare Worker proxy - CORS sorunu yok
+    const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?sembol=${sembol}`;
+    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
+    if (!res.ok) return null;
+    const json = await res.json();
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
+
+    const meta = result.meta;
+    const kapanis = (result.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
+    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
+    if (kapanis.length < 20) return null;
+
+    const fiyat = meta.regularMarketPrice || kapanis.at(-1);
+    const onceki = meta.chartPreviousClose || kapanis.at(-2);
+    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+    const hacimOrt = avg(hacimler.slice(-20));
+    const hacimSon = hacimler.at(-1) || 0;
+    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
+
+    const rsi = calcRSI(kapanis, 14);
+    const macd = calcMACD(kapanis);
+    const ma20 = avg(kapanis.slice(-20));
+    const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
+    const sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
+
+    return {
+      fiyat: +fiyat.toFixed(2), degisim,
+      rsi: +rsi.toFixed(1),
+      macd: +macd.macd.toFixed(4),
+      macdSignal: +macd.sinyal.toFixed(4),
+      macdHist: +macd.histogram.toFixed(4),
+      ma20: +ma20.toFixed(2), ma50: +ma50.toFixed(2),
+      hacim: hacimSon, hacimFark,
+      sinyal, kapanis: kapanis.slice(-60),
+      ts: Date.now()
+    };
+  } catch(e) { console.error(sembol, e); return null; }
+}
+
+// ══════════════════════════════════════════════
+// TEKNİK HESAPLAMALAR
+// ══════════════════════════════════════════════
+function calcRSI(k, p) {
+  if (k.length < p+1) return 50;
+  const s = k.slice(-p-1);
+  let g=0, l=0;
+  for (let i=1;i<s.length;i++) { const d=s[i]-s[i-1]; if(d>0)g+=d; else l+=Math.abs(d); }
+  const og=g/p, ol=l/p;
+  if (ol===0) return 100;
+  return 100-(100/(1+og/ol));
+}
+
+function ema(k, p) {
+  if (k.length < p) return k.at(-1)||0;
+  const m = 2/(p+1);
+  let e = avg(k.slice(0,p));
+  for (let i=p;i<k.length;i++) e=k[i]*m+e*(1-m);
+  return e;
+}
+
+function calcMACD(k) {
+  const h=ema(k,12), y=ema(k,26), m=h-y;
+  const ser=[];
+  for (let i=25;i<k.length;i++) { const h2=ema(k.slice(0,i+1),12); const y2=ema(k.slice(0,i+1),26); ser.push(h2-y2); }
+  const s=ema(ser,9);
+  return {macd:m, sinyal:s, histogram:m-s};
+}
+
+function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+
+function genelSinyal(rsi, macd, ma20, ma50, hacimFark) {
+  let al=0, sat=0;
+  if (rsi<25) al+=3; else if (rsi<35) al+=2; else if (rsi<45) al+=1;
+  else if (rsi>80) sat+=3; else if (rsi>70) sat+=2; else if (rsi>60) sat+=1;
+  if (macd.histogram>0 && macd.macd>macd.sinyal) al+=2; else if (macd.histogram<0) sat+=2;
+  if (ma20>ma50) al+=1; else sat+=1;
+  if (hacimFark>50) al+=1; // hacim spike AL lehine
+  if (hacimFark>100 && rsi>65) sat+=1; // yüksek hacim + aşırı alım = dikkat
+  if (al>=5) return 'GÜÇLÜ AL';
+  if (al>=3 && al>sat) return 'AL';
+  if (sat>=5) return 'GÜÇLÜ SAT';
+  if (sat>=3 && sat>al) return 'SAT';
+  return 'BEKLE';
+}
+
+// ══════════════════════════════════════════════
+// SİNYAL KAYDET & DOĞRULA
+// ══════════════════════════════════════════════
+async function sinyalKaydet(aiYorum) {
+  if (!currentUser) return;
+  const ts = Date.now();
+  const batch = [];
+
+  for (const [k, v] of Object.entries(veriler)) {
+    if (!takipEdilen.has(k)) continue;
+    batch.push({
+      uid: currentUser.uid,
+      sembol: k,
+      tarih: ts,
+      fiyat: v.fiyat,
+      rsi: v.rsi,
+      macd: v.macdHist,
+      hacimFark: v.hacimFark,
+      ma20: v.ma20,
+      ma50: v.ma50,
+      sinyal: v.sinyal,
+      aiYorum: aiYorum || '',
+      sonuc: null, // 7 gün sonra doldurulacak
+      sonucFiyat: null,
+      sonucYuzde: null,
+      dogrulandi: null,
+    });
+  }
+
+  // Firestore'a yaz - aynı gün aynı hisse varsa üzerine yaz
+  const bugun = new Date().toISOString().split('T')[0]; // 2026-04-27
+  for (const item of batch) {
+    try {
+      // Aynı kullanıcı + aynı sembol + aynı gün varsa güncelle
+      const mevcutQ = query(
+        collection(db, 'sinyaller'),
+        where('uid', '==', item.uid),
+        where('sembol', '==', item.sembol),
+        where('gun', '==', bugun)
+      );
+      const mevcutSnap = await getDocs(mevcutQ);
+      if (!mevcutSnap.empty) {
+        // Mevcut kaydı güncelle
+        await updateDoc(doc(db, 'sinyaller', mevcutSnap.docs[0].id), {
+          fiyat: item.fiyat, rsi: item.rsi, macd: item.macd,
+          hacimFark: item.hacimFark, ma20: item.ma20, ma50: item.ma50,
+          sinyal: item.sinyal, tarih: item.tarih
+        });
+      } else {
+        // Yeni kayıt oluştur
+        await addDoc(collection(db, 'sinyaller'), {...item, gun: bugun});
+      }
+    } catch(e) { console.error('Sinyal kayıt hatası:', e); }
   }
 }
+
+async function loadSinyalGecmisi() {
+  if (!currentUser) return;
+  try {
+    const q = query(
+      collection(db, 'sinyaller'),
+      where('uid', '==', currentUser.uid),
+      orderBy('tarih', 'desc'),
+      limit(100)
+    );
+    const snap = await getDocs(q);
+    sinyalGecmisi = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    await sinyalleriDogrula();
+  } catch(e) { console.error('Sinyal yükleme hatası:', e); }
+}
+
+window.sinyalleriGuncelle = async () => {
+  showLoading('Sinyal sonuçları kontrol ediliyor...');
+  await sinyalleriDogrula();
+  hideLoading();
+  renderSinyalGecmisi();
+  updateSummary();
+  showToast('Sinyal sonuçları güncellendi ✓');
+};
+
+async function sinyalleriDogrula() {
+  // 7 günden eski sinyaller için sonuçları kontrol et
+  const yediGunOnce = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const bekleyenler = sinyalGecmisi.filter(s => s.sonuc === null && s.tarih < yediGunOnce);
+
+  for (const sinyal of bekleyenler) {
+    const v = await fetchYahoo(sinyal.sembol);
+    if (!v) continue;
+    const sonucYuzde = +((v.fiyat - sinyal.fiyat) / sinyal.fiyat * 100).toFixed(2);
+    let dogrulandi = null;
+    if (['AL','GÜÇLÜ AL'].includes(sinyal.sinyal)) dogrulandi = sonucYuzde > 0;
+    else if (['SAT','GÜÇLÜ SAT'].includes(sinyal.sinyal)) dogrulandi = sonucYuzde < 0;
+    else dogrulandi = Math.abs(sonucYuzde) < 3; // BEKLE için +-3% tolerans
+
+    // Güncelle
+    try {
+      await updateDoc(doc(db, 'sinyaller', sinyal.id), {
+        sonuc: 'tamamlandi', sonucFiyat: v.fiyat,
+        sonucYuzde, dogrulandi
+      });
+      sinyal.sonuc = 'tamamlandi';
+      sinyal.sonucFiyat = v.fiyat;
+      sinyal.sonucYuzde = sonucYuzde;
+      sinyal.dogrulandi = dogrulandi;
+    } catch(e) { console.error(e); }
+    await sleep(300);
+  }
+}
+
+// ══════════════════════════════════════════════
+// AI ANALİZ
+// ══════════════════════════════════════════════
+// Token kullanımını kaydet
+async function tokenKaydet(kullanim, model = 'claude-sonnet-4-20250514') {
+  if (!currentUser) return;
+  try {
+    const ay = new Date().toISOString().slice(0, 7); // 2026-04
+    const ref = doc(db, 'tokenKullanim', `${currentUser.uid}_${ay}`);
+    const snap = await getDoc(ref);
+    const mevcut = snap.exists() ? snap.data() : {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      ad: currentUser.displayName || '',
+      ay,
+      toplamToken: 0,
+      istekSayisi: 0,
+      maliyet: 0
+    };
+    const yeniToken = mevcut.toplamToken + kullanim;
+    const maliyet = yeniToken * 0.000003; // ~$3 per 1M token
+    await setDoc(ref, {
+      ...mevcut,
+      toplamToken: yeniToken,
+      istekSayisi: mevcut.istekSayisi + 1,
+      maliyet: +maliyet.toFixed(4),
+      sonGuncelleme: Date.now()
+    });
+  } catch(e) { console.error('Token kayıt hatası:', e); }
+}
+
+async function aiAnalizYap() {
+  const key = havuzKey || anthropicKey;
+  if (!key) return '';
+
+  // Geçmiş sinyal istatistikleri
+  const dogrulanmis = sinyalGecmisi.filter(s => s.dogrulandi === true).length;
+  const yanlis = sinyalGecmisi.filter(s => s.dogrulandi === false).length;
+  const toplam = dogrulanmis + yanlis;
+  const isabet = toplam > 0 ? Math.round(dogrulanmis/toplam*100) : null;
+
+  // Geçmiş pattern analizi
+  const basariliPatternler = sinyalGecmisi
+    .filter(s => s.dogrulandi === true)
+    .map(s => `RSI=${s.rsi?.toFixed(0)},MACD=${s.macd?.toFixed(3)},Hacim=${s.hacimFark}%,Sinyal=${s.sinyal}`)
+    .slice(0, 10).join('\n');
+
+  const basarisizPatternler = sinyalGecmisi
+    .filter(s => s.dogrulandi === false)
+    .map(s => `RSI=${s.rsi?.toFixed(0)},MACD=${s.macd?.toFixed(3)},Hacim=${s.hacimFark}%,Sinyal=${s.sinyal},Sonuç=${s.sonucYuzde?.toFixed(1)}%`)
+    .slice(0, 10).join('\n');
+
+  const guncelVeri = Object.entries(veriler)
+    .filter(([k]) => takipEdilen.has(k))
+    .map(([k,v]) => `${k}: Fiyat=${v.fiyat}₺, RSI=${v.rsi}, MACD_hist=${v.macdHist?.toFixed(3)}, Hacim=${v.hacimFark>0?'+':''}${v.hacimFark}%, MA20=${v.ma20}, MA50=${v.ma50}, Sinyal=${v.sinyal}`)
+    .join('\n');
+
+  const prompt = `Sen tecrübeli bir BIST teknik analiz uzmanısın. Geçmiş sinyal performansına ve mevcut piyasa verilerine dayanarak analiz yap.
+
+${toplam > 0 ? `GEÇMIŞ SİNYAL PERFORMANSI:
+Toplam değerlendirilen: ${toplam} sinyal | İsabet: %${isabet}
+
+Başarılı sinyal örüntüleri:
+${basariliPatternler || 'Henüz yok'}
+
+Başarısız sinyal örüntüleri:
+${basarisizPatternler || 'Henüz yok'}` : 'İlk analiz — geçmiş veri henüz yok.'}
+
+GÜNCEL VERİLER:
+${guncelVeri}
+
+Lütfen:
+1. Öne çıkan fırsatları ve riskleri belirt
+2. Geçmiş başarısız sinyal örüntüleriyle örtüşen durumlar varsa uyar
+3. Hacim-fiyat ilişkisini yorumla
+4. Her hisse için 1 cümle, sonunda genel piyasa yorumu yap
+Kısa, net, Türkçe.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const yorum = data?.content?.[0]?.text || '';
+    // Token kullanımını kaydet
+    const kullanilanToken = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+    return yorum;
+  } catch(e) { console.error('AI hatası:', e); return ''; }
+}
+
+// ══════════════════════════════════════════════
+// DASHBOARD RENDER
+// ══════════════════════════════════════════════
+window.renderDashboard = () => {
+  const tbody = document.getElementById('dashTableBody');
+  const rows = Object.entries(veriler).filter(([k]) => takipEdilen.has(k));
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--muted)">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle\'ye bas.</td></tr>';
+    return;
+  }
+
+  // AI yorumunu göster
+  const lastSinyal = sinyalGecmisi[0];
+  if (lastSinyal?.aiYorum) {
+    document.getElementById('aiBoxContainer').innerHTML = `
+      <div class="ai-box">
+        <div class="ai-box-header">
+          <div class="ai-icon">⬡</div>
+          <div class="ai-box-title">Claude AI Analizi</div>
+          <div class="ai-box-time">${new Date(lastSinyal.tarih).toLocaleString('tr-TR')}</div>
+        </div>
+        <div class="ai-content">${lastSinyal.aiYorum}</div>
+      </div>`;
+  }
+
+  tbody.innerHTML = rows.map(([k, v]) => {
+    const rsiPct = Math.min(100,Math.max(0,v.rsi));
+    const rsiColor = v.rsi<30?'var(--accent)':v.rsi>70?'var(--red)':'var(--yellow)';
+    const cls = sinyalClass(v.sinyal);
+    const degCls = v.degisim>=0?'pos':'neg';
+    const hacimTxt = v.hacimFark > 0 ? `<span class="pos">+${v.hacimFark}%</span>` : v.hacimFark < 0 ? `<span class="neg">${v.hacimFark}%</span>` : '—';
+    return `<tr>
+      <td><span class="mono" style="font-weight:500">${k}</span></td>
+      <td class="mono">${v.fiyat} ₺</td>
+      <td class="mono ${degCls}">${v.degisim>=0?'+':''}${v.degisim}%</td>
+      <td>
+        <div class="rsi-wrap">
+          <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
+          <span class="mono" style="font-size:0.75rem;color:${rsiColor}">${v.rsi}</span>
+        </div>
+      </td>
+      <td class="mono" style="font-size:0.75rem;color:${v.macdHist>0?'var(--accent)':'var(--red)'}">${v.macdHist?.toFixed(3)}</td>
+      <td style="font-size:0.75rem">${hacimTxt}</td>
+      <td><span class="pill ${cls}">${v.sinyal}</span></td>
+      <td class="mono muted" style="font-size:0.68rem">${v.ts ? new Date(v.ts).toLocaleTimeString('tr-TR') : '—'}</td>
+    </tr>`;
+  }).join('');
+};
+
+function sinyalClass(s) {
+  return {'GÜÇLÜ AL':'guclu-al','AL':'al','SAT':'sat','GÜÇLÜ SAT':'guclu-sat','BEKLE':'bekle'}[s]||'bekle';
+}
+
+// ══════════════════════════════════════════════
+// SİNYAL GEÇMİŞİ RENDER
+// ══════════════════════════════════════════════
+window.renderSinyalGecmisi = () => {
+  const el = document.getElementById('sinyalListesi');
+  if (sinyalGecmisi.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok.</div>';
+    return;
+  }
+  el.innerHTML = sinyalGecmisi.slice(0, 50).map(s => {
+    const tarih = new Date(s.tarih).toLocaleDateString('tr-TR');
+    const saat = new Date(s.tarih).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+    const sonucPill = s.dogrulandi === null
+      ? '<span class="pill bekliyor">⏳ Bekleniyor</span>'
+      : s.dogrulandi
+        ? `<span class="pill dogrulandi">✓ Doğrulandı</span>`
+        : `<span class="pill yanlis">✗ Yanlışlandı</span>`;
+    const sonucYuzde = s.sonucYuzde !== null
+      ? `<span class="${s.sonucYuzde>=0?'pos':'neg'} mono">${s.sonucYuzde>=0?'+':''}${s.sonucYuzde}%</span>`
+      : '<span class="muted">—</span>';
+    return `<div class="sinyal-item">
+      <div class="sinyal-item-top">
+        <span class="mono" style="font-weight:500">${s.sembol}</span>
+        <span class="pill ${sinyalClass(s.sinyal)}">${s.sinyal}</span>
+        ${sonucPill}
+        ${sonucYuzde}
+      </div>
+      <div class="sinyal-item-meta">
+        <span>📅 ${tarih} ${saat}</span>
+        <span>Fiyat: <span class="mono">${s.fiyat}₺</span></span>
+        <span>RSI: <span class="mono">${s.rsi?.toFixed(0)}</span></span>
+        <span>Hacim: <span class="mono ${s.hacimFark>0?'pos':'muted'}">${s.hacimFark>0?'+':''}${s.hacimFark}%</span></span>
+        ${s.sonucFiyat ? `<span>Sonuç Fiyat: <span class="mono">${s.sonucFiyat}₺</span></span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ══════════════════════════════════════════════
+// PORTFÖY
+// ══════════════════════════════════════════════
+window.renderPortfoy = () => {
+  const el = document.getElementById('portfoyContent');
+  const items = Object.entries(portfoy);
+  if (items.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:5rem;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:1rem">💼</div>
+      <div style="margin-bottom:0.5rem;color:var(--text)">Portföyünüz boş</div>
+      <div style="font-size:0.8rem">Hisse listesinde sağ tıklayarak portföye ekle</div>
+    </div>`;
+    return;
+  }
+  let totMaliyet=0, totDeger=0;
+  const rows = items.map(([k,p]) => {
+    const v = veriler[k];
+    const gf = v?.fiyat || 0;
+    const mal = p.adet * p.alisFiyati;
+    const deg = gf ? p.adet * gf : 0;
+    const kz = deg - mal;
+    const kzp = mal > 0 ? (kz/mal*100) : 0;
+    totMaliyet += mal; totDeger += deg || mal;
+    const sin = v ? `<span class="pill ${sinyalClass(v.sinyal)}">${v.sinyal}</span>` : '—';
+    return `<tr>
+      <td><span class="mono" style="font-weight:500">${k}</span><br><span class="muted" style="font-size:0.68rem">${p.ad||''}</span></td>
+      <td class="mono">${p.adet}</td>
+      <td class="mono">${p.alisFiyati.toFixed(2)} ₺</td>
+      <td class="mono">${gf ? gf.toFixed(2)+' ₺' : '—'}</td>
+      <td class="mono">${mal.toFixed(0)} ₺</td>
+      <td class="mono">${deg ? deg.toFixed(0)+' ₺' : '—'}</td>
+      <td class="mono ${kz>=0?'pos':'neg'}">${kz>=0?'+':''}${kz.toFixed(0)} ₺<br><span style="font-size:0.72rem">${kzp>=0?'+':''}${kzp.toFixed(1)}%</span></td>
+      <td>${sin}</td>
+      <td><button class="btn danger" onclick="portfoyCikar('${k}')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>
+    </tr>`;
+  }).join('');
+
+  const topKZ = totDeger - totMaliyet;
+  const topKZP = totMaliyet > 0 ? (topKZ/totMaliyet*100) : 0;
+
+  el.innerHTML = `
+    <div class="portfoy-summary">
+      <div class="grid-4" style="margin-bottom:0">
+        <div><div class="card-title">Toplam Maliyet</div><div class="card-value" style="font-size:1.2rem">${totMaliyet.toFixed(0)} ₺</div></div>
+        <div><div class="card-title">Güncel Değer</div><div class="card-value" style="font-size:1.2rem">${totDeger.toFixed(0)} ₺</div></div>
+        <div><div class="card-title">Toplam K/Z</div><div class="card-value ${topKZ>=0?'green':'red'}" style="font-size:1.2rem">${topKZ>=0?'+':''}${topKZ.toFixed(0)} ₺</div></div>
+        <div><div class="card-title">Getiri</div><div class="card-value ${topKZP>=0?'green':'red'}" style="font-size:1.2rem">${topKZP>=0?'+':''}${topKZP.toFixed(1)}%</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Hisse</th><th>Adet</th><th>Alış</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th>Sinyal</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+};
+
+window.portfoyCikar = async (k) => {
+  if (!confirm(k + ' portföyden çıkarılsın mı?')) return;
+  delete portfoy[k];
+  await saveUserData();
+  renderPortfoy();
+  showToast(k + ' portföyden çıkarıldı');
+};
+
+// ══════════════════════════════════════════════
+// ÖZET
+// ══════════════════════════════════════════════
+function updateSummary() {
+  document.getElementById('sumTakip').textContent = takipEdilen.size;
+  const vs = Object.values(veriler);
+  document.getElementById('sumAl').textContent = vs.filter(v=>v.sinyal==='GÜÇLÜ AL').length || '—';
+  document.getElementById('sumSat').textContent = vs.filter(v=>v.sinyal==='GÜÇLÜ SAT').length || '—';
+
+  const dog = sinyalGecmisi.filter(s=>s.dogrulandi===true).length;
+  const yan = sinyalGecmisi.filter(s=>s.dogrulandi===false).length;
+  const top = dog + yan;
+  document.getElementById('sumIsabet').textContent = top > 0 ? `%${Math.round(dog/top*100)}` : '—';
+
+  // Sinyal tab özet
+  document.getElementById('sinTopToplam').textContent = sinyalGecmisi.length;
+  document.getElementById('sinTopDogru').textContent = dog;
+  document.getElementById('sinTopYanlis').textContent = yan;
+  document.getElementById('sinTopIsabet').textContent = top > 0 ? `%${Math.round(dog/top*100)}` : '—';
+}
+
+// ══════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════
+async function loadAdminPanel() {
+  if (!isAdmin) return;
+  loadTokenIstatistik();
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const users = snap.docs.map(d => ({id:d.id,...d.data()}));
+    document.getElementById('adminTotalUser').textContent = users.length;
+
+    const config = await getDoc(doc(db, 'config', 'global'));
+    if (config.exists()) {
+      document.getElementById('adminApiKey').value = config.data().anthropicKey || '';
+    }
+
+    document.getElementById('kullaniciListesi').innerHTML = users.map(u => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--accent);flex-shrink:0">${(u.name||u.email)[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis">${u.name||'—'}</div>
+          <div style="font-size:0.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis">${u.email}</div>
+        </div>
+        <span class="pill ${u.active?'al':'bekle'}">${u.active?'Aktif':'Pasif'}</span>
+        <span class="pill bekle" style="font-size:0.6rem">${u.plan||'web'}</span>
+        ${!u.isAdmin ? `<button class="btn danger" onclick="kullanicisil('${u.id}')" style="font-size:0.7rem;padding:2px 6px">Sil</button>` : ''}
+      </div>`).join('');
+  } catch(e) { console.error('Admin yükleme hatası:', e); }
+}
+
+window.showAddUser = () => document.getElementById('addUserModal').classList.add('show');
+
+window.kullaniciEkle = async () => {
+  const name = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const apiKey = document.getElementById('newUserApiKey').value.trim();
+  const plan = document.getElementById('newUserPlan').value;
+  if (!email) { showToast('E-posta zorunlu!', 'error'); return; }
+
+  // uid email hash olarak kullanacağız (gerçek uid Google login sonrası oluşur)
+  const uid = btoa(email).replace(/=/g,'');
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      email, name, apiKey, plan, active: true,
+      isAdmin: false, createdAt: serverTimestamp(),
+      takipEdilen: [], portfoy: {}, veriler: {}
+    });
+    closeModal('addUserModal');
+    showToast(email + ' eklendi ✓');
+    loadAdminPanel();
+  } catch(e) { showToast('Hata: '+e.message,'error'); }
+};
+
+window.kullanicisil = async (uid) => {
+  if (!confirm('Kullanıcı silinsin mi?')) return;
+  try {
+    const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await deleteDoc(doc(db, 'users', uid));
+    showToast('Kullanıcı silindi');
+    loadAdminPanel();
+  } catch(e) { showToast('Hata: '+e.message,'error'); }
+};
+
+// Token istatistiklerini yükle
+window.loadTokenIstatistik = async () => {
+  const el = document.getElementById('tokenIstatistik');
+  if (!el) return;
+  try {
+    const ay = new Date().toISOString().slice(0, 7);
+    document.getElementById('tokenAySec').textContent = ay;
+    const snap = await getDocs(collection(db, 'tokenKullanim'));
+    const buAy = snap.docs
+      .map(d => d.data())
+      .filter(d => d.ay === ay)
+      .sort((a, b) => b.toplamToken - a.toplamToken);
+
+    if (buAy.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Bu ay henüz AI kullanımı yok</div>';
+      return;
+    }
+
+    const toplamToken = buAy.reduce((s, d) => s + d.toplamToken, 0);
+    const toplamMaliyet = buAy.reduce((s, d) => s + d.maliyet, 0);
+    const toplamIstek = buAy.reduce((s, d) => s + d.istekSayisi, 0);
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem">
+        <div class="card" style="text-align:center">
+          <div class="card-title">Toplam Token</div>
+          <div class="card-value mono" style="font-size:1.1rem">${toplamToken.toLocaleString()}</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div class="card-title">Tahmini Maliyet</div>
+          <div class="card-value green mono" style="font-size:1.1rem">$${toplamMaliyet.toFixed(3)}</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div class="card-title">AI İstek</div>
+          <div class="card-value mono" style="font-size:1.1rem">${toplamIstek}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+        <thead><tr>
+          <th style="text-align:left;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Kullanıcı</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Token</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">İstek</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Maliyet</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Ortalama/İstek</th>
+        </tr></thead>
+        <tbody>
+          ${buAy.map(d => `<tr>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border)">${d.ad || d.email}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${d.toplamToken.toLocaleString()}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${d.istekSayisi}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:var(--accent)">$${d.maliyet.toFixed(4)}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:var(--muted)">${Math.round(d.toplamToken/d.istekSayisi).toLocaleString()}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) { 
+    document.getElementById('tokenIstatistik').innerHTML = '<div style="color:var(--red)">Yükleme hatası: ' + e.message + '</div>';
+  }
+};
+
+// Akıllı AI tetikleme - sadece anlamlı değişikliklerde
+function aiGerekliMi() {
+  // Takip edilen hisse yoksa AI'a gerek yok
+  if (takipEdilen.size === 0) return false;
+  // Havuz key yoksa AI çalışmaz
+  if (!havuzKey && !anthropicKey) return false;
+
+  for (const k of takipEdilen) {
+    const v = veriler[k];
+    if (!v) continue;
+    // RSI aşırı bölge
+    if (v.rsi < 30 || v.rsi > 70) return true;
+    // Güçlü sinyal
+    if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') return true;
+    // Büyük fiyat hareketi
+    if (Math.abs(v.degisim) >= 3) return true;
+  }
+
+  // Sabah ilk güncelleme (09:30-10:30 arası)
+  const saat = new Date().getHours();
+  if (saat >= 9 && saat <= 10) return true;
+
+  return false;
+}
+
+window.mukerrerTemizle = async () => {
+  if (!confirm('Mükerrer sinyal kayıtları temizlensin mi?')) return;
+  showLoading('Mükerrer kayıtlar temizleniyor...');
+  try {
+    const snap = await getDocs(collection(db, 'sinyaller'));
+    const tumKayitlar = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    
+    // uid + sembol + gun bazında grupla
+    const gruplar = {};
+    tumKayitlar.forEach(k => {
+      const gun = k.gun || new Date(k.tarih).toISOString().split('T')[0];
+      const anahtar = `${k.uid}_${k.sembol}_${gun}`;
+      if (!gruplar[anahtar]) gruplar[anahtar] = [];
+      gruplar[anahtar].push(k);
+    });
+
+    // Her gruptan en yenisi hariç diğerlerini sil
+    let silinenSayisi = 0;
+    for (const grup of Object.values(gruplar)) {
+      if (grup.length <= 1) continue;
+      // En yeni kaydı tut
+      grup.sort((a, b) => b.tarih - a.tarih);
+      for (let i = 1; i < grup.length; i++) {
+        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await deleteDoc(doc(db, 'sinyaller', grup[i].id));
+        silinenSayisi++;
+      }
+    }
+
+    hideLoading();
+    showToast(`${silinenSayisi} mükerrer kayıt silindi ✓`);
+    await loadSinyalGecmisi();
+    renderSinyalGecmisi();
+  } catch(e) {
+    hideLoading();
+    showToast('Hata: ' + e.message, 'error');
+  }
+};
+
+window.saveApiKey = async () => {
+  const key = document.getElementById('adminApiKey').value.trim();
+  anthropicKey = key;
+  // Kullanıcı kendi doc'una kaydet
+  await updateDoc(doc(db, 'users', currentUser.uid), { apiKey: key });
+  showToast('API anahtarı kaydedildi ✓');
+  document.getElementById('apiStatus').textContent = key ? '✓ Tanımlı' : 'Tanımlı değil';
+  document.getElementById('apiStatus').style.color = key ? 'var(--accent)' : 'var(--muted)';
+};
+
+// ══════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════
+function setStatus(type, text) {
+  document.getElementById('statusDot').className = 'status-dot ' + type;
+  document.getElementById('statusText').textContent = text;
+}
+
+function showLoading(msg) {
+  document.getElementById('globalLoading').classList.add('show');
+  document.getElementById('loadingMsg').textContent = msg;
+}
+function setLoadingMsg(t) { document.getElementById('loadingMsg').textContent = t; }
+function hideLoading() { document.getElementById('globalLoading').classList.remove('show'); }
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✗ ':'') + msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════
+// SÖZLÜK SİSTEMİ
+// ══════════════════════════════════════════════
+
+// Temel terimler listesi
+const TEMEL_TERIMLER = [
+  "RSI", "MACD", "Momentum", "Hacim", "Hareketli Ortalama",
+  "Aşırı Alım", "Aşırı Satım", "Destek Seviyesi", "Direnç Seviyesi",
+  "Trend", "Volatilite", "Piyasa Değeri", "Halka Arz", "Temettü",
+  "F/K Oranı", "Teknik Analiz", "Temel Analiz", "Stop Loss",
+  "Take Profit", "Portföy Çeşitlendirmesi", "Beta", "Endeks",
+  "Boğa Piyasası", "Ayı Piyasası", "Konsolidasyon", "Breakout",
+  "Fibonacci", "Bollinger Bandı", "Stochastic", "EMA", "SMA",
+  "Hacim Spike", "Kurumsal Yatırımcı", "Likidite", "Spread"
+];
+
+let sozlukVeriler = []; // Firestore'dan yüklenen terimler
+
+async function loadSozluk() {
+  // Admin butonlarını göster
+  if (isAdmin) {
+    document.getElementById('adminSozlukBtns').style.display = 'flex';
+    document.getElementById('adminSozlukStats').style.display = 'block';
+    loadTerimIstatistik();
+  }
+
+  // Firestore'dan terimleri yükle
+  try {
+    const q = query(
+      collection(db, 'sozluk'),
+      orderBy('sorulma', 'desc'),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    sozlukVeriler = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    renderSozluk();
+  } catch(e) {
+    console.error('Sözlük yükleme hatası:', e);
+    renderSozluk();
+  }
+
+  // Popüler terimleri göster
+  renderPopularTerimler();
+}
+
+function renderPopularTerimler() {
+  const el = document.getElementById('popularTerimler');
+  TEMEL_TERIMLER.forEach(terim => {
+    const chip = document.createElement('button');
+    chip.className = 'terim-chip';
+    chip.textContent = terim;
+    chip.onclick = () => terimSorAPI(terim);
+    el.appendChild(chip);
+  });
+}
+
+function renderSozluk(filtre = '') {
+  const el = document.getElementById('sozlukListesi');
+  const filtered = filtre
+    ? sozlukVeriler.filter(t => t.terim.toLowerCase().includes(filtre.toLowerCase()))
+    : sozlukVeriler;
+
+  if (filtered.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:1rem">📖</div>
+      <div style="color:var(--text);margin-bottom:0.5rem">Sözlüğün henüz boş</div>
+      <div style="font-size:0.8rem">Yukarıdaki terimlerden birine tıkla, Claude açıklasın</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(t => `
+    <div class="terim-card ${t.acik ? 'acik' : ''}" onclick="toggleTerim('${t.id}')">
+      <div class="terim-baslik">
+        <span>${t.terim}</span>
+        <span class="pill al" style="font-size:0.6rem">${t.sorulma || 1}x soruldu</span>
+        ${isAdmin ? `<button class="btn primary" onclick="event.stopPropagation();pushTerimGonder('${t.id}')" style="font-size:0.65rem;padding:2px 8px;margin-left:auto">📢 Push</button>` : ''}
+      </div>
+      <div class="terim-aciklama">${t.aciklama || ''}</div>
+      <div class="terim-meta">
+        <span>📅 ${t.tarih ? new Date(t.tarih).toLocaleDateString('tr-TR') : '—'}</span>
+        ${t.ekleyenAd ? `<span>👤 ${t.ekleyenAd}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleTerim(id) {
+  const t = sozlukVeriler.find(x => x.id === id);
+  if (t) { t.acik = !t.acik; renderSozluk(); }
+}
+
+window.filterTerimler = () => {
+  const q = document.getElementById('sozlukSearch').value;
+  renderSozluk(q);
+};
+
+window.terimiSor = () => {
+  const q = document.getElementById('sozlukSearch').value.trim();
+  if (!q) { showToast('Önce terim yaz!', 'error'); return; }
+  terimSorAPI(q);
+};
+
+async function terimSorAPI(terim) {
+  const kullanilanKey = havuzKey || anthropicKey;
+  if (!kullanilanKey) {
+    showToast('Sistem şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.', 'error');
+    return;
+  }
+
+  // Daha önce sorulmuş mu?
+  const mevcut = sozlukVeriler.find(t => t.terim.toLowerCase() === terim.toLowerCase());
+  if (mevcut) {
+    // Sorulma sayısını artır
+    showToast(`"${terim}" zaten sözlükte var!`);
+    try {
+      await updateDoc(doc(db, 'sozluk', mevcut.id), {
+        sorulma: (mevcut.sorulma || 1) + 1
+      });
+      mevcut.sorulma = (mevcut.sorulma || 1) + 1;
+    } catch(e) {}
+    renderSozluk();
+    return;
+  }
+
+  showLoading(`"${terim}" için Claude açıklama hazırlıyor...`);
+
+  try {
+    // Kullanıcının API key'i ile Claude'a sor
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': kullanilanKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `Borsa yatırımcısına "${terim}" terimini açıkla. 
+          Kısa, sade, anlaşılır Türkçe. 2-3 cümle. 
+          Günlük hayattan basit bir örnek ver. 
+          Teknik jargon kullanma.`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const aciklama = data?.content?.[0]?.text || '';
+    const kullanilanToken = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+
+    if (!aciklama) { hideLoading(); showToast('Açıklama alınamadı', 'error'); return; }
+
+    // Firestore'a kaydet (admin'in sözlüğüne)
+    const yeniTerim = {
+      terim,
+      aciklama,
+      sorulma: 1,
+      tarih: Date.now(),
+      ekleyenUid: currentUser.uid,
+      ekleyenAd: currentUser.displayName || currentUser.email,
+      pushGonderildi: false
+    };
+
+    const docRef = await addDoc(collection(db, 'sozluk'), yeniTerim);
+    sozlukVeriler.unshift({id: docRef.id, ...yeniTerim});
+
+    hideLoading();
+    renderSozluk();
+    showToast(`"${terim}" sözlüğe eklendi ✓`);
+
+  } catch(e) {
+    hideLoading();
+    showToast('Hata: ' + e.message, 'error');
+  }
+}
+
+async function loadTerimIstatistik() {
+  try {
+    const snap = await getDocs(query(collection(db, 'sozluk'), orderBy('sorulma', 'desc'), limit(10)));
+    const terimler = snap.docs.map(d => d.data());
+    document.getElementById('terimIstatistik').innerHTML = terimler.map((t, i) => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+        <span class="mono" style="color:var(--muted);font-size:0.8rem">${i+1}.</span>
+        <span style="flex:1;font-size:0.82rem">${t.terim}</span>
+        <span class="pill al">${t.sorulma}x</span>
+        <button class="btn" onclick="pushTerimGonderByData('${t.terim}','${t.aciklama?.substring(0,50)}')" style="font-size:0.7rem;padding:2px 8px">📢 Push</button>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+window.pushGonder = () => {
+  document.getElementById('pushModal').classList.add('show');
+};
+
+window.pushTerimGonder = async (id) => {
+  const t = sozlukVeriler.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('pushBaslik').value = `📚 Bugünün Terimi: ${t.terim}`;
+  document.getElementById('pushMesaj').value = t.aciklama;
+  document.getElementById('pushModal').classList.add('show');
+};
+
+window.pushTerimGonderByData = (terim, aciklama) => {
+  document.getElementById('pushBaslik').value = `📚 Bugünün Terimi: ${terim}`;
+  document.getElementById('pushMesaj').value = aciklama + '...';
+  document.getElementById('pushModal').classList.add('show');
+};
+
+window.pushGonderOnay = async () => {
+  const baslik = document.getElementById('pushBaslik').value;
+  const mesaj = document.getElementById('pushMesaj').value;
+  if (!baslik || !mesaj) { showToast('Başlık ve mesaj zorunlu!', 'error'); return; }
+
+  // Push mesajını Firestore'a kaydet - kullanıcılar görecek
+  try {
+    await addDoc(collection(db, 'pushMesajlar'), {
+      baslik, mesaj,
+      tarih: Date.now(),
+      gonderen: currentUser.uid,
+      okundu: {}
+    });
+    closeModal('pushModal');
+    showToast('Push mesajı gönderildi! ✓');
+    // Tüm aktif kullanıcılara bildirim göster
+    showPushBildirim(baslik, mesaj);
+  } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+};
+
+function showPushBildirim(baslik, mesaj) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:fixed;top:80px;right:1.5rem;z-index:700;
+    background:var(--bg2);border:1px solid rgba(0,229,160,0.3);
+    border-radius:16px;padding:1.25rem;max-width:320px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    animation:modalIn 0.3s ease;
+  `;
+  el.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:0.75rem">
+      <div style="font-size:1.5rem">📢</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem">${baslik}</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">${mesaj}</div>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 8000);
+}
+
+// Push mesajlarını kontrol et (login sonrası)
+async function checkPushMesajlar() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'pushMesajlar'), orderBy('tarih', 'desc'), limit(5))
+    );
+    snap.docs.forEach(d => {
+      const m = d.data();
+      const okundu = m.okundu?.[currentUser.uid];
+      if (!okundu && Date.now() - m.tarih < 24 * 60 * 60 * 1000) {
+        setTimeout(() => showPushBildirim(m.baslik, m.mesaj), 2000);
+        updateDoc(doc(db, 'pushMesajlar', d.id), {
+          [`okundu.${currentUser.uid}`]: true
+        });
+      }
+    });
+  } catch(e) {}
+}
+
+// Loading ekranını kaldır
+setTimeout(() => document.getElementById('loadingScreen').classList.add('hide'), 2000);
+</script>
+</body>
+</html>
