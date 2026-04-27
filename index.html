@@ -1634,6 +1634,7 @@ function updateSummary() {
 async function loadAdminPanel() {
   if (!isAdmin) return;
   loadTokenIstatistik();
+  loadHaberAnalizleri();
   try {
     const snap = await getDocs(collection(db, 'users'));
     const users = snap.docs.map(d => ({id:d.id,...d.data()}));
@@ -1802,6 +1803,119 @@ function sinyalPiyasaAyarla(sinyal, hisseDegisim) {
 }
 
 // Token istatistiklerini yükle
+// Haber analizlerini yükle (admin)
+async function loadHaberAnalizleri() {
+  const el = document.getElementById('haberAnalizListesi');
+  if (!el || !isAdmin) return;
+  try {
+    const bugun = new Date();
+    bugun.setHours(0,0,0,0);
+    const snap = await getDocs(
+      query(collection(db, 'haberAnalizleri'), orderBy('tarih', 'desc'), limit(50))
+    );
+    const analizler = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    
+    if (analizler.length === 0) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:1rem">Henüz analiz yok</div>';
+      return;
+    }
+
+    el.innerHTML = analizler.map(a => `
+      <div style="padding:0.75rem;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.4rem">
+          <div style="font-size:0.82rem;font-weight:500;flex:1">${a.haberBaslik||'—'}</div>
+          <span style="font-size:0.68rem;color:var(--muted);font-family:var(--mono);white-space:nowrap">${new Date(a.tarih).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+          <span style="font-size:0.72rem;color:var(--accent)">👤 ${a.kullaniciAd||'—'}</span>
+          ${a.hisseler?.slice(0,5).map(x=>`
+            <span style="font-size:0.68rem;padding:1px 6px;border-radius:4px;
+              background:${x.etki==='olumlu'?'rgba(0,229,160,0.12)':x.etki==='olumsuz'?'rgba(255,69,96,0.12)':'rgba(255,209,102,0.12)'};
+              color:${x.etki==='olumlu'?'var(--accent)':x.etki==='olumsuz'?'var(--red)':'var(--yellow)'};
+              font-family:var(--mono)">
+              ${x.etki==='olumlu'?'🟢':x.etki==='olumsuz'?'🔴':'🟡'} ${x.kod}
+            </span>`).join('')||''}
+        </div>
+        ${a.yorum?`<div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;line-height:1.5">${a.yorum}</div>`:''}
+      </div>`).join('');
+  } catch(e) { 
+    if (el) el.innerHTML = `<div style="color:var(--red);font-size:0.8rem">${e.message}</div>`;
+  }
+}
+
+// Gün sonu özeti oluştur
+window.gunSonuOzetOlustur = async () => {
+  const key = havuzKey || anthropicKey;
+  if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
+  
+  showLoading('Gün sonu özeti hazırlanıyor...');
+  
+  try {
+    // Bugünkü tüm analizleri çek
+    const snap = await getDocs(
+      query(collection(db, 'haberAnalizleri'), orderBy('tarih', 'desc'), limit(100))
+    );
+    const analizler = snap.docs.map(d => d.data());
+    const bugun = new Date().toLocaleDateString('tr-TR');
+    const bugunAnalizler = analizler.filter(a => 
+      new Date(a.tarih).toLocaleDateString('tr-TR') === bugun
+    );
+
+    if (bugunAnalizler.length === 0) {
+      hideLoading();
+      showToast('Bugün henüz analiz yapılmamış!', 'error');
+      return;
+    }
+
+    // Özet prompt
+    const analizOzeti = bugunAnalizler.map(a => 
+      `Haber: ${a.haberBaslik}
+Etkilenen: ${a.hisseler?.map(x=>`${x.kod}(${x.etki})`).join(', ')}
+Yorum: ${a.yorum}`
+    ).join('
+---
+');
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{
+          role: 'user',
+          content: `Bugün BIST'te öne çıkan haberlerin analizleri aşağıda. Yatırımcılara yönelik kısa, net ve anlaşılır bir günlük piyasa özeti yaz. 3-4 paragraf, teknik jargon kullanma, Türkçe.
+
+${analizOzeti}`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const ozet = data?.content?.[0]?.text || '';
+    const kullanilanToken = (data?.usage?.input_tokens||0)+(data?.usage?.output_tokens||0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+
+    hideLoading();
+
+    if (ozet) {
+      // Push mesajı olarak gönder
+      document.getElementById('pushBaslik').value = `📊 ${bugun} Piyasa Özeti`;
+      document.getElementById('pushMesaj').value = ozet;
+      document.getElementById('pushModal').classList.add('show');
+    }
+
+  } catch(e) {
+    hideLoading();
+    showToast('Hata: ' + e.message, 'error');
+  }
+};
+
 window.loadTokenIstatistik = async () => {
   const el = document.getElementById('tokenIstatistik');
   if (!el) return;
@@ -2057,6 +2171,20 @@ window.tekHaberAnalizEt = async (idx) => {
   const key = havuzKey || anthropicKey;
   if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
 
+  // Daha önce bu kullanıcı bu haberi analiz ettirmiş mi?
+  const haberHash = btoa(encodeURIComponent(h.baslik)).substring(0, 40);
+  const analizDocId = `${currentUser.uid}_${haberHash}`;
+  try {
+    const mevcutSnap = await getDoc(doc(db, 'haberAnalizleri', analizDocId));
+    if (mevcutSnap.exists()) {
+      // Mevcut analizi göster
+      const mevcut = mevcutSnap.data();
+      haberAnalizGoster(analizEl, mevcut);
+      if (btn) btn.remove();
+      return;
+    }
+  } catch(e) {}
+
   try {
     const bistKodlari = BIST.map(b => b[0]).join(', ');
     const takipKodlari = [...takipEdilen].join(', ') || 'Yok';
@@ -2093,7 +2221,7 @@ Tüm BIST kodları (sadece bunlardan seç): ${bistKodlari}
 
     let analiz = null;
     try {
-      const m = text.match(/\{[\s\S]*\}/);
+      const m = text.match(/[{][\s\S]*[}]/);
       if (m) analiz = JSON.parse(m[0]);
     } catch(e) {}
 
@@ -2188,7 +2316,7 @@ JSON formatı (başka hiçbir şey yazma):
       // JSON parse
       let analiz = null;
       try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonMatch = text.match(/[{][\s\S]*[}]/);
         if (jsonMatch) analiz = JSON.parse(jsonMatch[0]);
       } catch(e) {}
 
@@ -2245,6 +2373,28 @@ JSON formatı (başka hiçbir şey yazma):
 
 // Güncelleme sonrası haberleri sıfırla
 function haberlerSifirla() { haberlerYuklendi = false; }
+
+// Haber analiz kutusunu göster
+function haberAnalizGoster(el, analiz) {
+  if (!el || !analiz) return;
+  el.innerHTML = `
+    <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.12);border-radius:8px">
+      <div style="font-size:0.68rem;color:var(--accent);font-family:var(--mono);margin-bottom:0.5rem">⬡ AI ETKİ ANALİZİ</div>
+      ${analiz.hisseler?.length > 0 ? `
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem">
+          ${analiz.hisseler.map(x => `
+            <div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;
+              background:${x.etki==='olumlu'?'rgba(0,229,160,0.12)':x.etki==='olumsuz'?'rgba(255,69,96,0.12)':'rgba(255,209,102,0.12)'};
+              border:1px solid ${x.etki==='olumlu'?'rgba(0,229,160,0.3)':x.etki==='olumsuz'?'rgba(255,69,96,0.3)':'rgba(255,209,102,0.3)'}">
+              <span>${x.etki==='olumlu'?'🟢':x.etki==='olumsuz'?'🔴':'🟡'}</span>
+              <span style="font-family:var(--mono);font-size:0.72rem;font-weight:500">${x.kod}</span>
+              <span style="font-size:0.65rem;color:var(--muted)">${x.tip==='direkt'?'Doğrudan':'Dolaylı'}</span>
+            </div>`).join('')}
+        </div>` : ''}
+      <div style="font-size:0.78rem;color:#b0d8c8;line-height:1.6">${analiz.yorum||''}</div>
+      ${analiz.sure?`<div style="font-size:0.68rem;color:var(--muted);margin-top:0.4rem;font-family:var(--mono)">⏱ ${analiz.sure}</div>`:''}
+    </div>`;
+}
 
 // ══════════════════════════════════════════════
 // SÖZLÜK SİSTEMİ
