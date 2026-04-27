@@ -501,7 +501,8 @@ tr:last-child td { border-bottom:none; }
           <button class="btn danger" style="width:100%;margin-bottom:0.75rem" onclick="mukerrerTemizle()">🧹 Mükerrer Sinyalleri Temizle</button>
         </div>
         <div style="margin-top:1.25rem">
-          <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">Anthropic API Anahtarı</div>
+          <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">🔑 Havuz API Anahtarı</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">Kullanıcılar bu anahtarı göremez. Tüm AI işlemleri buradan yapılır.</div>
           <div class="form-group">
             <input class="form-input" id="adminApiKey" type="password" placeholder="sk-ant-api03-...">
           </div>
@@ -613,7 +614,8 @@ let veriler = {};
 let sinyalGecmisi = [];
 let aktifFilter = 'tum';
 let portfoyKod = null;
-let anthropicKey = '';
+let anthropicKey = ''; // Admin havuz key - kullanıcı görmez
+let havuzKey = ''; // Firestore'dan yüklenen admin key
 
 // Admin e-posta listesi — buraya kendi e-postanı yaz
 const ADMIN_EMAILS = ['ugurserkan@gmail.com'];
@@ -801,6 +803,15 @@ onAuthStateChanged(auth, async (user) => {
     loadAdminPanel();
   }
 
+  // Havuz API key yükle (admin key - kullanıcı göremez)
+  try {
+    const configSnap = await getDoc(doc(db, 'config', 'global'));
+    if (configSnap.exists()) {
+      havuzKey = configSnap.data().anthropicKey || '';
+      anthropicKey = havuzKey; // Tüm AI işlemleri havuz key kullanır
+    }
+  } catch(e) { console.error('Config yükleme hatası:', e); }
+
   // Push mesajları kontrol et
   checkPushMesajlar();
   // Sinyalleri yükle
@@ -964,8 +975,17 @@ window.verileriGuncelle = async () => {
     filterHisseler();
   }
 
-  setLoadingMsg('AI analiz yapılıyor...');
-  const aiYorum = await aiAnalizYap();
+  // Akıllı AI tetikleme - sadece gerektiğinde
+  let aiYorum = '';
+  if (aiGerekliMi()) {
+    setLoadingMsg('AI analiz yapılıyor...');
+    try {
+      aiYorum = await Promise.race([
+        aiAnalizYap(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
+      ]).catch(() => '');
+    } catch(e) { aiYorum = ''; }
+  }
   await sinyalKaydet(aiYorum);
   await saveUserData();
   hideLoading();
@@ -1210,8 +1230,36 @@ async function sinyalleriDogrula() {
 // ══════════════════════════════════════════════
 // AI ANALİZ
 // ══════════════════════════════════════════════
+// Token kullanımını kaydet
+async function tokenKaydet(kullanim, model = 'claude-sonnet-4-20250514') {
+  if (!currentUser) return;
+  try {
+    const ay = new Date().toISOString().slice(0, 7); // 2026-04
+    const ref = doc(db, 'tokenKullanim', `${currentUser.uid}_${ay}`);
+    const snap = await getDoc(ref);
+    const mevcut = snap.exists() ? snap.data() : {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      ad: currentUser.displayName || '',
+      ay,
+      toplamToken: 0,
+      istekSayisi: 0,
+      maliyet: 0
+    };
+    const yeniToken = mevcut.toplamToken + kullanim;
+    const maliyet = yeniToken * 0.000003; // ~$3 per 1M token
+    await setDoc(ref, {
+      ...mevcut,
+      toplamToken: yeniToken,
+      istekSayisi: mevcut.istekSayisi + 1,
+      maliyet: +maliyet.toFixed(4),
+      sonGuncelleme: Date.now()
+    });
+  } catch(e) { console.error('Token kayıt hatası:', e); }
+}
+
 async function aiAnalizYap() {
-  const key = anthropicKey;
+  const key = havuzKey || anthropicKey;
   if (!key) return '';
 
   // Geçmiş sinyal istatistikleri
@@ -1273,7 +1321,11 @@ Kısa, net, Türkçe.`;
       })
     });
     const data = await res.json();
-    return data?.content?.[0]?.text || '';
+    const yorum = data?.content?.[0]?.text || '';
+    // Token kullanımını kaydet
+    const kullanilanToken = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+    return yorum;
   } catch(e) { console.error('AI hatası:', e); return ''; }
 }
 
@@ -1462,6 +1514,7 @@ function updateSummary() {
 // ══════════════════════════════════════════════
 async function loadAdminPanel() {
   if (!isAdmin) return;
+  loadTokenIstatistik();
   try {
     const snap = await getDocs(collection(db, 'users'));
     const users = snap.docs.map(d => ({id:d.id,...d.data()}));
@@ -1518,6 +1571,92 @@ window.kullanicisil = async (uid) => {
     loadAdminPanel();
   } catch(e) { showToast('Hata: '+e.message,'error'); }
 };
+
+// Token istatistiklerini yükle
+window.loadTokenIstatistik = async () => {
+  const el = document.getElementById('tokenIstatistik');
+  if (!el) return;
+  try {
+    const ay = new Date().toISOString().slice(0, 7);
+    document.getElementById('tokenAySec').textContent = ay;
+    const snap = await getDocs(collection(db, 'tokenKullanim'));
+    const buAy = snap.docs
+      .map(d => d.data())
+      .filter(d => d.ay === ay)
+      .sort((a, b) => b.toplamToken - a.toplamToken);
+
+    if (buAy.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Bu ay henüz AI kullanımı yok</div>';
+      return;
+    }
+
+    const toplamToken = buAy.reduce((s, d) => s + d.toplamToken, 0);
+    const toplamMaliyet = buAy.reduce((s, d) => s + d.maliyet, 0);
+    const toplamIstek = buAy.reduce((s, d) => s + d.istekSayisi, 0);
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem">
+        <div class="card" style="text-align:center">
+          <div class="card-title">Toplam Token</div>
+          <div class="card-value mono" style="font-size:1.1rem">${toplamToken.toLocaleString()}</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div class="card-title">Tahmini Maliyet</div>
+          <div class="card-value green mono" style="font-size:1.1rem">$${toplamMaliyet.toFixed(3)}</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div class="card-title">AI İstek</div>
+          <div class="card-value mono" style="font-size:1.1rem">${toplamIstek}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+        <thead><tr>
+          <th style="text-align:left;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Kullanıcı</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Token</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">İstek</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Maliyet</th>
+          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Ortalama/İstek</th>
+        </tr></thead>
+        <tbody>
+          ${buAy.map(d => `<tr>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border)">${d.ad || d.email}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${d.toplamToken.toLocaleString()}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${d.istekSayisi}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:var(--accent)">$${d.maliyet.toFixed(4)}</td>
+            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:var(--muted)">${Math.round(d.toplamToken/d.istekSayisi).toLocaleString()}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) { 
+    document.getElementById('tokenIstatistik').innerHTML = '<div style="color:var(--red)">Yükleme hatası: ' + e.message + '</div>';
+  }
+};
+
+// Akıllı AI tetikleme - sadece anlamlı değişikliklerde
+function aiGerekliMi() {
+  // Takip edilen hisse yoksa AI'a gerek yok
+  if (takipEdilen.size === 0) return false;
+  // Havuz key yoksa AI çalışmaz
+  if (!havuzKey && !anthropicKey) return false;
+
+  for (const k of takipEdilen) {
+    const v = veriler[k];
+    if (!v) continue;
+    // RSI aşırı bölge
+    if (v.rsi < 30 || v.rsi > 70) return true;
+    // Güçlü sinyal
+    if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') return true;
+    // Büyük fiyat hareketi
+    if (Math.abs(v.degisim) >= 3) return true;
+  }
+
+  // Sabah ilk güncelleme (09:30-10:30 arası)
+  const saat = new Date().getHours();
+  if (saat >= 9 && saat <= 10) return true;
+
+  return false;
+}
 
 window.mukerrerTemizle = async () => {
   if (!confirm('Mükerrer sinyal kayıtları temizlensin mi?')) return;
@@ -1698,8 +1837,9 @@ window.terimiSor = () => {
 };
 
 async function terimSorAPI(terim) {
-  if (!anthropicKey) {
-    showToast('API anahtarı gerekli! Admin panelinden ekle.', 'error');
+  const kullanilanKey = havuzKey || anthropicKey;
+  if (!kullanilanKey) {
+    showToast('Sistem şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.', 'error');
     return;
   }
 
@@ -1726,7 +1866,7 @@ async function terimSorAPI(terim) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
+        'x-api-key': kullanilanKey,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
@@ -1745,6 +1885,8 @@ async function terimSorAPI(terim) {
 
     const data = await res.json();
     const aciklama = data?.content?.[0]?.text || '';
+    const kullanilanToken = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
 
     if (!aciklama) { hideLoading(); showToast('Açıklama alınamadı', 'error'); return; }
 
