@@ -956,7 +956,7 @@ window.verileriGuncelle = async () => {
   setStatus('loading', 'Güncelleniyor...');
 
   const tumKodlar = BIST.map(b => b[0]);
-  const grupBoyutu = 50;
+  const grupBoyutu = 100;
 
   for (let i = 0; i < tumKodlar.length; i += grupBoyutu) {
     const grup = tumKodlar.slice(i, i + grupBoyutu);
