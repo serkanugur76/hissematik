@@ -941,37 +941,74 @@ window.closeModal = (id) => document.getElementById(id).classList.remove('show')
 // VERİ ÇEKME
 // ══════════════════════════════════════════════
 window.verileriGuncelle = async () => {
-  if (takipEdilen.size === 0) {
-    showToast('Önce hisse seç!', 'error');
-    switchTab('hisseler');
-    return;
-  }
-  showLoading('Yahoo Finance\'ten veri çekiliyor...');
+  showLoading('Veriler çekiliyor...');
   setStatus('loading', 'Güncelleniyor...');
 
-  const kodlar = [...takipEdilen];
-  for (let i = 0; i < kodlar.length; i++) {
-    const k = kodlar[i];
-    setLoadingMsg(`${k} çekiliyor... (${i+1}/${kodlar.length})`);
-    const v = await fetchYahoo(k);
-    if (v) veriler[k] = v;
-    await sleep(250);
+  const tumKodlar = BIST.map(b => b[0]);
+  const grupBoyutu = 50;
+
+  for (let i = 0; i < tumKodlar.length; i += grupBoyutu) {
+    const grup = tumKodlar.slice(i, i + grupBoyutu);
+    setLoadingMsg(`Çekiliyor... ${Math.min(i + grupBoyutu, tumKodlar.length)}/${tumKodlar.length} hisse`);
+    try {
+      const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?semboller=${grup.join(',')}`;
+      const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(30000)});
+      if (res.ok) {
+        const topluVeri = await res.json();
+        for (const [sembol, json] of Object.entries(topluVeri)) {
+          const v = parseYahooVeri(sembol, json);
+          if (v) veriler[sembol] = v;
+        }
+      }
+    } catch(e) { console.error('Grup hatası:', e); }
+    filterHisseler();
   }
 
   setLoadingMsg('AI analiz yapılıyor...');
   const aiYorum = await aiAnalizYap();
-
-  // Sinyalleri kaydet
   await sinyalKaydet(aiYorum);
-
   await saveUserData();
   hideLoading();
   setStatus('live', 'Canlı');
   renderDashboard();
   renderPortfoy();
+  filterHisseler();
   updateSummary();
-  showToast('Veriler güncellendi ✓');
+  showToast(`${Object.keys(veriler).length} hisse güncellendi ✓`);
 };
+
+function parseYahooVeri(sembol, json) {
+  try {
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
+    const meta = result.meta;
+    const kapanis = (result.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
+    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
+    if (kapanis.length < 5) return null;
+    const fiyat = meta.regularMarketPrice || kapanis.at(-1);
+    const onceki = meta.chartPreviousClose || kapanis.at(-2);
+    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+    const hacimOrt = avg(hacimler.slice(-20));
+    const hacimSon = hacimler.at(-1) || 0;
+    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
+    const rsi = calcRSI(kapanis, 14);
+    const macd = calcMACD(kapanis);
+    const ma20 = avg(kapanis.slice(-20));
+    const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
+    const sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
+    return {
+      fiyat: +fiyat.toFixed(2), degisim,
+      rsi: +rsi.toFixed(1),
+      macd: +macd.macd.toFixed(4),
+      macdSignal: +macd.sinyal.toFixed(4),
+      macdHist: +macd.histogram.toFixed(4),
+      ma20: +ma20.toFixed(2), ma50: +ma50.toFixed(2),
+      hacim: hacimSon, hacimFark,
+      sinyal, kapanis: kapanis.slice(-60),
+      ts: Date.now()
+    };
+  } catch(e) { return null; }
+}
 
 async function fetchYahoo(sembol) {
   try {
