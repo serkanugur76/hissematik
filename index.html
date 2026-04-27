@@ -274,6 +274,29 @@ tr:last-child td { border-bottom:none; }
 .toast.success { border-color:rgba(0,229,160,0.3); }
 .toast.error { border-color:rgba(255,69,96,0.3); }
 
+/* SÖZLÜK */
+.terim-card {
+  background:var(--bg3); border:1px solid var(--border); border-radius:10px;
+  padding:1rem; margin-bottom:0.75rem; cursor:pointer; transition:all 0.2s;
+}
+.terim-card:hover { border-color:var(--border2); }
+.terim-card.acik { border-color:rgba(0,229,160,0.3); }
+.terim-baslik { font-weight:600; font-size:0.9rem; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.5rem; }
+.terim-aciklama { font-size:0.82rem; line-height:1.7; color:#b0d0c0; margin-top:0.5rem; }
+.terim-meta { font-size:0.68rem; color:var(--muted); margin-top:0.5rem; display:flex; gap:1rem; }
+.terim-chip {
+  padding:0.3rem 0.75rem; border-radius:20px; font-size:0.75rem;
+  cursor:pointer; border:1px solid var(--border2); color:var(--text);
+  transition:all 0.15s; background:var(--bg3);
+}
+.terim-chip:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+/* PUSH MODAL */
+.push-preview {
+  background:var(--bg3); border:1px solid var(--border2); border-radius:12px;
+  padding:1rem; margin-top:1rem; font-size:0.82rem; line-height:1.6;
+}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -323,6 +346,7 @@ tr:last-child td { border-bottom:none; }
       <button class="nav-tab" onclick="switchTab('hisseler')">Hisseler</button>
       <button class="nav-tab" onclick="switchTab('sinyaller')">Sinyal Geçmişi</button>
       <button class="nav-tab" onclick="switchTab('portfoy')">Portföy</button>
+      <button class="nav-tab" onclick="switchTab('sozluk')">📚 Sözlük</button>
       <button class="nav-tab admin-only" onclick="switchTab('admin')" style="display:none">⚙ Admin</button>
     </div>
     <div class="topbar-right">
@@ -406,6 +430,50 @@ tr:last-child td { border-bottom:none; }
     <div id="portfoyContent"></div>
   </div>
 
+  <!-- SÖZLÜK -->
+  <div class="panel" id="panel-sozluk">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📚 Finans Terimleri Sözlüğü</div>
+        <div class="section-sub">Anlamını merak ettiğin terime tıkla → Claude açıklar → Listene eklenir</div>
+      </div>
+      <div style="display:flex;gap:0.5rem" id="adminSozlukBtns" style="display:none">
+        <button class="btn primary" onclick="pushGonder()">📢 Push Gönder</button>
+      </div>
+    </div>
+
+    <!-- Terim arama -->
+    <div class="search-row" style="margin-bottom:1.5rem">
+      <input class="search-input" id="sozlukSearch" placeholder="Terim ara veya yaz..." oninput="filterTerimler()">
+      <button class="btn primary" onclick="terimiSor()">+ Sormak İstiyorum</button>
+    </div>
+
+    <!-- Popüler terimler -->
+    <div style="margin-bottom:1.5rem">
+      <div style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Sık Kullanılan Terimler</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem" id="popularTerimler"></div>
+    </div>
+
+    <!-- Terim listesi -->
+    <div class="card">
+      <div id="sozlukListesi">
+        <div style="text-align:center;padding:3rem;color:var(--muted)">
+          <div style="font-size:2rem;margin-bottom:1rem">📖</div>
+          <div style="color:var(--text);margin-bottom:0.5rem">Sözlüğün henüz boş</div>
+          <div style="font-size:0.8rem">Yukarıdan terim ara veya dashboard'daki sinyallerde terimlere tıkla</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin: istatistikler -->
+    <div id="adminSozlukStats" style="display:none;margin-top:1.5rem">
+      <div class="section-title" style="margin-bottom:1rem">📊 Kullanıcı İstatistikleri</div>
+      <div class="card">
+        <div id="terimIstatistik"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ADMIN -->
   <div class="panel" id="panel-admin">
     <div class="admin-bar">
@@ -473,6 +541,30 @@ tr:last-child td { border-bottom:none; }
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('addUserModal')">İptal</button>
       <button class="btn primary" onclick="kullaniciEkle()">Ekle</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pushModal">
+  <div class="modal">
+    <div class="modal-title">📢 Push Mesajı Gönder</div>
+    <div class="modal-sub">Tüm aktif kullanıcılara anlık bildirim gönder</div>
+    <div class="form-group">
+      <label class="form-label">Başlık</label>
+      <input class="form-input" id="pushBaslik" placeholder="📚 Bugünün Terimi: RSI">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mesaj</label>
+      <textarea class="form-input" id="pushMesaj" rows="4" placeholder="RSI, hissenin aşırı alınıp alınmadığını gösteren bir göstergedir..." style="resize:vertical"></textarea>
+    </div>
+    <div class="push-preview" id="pushPreview">
+      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem">ÖNİZLEME</div>
+      <div style="font-weight:600;font-size:0.85rem">📚 Bugünün Terimi</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem">Mesaj burada görünecek...</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('pushModal')">İptal</button>
+      <button class="btn primary" onclick="pushGonderOnay()">📢 Gönder</button>
     </div>
   </div>
 </div>
@@ -705,6 +797,8 @@ onAuthStateChanged(auth, async (user) => {
     loadAdminPanel();
   }
 
+  // Push mesajları kontrol et
+  checkPushMesajlar();
   // Sinyalleri yükle
   await loadSinyalGecmisi();
   renderHisseler();
@@ -737,6 +831,7 @@ window.switchTab = (name) => {
   if (name === 'sinyaller') renderSinyalGecmisi();
   if (name === 'portfoy') renderPortfoy();
   if (name === 'admin') loadAdminPanel();
+  if (name === 'sozluk') loadSozluk();
 };
 
 // ══════════════════════════════════════════════
@@ -1375,6 +1470,279 @@ function showToast(msg, type='success') {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════
+// SÖZLÜK SİSTEMİ
+// ══════════════════════════════════════════════
+
+// Temel terimler listesi
+const TEMEL_TERIMLER = [
+  "RSI", "MACD", "Momentum", "Hacim", "Hareketli Ortalama",
+  "Aşırı Alım", "Aşırı Satım", "Destek Seviyesi", "Direnç Seviyesi",
+  "Trend", "Volatilite", "Piyasa Değeri", "Halka Arz", "Temettü",
+  "F/K Oranı", "Teknik Analiz", "Temel Analiz", "Stop Loss",
+  "Take Profit", "Portföy Çeşitlendirmesi", "Beta", "Endeks",
+  "Boğa Piyasası", "Ayı Piyasası", "Konsolidasyon", "Breakout",
+  "Fibonacci", "Bollinger Bandı", "Stochastic", "EMA", "SMA",
+  "Hacim Spike", "Kurumsal Yatırımcı", "Likidite", "Spread"
+];
+
+let sozlukVeriler = []; // Firestore'dan yüklenen terimler
+
+async function loadSozluk() {
+  // Admin butonlarını göster
+  if (isAdmin) {
+    document.getElementById('adminSozlukBtns').style.display = 'flex';
+    document.getElementById('adminSozlukStats').style.display = 'block';
+    loadTerimIstatistik();
+  }
+
+  // Firestore'dan terimleri yükle
+  try {
+    const q = query(
+      collection(db, 'sozluk'),
+      orderBy('sorulma', 'desc'),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    sozlukVeriler = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    renderSozluk();
+  } catch(e) {
+    console.error('Sözlük yükleme hatası:', e);
+    renderSozluk();
+  }
+
+  // Popüler terimleri göster
+  renderPopularTerimler();
+}
+
+function renderPopularTerimler() {
+  const el = document.getElementById('popularTerimler');
+  TEMEL_TERIMLER.forEach(terim => {
+    const chip = document.createElement('button');
+    chip.className = 'terim-chip';
+    chip.textContent = terim;
+    chip.onclick = () => terimSorAPI(terim);
+    el.appendChild(chip);
+  });
+}
+
+function renderSozluk(filtre = '') {
+  const el = document.getElementById('sozlukListesi');
+  const filtered = filtre
+    ? sozlukVeriler.filter(t => t.terim.toLowerCase().includes(filtre.toLowerCase()))
+    : sozlukVeriler;
+
+  if (filtered.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:1rem">📖</div>
+      <div style="color:var(--text);margin-bottom:0.5rem">Sözlüğün henüz boş</div>
+      <div style="font-size:0.8rem">Yukarıdaki terimlerden birine tıkla, Claude açıklasın</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(t => `
+    <div class="terim-card ${t.acik ? 'acik' : ''}" onclick="toggleTerim('${t.id}')">
+      <div class="terim-baslik">
+        <span>${t.terim}</span>
+        <span class="pill al" style="font-size:0.6rem">${t.sorulma || 1}x soruldu</span>
+        ${isAdmin ? `<button class="btn primary" onclick="event.stopPropagation();pushTerimGonder('${t.id}')" style="font-size:0.65rem;padding:2px 8px;margin-left:auto">📢 Push</button>` : ''}
+      </div>
+      <div class="terim-aciklama">${t.aciklama || ''}</div>
+      <div class="terim-meta">
+        <span>📅 ${t.tarih ? new Date(t.tarih).toLocaleDateString('tr-TR') : '—'}</span>
+        ${t.ekleyenAd ? `<span>👤 ${t.ekleyenAd}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleTerim(id) {
+  const t = sozlukVeriler.find(x => x.id === id);
+  if (t) { t.acik = !t.acik; renderSozluk(); }
+}
+
+window.filterTerimler = () => {
+  const q = document.getElementById('sozlukSearch').value;
+  renderSozluk(q);
+};
+
+window.terimiSor = () => {
+  const q = document.getElementById('sozlukSearch').value.trim();
+  if (!q) { showToast('Önce terim yaz!', 'error'); return; }
+  terimSorAPI(q);
+};
+
+async function terimSorAPI(terim) {
+  if (!anthropicKey) {
+    showToast('API anahtarı gerekli! Admin panelinden ekle.', 'error');
+    return;
+  }
+
+  // Daha önce sorulmuş mu?
+  const mevcut = sozlukVeriler.find(t => t.terim.toLowerCase() === terim.toLowerCase());
+  if (mevcut) {
+    // Sorulma sayısını artır
+    showToast(`"${terim}" zaten sözlükte var!`);
+    try {
+      await updateDoc(doc(db, 'sozluk', mevcut.id), {
+        sorulma: (mevcut.sorulma || 1) + 1
+      });
+      mevcut.sorulma = (mevcut.sorulma || 1) + 1;
+    } catch(e) {}
+    renderSozluk();
+    return;
+  }
+
+  showLoading(`"${terim}" için Claude açıklama hazırlıyor...`);
+
+  try {
+    // Kullanıcının API key'i ile Claude'a sor
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `Borsa yatırımcısına "${terim}" terimini açıkla. 
+          Kısa, sade, anlaşılır Türkçe. 2-3 cümle. 
+          Günlük hayattan basit bir örnek ver. 
+          Teknik jargon kullanma.`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const aciklama = data?.content?.[0]?.text || '';
+
+    if (!aciklama) { hideLoading(); showToast('Açıklama alınamadı', 'error'); return; }
+
+    // Firestore'a kaydet (admin'in sözlüğüne)
+    const yeniTerim = {
+      terim,
+      aciklama,
+      sorulma: 1,
+      tarih: Date.now(),
+      ekleyenUid: currentUser.uid,
+      ekleyenAd: currentUser.displayName || currentUser.email,
+      pushGonderildi: false
+    };
+
+    const docRef = await addDoc(collection(db, 'sozluk'), yeniTerim);
+    sozlukVeriler.unshift({id: docRef.id, ...yeniTerim});
+
+    hideLoading();
+    renderSozluk();
+    showToast(`"${terim}" sözlüğe eklendi ✓`);
+
+  } catch(e) {
+    hideLoading();
+    showToast('Hata: ' + e.message, 'error');
+  }
+}
+
+async function loadTerimIstatistik() {
+  try {
+    const snap = await getDocs(query(collection(db, 'sozluk'), orderBy('sorulma', 'desc'), limit(10)));
+    const terimler = snap.docs.map(d => d.data());
+    document.getElementById('terimIstatistik').innerHTML = terimler.map((t, i) => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+        <span class="mono" style="color:var(--muted);font-size:0.8rem">${i+1}.</span>
+        <span style="flex:1;font-size:0.82rem">${t.terim}</span>
+        <span class="pill al">${t.sorulma}x</span>
+        <button class="btn" onclick="pushTerimGonderByData('${t.terim}','${t.aciklama?.substring(0,50)}')" style="font-size:0.7rem;padding:2px 8px">📢 Push</button>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+window.pushGonder = () => {
+  document.getElementById('pushModal').classList.add('show');
+};
+
+window.pushTerimGonder = async (id) => {
+  const t = sozlukVeriler.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('pushBaslik').value = `📚 Bugünün Terimi: ${t.terim}`;
+  document.getElementById('pushMesaj').value = t.aciklama;
+  document.getElementById('pushModal').classList.add('show');
+};
+
+window.pushTerimGonderByData = (terim, aciklama) => {
+  document.getElementById('pushBaslik').value = `📚 Bugünün Terimi: ${terim}`;
+  document.getElementById('pushMesaj').value = aciklama + '...';
+  document.getElementById('pushModal').classList.add('show');
+};
+
+window.pushGonderOnay = async () => {
+  const baslik = document.getElementById('pushBaslik').value;
+  const mesaj = document.getElementById('pushMesaj').value;
+  if (!baslik || !mesaj) { showToast('Başlık ve mesaj zorunlu!', 'error'); return; }
+
+  // Push mesajını Firestore'a kaydet - kullanıcılar görecek
+  try {
+    await addDoc(collection(db, 'pushMesajlar'), {
+      baslik, mesaj,
+      tarih: Date.now(),
+      gonderen: currentUser.uid,
+      okundu: {}
+    });
+    closeModal('pushModal');
+    showToast('Push mesajı gönderildi! ✓');
+    // Tüm aktif kullanıcılara bildirim göster
+    showPushBildirim(baslik, mesaj);
+  } catch(e) { showToast('Hata: ' + e.message, 'error'); }
+};
+
+function showPushBildirim(baslik, mesaj) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:fixed;top:80px;right:1.5rem;z-index:700;
+    background:var(--bg2);border:1px solid rgba(0,229,160,0.3);
+    border-radius:16px;padding:1.25rem;max-width:320px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    animation:modalIn 0.3s ease;
+  `;
+  el.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:0.75rem">
+      <div style="font-size:1.5rem">📢</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem">${baslik}</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">${mesaj}</div>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 8000);
+}
+
+// Push mesajlarını kontrol et (login sonrası)
+async function checkPushMesajlar() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'pushMesajlar'), orderBy('tarih', 'desc'), limit(5))
+    );
+    snap.docs.forEach(d => {
+      const m = d.data();
+      const okundu = m.okundu?.[currentUser.uid];
+      if (!okundu && Date.now() - m.tarih < 24 * 60 * 60 * 1000) {
+        setTimeout(() => showPushBildirim(m.baslik, m.mesaj), 2000);
+        updateDoc(doc(db, 'pushMesajlar', d.id), {
+          [`okundu.${currentUser.uid}`]: true
+        });
+      }
+    });
+  } catch(e) {}
+}
 
 // Loading ekranını kaldır
 setTimeout(() => document.getElementById('loadingScreen').classList.add('hide'), 2000);
