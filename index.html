@@ -868,27 +868,32 @@ window.filterHisseler = () => {
     const degisim = v ? v.degisim : null;
     const fiyat = v ? v.fiyat : null;
     const sinyal = v ? v.sinyal : null;
-    let borderRenk = '';
+
+    // Tüm hisseler için renk ve fiyat göster
+    let cardStyle = '';
     let degisimHTML = '';
-    if (isTakip && v) {
-      if (degisim > 0) borderRenk = ' style="border-color:rgba(0,229,160,0.5);background:rgba(0,229,160,0.06)"';
-      else if (degisim < 0) borderRenk = ' style="border-color:rgba(255,69,96,0.5);background:rgba(255,69,96,0.06)"';
+    if (v) {
+      if (degisim > 0) cardStyle = 'border-color:rgba(0,229,160,0.4);background:rgba(0,229,160,0.05)';
+      else if (degisim < 0) cardStyle = 'border-color:rgba(255,69,96,0.4);background:rgba(255,69,96,0.05)';
       degisimHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem">
-          <span style="font-family:var(--mono);font-size:0.8rem;font-weight:500">${fiyat} ₺</span>
-          <span style="font-family:var(--mono);font-size:0.72rem;color:${degisim>=0?'var(--accent)':'var(--red)'}">${degisim>=0?'+':''}${degisim}%</span>
+          <span style="font-family:var(--mono);font-size:0.78rem;font-weight:500">${fiyat} ₺</span>
+          <span style="font-family:var(--mono);font-size:0.7rem;color:${degisim>=0?'var(--accent)':'var(--red)'}">${degisim>=0?'+':''}${degisim}%</span>
         </div>`;
     }
+
     card.className = 'hisse-card' + (isTakip?' takip':'') + (isPF?' portfoy':'');
-    if (isTakip && v) card.setAttribute('style', degisim > 0 ? 'border-color:rgba(0,229,160,0.5);background:rgba(0,229,160,0.06)' : degisim < 0 ? 'border-color:rgba(255,69,96,0.5);background:rgba(255,69,96,0.06)' : '');
+    if (cardStyle) card.setAttribute('style', cardStyle);
+    
     card.innerHTML = `
       <div class="h-check">${isTakip?'✓':''}</div>
       <div class="h-kod">${k}</div>
       <div class="h-ad">${a}</div>
       ${degisimHTML}
       <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:0.3rem">
-        ${isTakip?`<span class="pill ${sinyal ? (sinyal.includes('AL')?'al':sinyal.includes('SAT')?'sat':'bekle') : 'al'}" style="font-size:0.6rem">${sinyal||'TAKİP'}</span>`:''}
+        ${isTakip ? `<span class="pill ${sinyal?(sinyal.includes('AL')?'al':sinyal.includes('SAT')?'sat':'bekle'):'al'}" style="font-size:0.6rem">${sinyal||'TAKİP'}</span>` : ''}
         ${isPF?'<span class="pill bekle" style="font-size:0.6rem">PORTFÖY</span>':''}
+        ${v && !isTakip && sinyal ? `<span class="pill ${sinyal.includes('AL')?'guclu-al':sinyal.includes('SAT')?'guclu-sat':'bekle'}" style="font-size:0.58rem">${sinyal}</span>` : ''}
       </div>`;
     card.onclick = () => toggleTakip(k);
     card.oncontextmenu = (e) => { e.preventDefault(); portfoyModal(k, a); };
