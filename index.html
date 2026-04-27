@@ -874,7 +874,14 @@ window.setFilter = (f, el) => {
 };
 
 function toggleTakip(k) {
-  if (takipEdilen.has(k)) takipEdilen.delete(k); else takipEdilen.add(k);
+  if (takipEdilen.has(k)) {
+    if (!confirm(`${k} takipten çıkarılsın mı?`)) return;
+    takipEdilen.delete(k);
+    // Verilerden de sil
+    delete veriler[k];
+  } else {
+    takipEdilen.add(k);
+  }
   saveUserData();
   filterHisseler();
   updateSummary();
