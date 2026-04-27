@@ -274,6 +274,31 @@ tr:last-child td { border-bottom:none; }
 .toast.success { border-color:rgba(0,229,160,0.3); }
 .toast.error { border-color:rgba(255,69,96,0.3); }
 
+/* HABERLER */
+.haber-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem; transition: all 0.2s;
+}
+.haber-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.haber-baslik {
+  font-size: 0.88rem; font-weight: 600; line-height: 1.4;
+  margin-bottom: 0.4rem; color: var(--text);
+}
+.haber-baslik a { color: inherit; text-decoration: none; }
+.haber-baslik a:hover { color: var(--accent); }
+.haber-aciklama { font-size: 0.78rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem; }
+.haber-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
+.haber-ilgili {
+  display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem;
+}
+.haber-hisse-chip {
+  padding: 2px 8px; border-radius: 4px; font-size: 0.65rem;
+  background: var(--accent-dim); color: var(--accent);
+  font-family: var(--mono); cursor: pointer;
+}
+.haber-hisse-chip:hover { background: rgba(0,229,160,0.2); }
+
 /* SÖZLÜK */
 .terim-card {
   background:var(--bg3); border:1px solid var(--border); border-radius:10px;
@@ -346,6 +371,7 @@ tr:last-child td { border-bottom:none; }
       <button class="nav-tab" onclick="switchTab('hisseler')">Hisseler</button>
       <button class="nav-tab" onclick="switchTab('sinyaller')">Sinyal Geçmişi</button>
       <button class="nav-tab" onclick="switchTab('portfoy')">Portföy</button>
+      <button class="nav-tab" onclick="switchTab('haberler')">📰 Haberler</button>
       <button class="nav-tab" onclick="switchTab('sozluk')">📚 Sözlük</button>
       <button class="nav-tab admin-only" onclick="switchTab('admin')" style="display:none">⚙ Admin</button>
     </div>
@@ -467,6 +493,23 @@ tr:last-child td { border-bottom:none; }
   <!-- PORTFÖY -->
   <div class="panel" id="panel-portfoy">
     <div id="portfoyContent"></div>
+  </div>
+
+  <!-- HABERLER -->
+  <div class="panel" id="panel-haberler">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📰 Piyasa Haberleri</div>
+        <div class="section-sub">Finans dünyasından son dakika haberleri</div>
+      </div>
+      <button class="btn primary" onclick="haberleriYenile()">⟳ Yenile</button>
+    </div>
+    <div id="haberListesi">
+      <div style="text-align:center;padding:3rem;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:1rem">📰</div>
+        <div>Haberler yükleniyor...</div>
+      </div>
+    </div>
   </div>
 
   <!-- SÖZLÜK -->
@@ -844,6 +887,7 @@ window.switchTab = (name) => {
   if (name === 'portfoy') renderPortfoy();
   if (name === 'admin') loadAdminPanel();
   if (name === 'sozluk') loadSozluk();
+  if (name === 'haberler') loadHaberler();
 };
 
 // ══════════════════════════════════════════════
@@ -1050,6 +1094,7 @@ window.verileriGuncelle = async () => {
   renderPortfoy();
   filterHisseler();
   updateSummary();
+  haberlerSifirla(); // Haberler bir sonraki açılışta yenilensin
   showToast(`${Object.keys(veriler).filter(k => veriler[k].fiyat).length} hisse güncellendi ✓`);
 };
 
@@ -1916,6 +1961,90 @@ function showToast(msg, type='success') {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════
+// HABERLER SİSTEMİ
+// ══════════════════════════════════════════════
+
+let haberlerYuklendi = false;
+
+async function loadHaberler() {
+  if (haberlerYuklendi) return;
+  const el = document.getElementById('haberListesi');
+  el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)"><div class="spinner" style="margin:0 auto 1rem"></div><div>Haberler yükleniyor...</div></div>';
+  await haberleriYenile();
+}
+
+window.haberleriYenile = async () => {
+  const el = document.getElementById('haberListesi');
+  try {
+    const res = await fetch(
+      'https://hissematik-proxy.ugurserkan.workers.dev/?haberler=1',
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (!res.ok) throw new Error('Bağlantı hatası');
+    const data = await res.json();
+    const haberler = data?.haberler || [];
+
+    if (haberler.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Haber bulunamadı</div>';
+      return;
+    }
+
+    // Haberleri tarihe göre sırala
+    haberler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+
+    el.innerHTML = haberler.map(h => {
+      // Haberde geçen hisse kodlarını bul
+      const ilgiliHisseler = [...takipEdilen].filter(k =>
+        h.baslik?.includes(k) || h.aciklama?.includes(k)
+      );
+
+      const tarihStr = h.tarih ? new Date(h.tarih).toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+      }) : '';
+
+      const kaynakAdi = h.kaynak?.includes('dunya') ? 'Dünya' :
+                        h.kaynak?.includes('bloomberg') ? 'Bloomberg HT' :
+                        h.kaynak?.includes('bbc') ? 'BBC Türkçe' : 'Finans';
+
+      return `<div class="haber-card">
+        <div class="haber-baslik">
+          ${h.link ? `<a href="${h.link}" target="_blank" rel="noopener">${h.baslik}</a>` : h.baslik}
+        </div>
+        ${h.aciklama ? `<div class="haber-aciklama">${h.aciklama}...</div>` : ''}
+        <div class="haber-meta">
+          <span>📰 ${kaynakAdi}</span>
+          ${tarihStr ? `<span>🕐 ${tarihStr}</span>` : ''}
+        </div>
+        ${ilgiliHisseler.length > 0 ? `
+          <div class="haber-ilgili">
+            <span style="font-size:0.65rem;color:var(--muted);align-self:center">İlgili:</span>
+            ${ilgiliHisseler.map(k => `
+              <span class="haber-hisse-chip" onclick="switchTab('hisseler')">${k}</span>
+            `).join('')}
+          </div>` : ''}
+      </div>`;
+    }).join('');
+
+    haberlerYuklendi = true;
+
+    // Dashboard'da haber sayısını güncelle
+    if (haberler.length > 0) {
+      showToast(`${haberler.length} haber yüklendi ✓`);
+    }
+
+  } catch(e) {
+    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">
+      <div style="color:var(--red);margin-bottom:0.5rem">Haberler yüklenemedi</div>
+      <div style="font-size:0.78rem">${e.message}</div>
+      <button class="btn primary" onclick="haberleriYenile()" style="margin-top:1rem">Tekrar Dene</button>
+    </div>`;
+  }
+};
+
+// Güncelleme sonrası haberleri sıfırla
+function haberlerSifirla() { haberlerYuklendi = false; }
 
 // ══════════════════════════════════════════════
 // SÖZLÜK SİSTEMİ
