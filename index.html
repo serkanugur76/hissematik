@@ -400,6 +400,8 @@ tr:last-child td { border-bottom:none; }
     <div class="search-row">
       <input class="search-input" id="searchInput" placeholder="Hisse kodu veya şirket ara..." oninput="filterHisseler()">
       <button class="chip active" onclick="setFilter('tum',this)">Tümü</button>
+      <button class="chip" onclick="setFilter('bist30',this)">BIST 30</button>
+      <button class="chip" onclick="setFilter('bist100',this)">BIST 100</button>
       <button class="chip" onclick="setFilter('takip',this)">Takip</button>
       <button class="chip" onclick="setFilter('portfoy',this)">Portföy</button>
     </div>
@@ -623,6 +625,10 @@ const ADMIN_EMAILS = ['ugurserkan@gmail.com'];
 // ══════════════════════════════════════════════
 // BIST HİSSELERİ
 // ══════════════════════════════════════════════
+const BIST30 = new Set(["AKBNK","ARCLK","ASELS","BIMAS","EREGL","FROTO","GARAN","GUBRF","HALKB","ISCTR","KCHOL","KRDMD","KOZAL","ODAS","PETKM","PGSUS","SAHOL","SASA","SISE","SKBNK","SOKM","TAVHL","TCELL","THYAO","TKFEN","TOASO","TTKOM","TUPRS","VAKBN","YKBNK"]);
+
+const BIST100 = new Set(["ACSEL","ADEL","AEFES","AGESA","AKBNK","AKCNS","AKGRT","AKSA","AKSEN","ALARK","ALBRK","ANSGR","ARCLK","ARENA","ASELS","ASTOR","ASUZU","AYDEM","BAGFS","BANVT","BIMAS","BIZIM","BJKAS","BRSAN","BSOKE","BTCIM","BUCIM","CCOLA","CIMSA","CLEBI","CRFSA","DEVA","DOAS","DOHOL","ECILC","EKGYO","ENJSA","ENKAI","EREGL","FENER","FROTO","GARAN","GSRAY","GUBRF","HALKB","HEKTS","INDES","INVEO","ISCTR","ISGYO","IZMDC","IZOCM","KAREL","KARSN","KARTN","KATMR","KCAER","KCHOL","KLKIM","KONTR","KONYO","KORDS","KOZAA","KOZAL","KRDMA","KRDMD","KRONT","LIDER","LOGO","MAVI","MERKO","MIGROS","MPARK","NUHCM","ODAS","OTKAR","OYAKC","PARSN","PETKM","PGSUS","PTOFS","RAYSG","RYSAS","SAHOL","SARKY","SASA","SDTTR","SELEC","SISE","SKBNK","SMART","SNGYO","SOKM","TATGD","TAVHL","TCELL","THYAO","TKFEN","TOASO","TRGYO","TSKB","TTKOM","TTRAK","TUPRS","ULKER","VAKBN","VESBE","VESTL","YKBNK","ZOREN"]);
+
 const BIST = [
   ["ACSEL","Açıselsan"],["ADEL","Adel Kalemcilik"],["AEFES","Anadolu Efes"],
   ["AGESA","AgeS Emeklilik"],["AGHOL","AG Anadolu Grubu"],["AKBNK","Akbank"],
@@ -810,6 +816,8 @@ window.filterHisseler = () => {
   BIST.filter(([k,a]) => {
     if (aktifFilter === 'takip' && !takipEdilen.has(k)) return false;
     if (aktifFilter === 'portfoy' && !portfoy[k]) return false;
+    if (aktifFilter === 'bist30' && !BIST30.has(k)) return false;
+    if (aktifFilter === 'bist100' && !BIST100.has(k)) return false;
     if (q && !k.toLowerCase().includes(q) && !a.toLowerCase().includes(q)) return false;
     return true;
   }).filter(([k]) => {
