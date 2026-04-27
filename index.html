@@ -497,6 +497,10 @@ tr:last-child td { border-bottom:none; }
           <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Toplam Kullanıcı</span><span id="adminTotalUser" class="mono">—</span></div>
         </div>
         <div style="margin-top:1.25rem">
+          <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">Veri Temizliği</div>
+          <button class="btn danger" style="width:100%;margin-bottom:0.75rem" onclick="mukerrerTemizle()">🧹 Mükerrer Sinyalleri Temizle</button>
+        </div>
+        <div style="margin-top:1.25rem">
           <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">Anthropic API Anahtarı</div>
           <div class="form-group">
             <input class="form-input" id="adminApiKey" type="password" placeholder="sk-ant-api03-...">
@@ -1069,10 +1073,29 @@ async function sinyalKaydet(aiYorum) {
     });
   }
 
-  // Firestore'a yaz
+  // Firestore'a yaz - aynı gün aynı hisse varsa üzerine yaz
+  const bugun = new Date().toISOString().split('T')[0]; // 2026-04-27
   for (const item of batch) {
     try {
-      await addDoc(collection(db, 'sinyaller'), item);
+      // Aynı kullanıcı + aynı sembol + aynı gün varsa güncelle
+      const mevcutQ = query(
+        collection(db, 'sinyaller'),
+        where('uid', '==', item.uid),
+        where('sembol', '==', item.sembol),
+        where('gun', '==', bugun)
+      );
+      const mevcutSnap = await getDocs(mevcutQ);
+      if (!mevcutSnap.empty) {
+        // Mevcut kaydı güncelle
+        await updateDoc(doc(db, 'sinyaller', mevcutSnap.docs[0].id), {
+          fiyat: item.fiyat, rsi: item.rsi, macd: item.macd,
+          hacimFark: item.hacimFark, ma20: item.ma20, ma50: item.ma50,
+          sinyal: item.sinyal, tarih: item.tarih
+        });
+      } else {
+        // Yeni kayıt oluştur
+        await addDoc(collection(db, 'sinyaller'), {...item, gun: bugun});
+      }
     } catch(e) { console.error('Sinyal kayıt hatası:', e); }
   }
 }
@@ -1440,6 +1463,45 @@ window.kullanicisil = async (uid) => {
     showToast('Kullanıcı silindi');
     loadAdminPanel();
   } catch(e) { showToast('Hata: '+e.message,'error'); }
+};
+
+window.mukerrerTemizle = async () => {
+  if (!confirm('Mükerrer sinyal kayıtları temizlensin mi?')) return;
+  showLoading('Mükerrer kayıtlar temizleniyor...');
+  try {
+    const snap = await getDocs(collection(db, 'sinyaller'));
+    const tumKayitlar = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    
+    // uid + sembol + gun bazında grupla
+    const gruplar = {};
+    tumKayitlar.forEach(k => {
+      const gun = k.gun || new Date(k.tarih).toISOString().split('T')[0];
+      const anahtar = `${k.uid}_${k.sembol}_${gun}`;
+      if (!gruplar[anahtar]) gruplar[anahtar] = [];
+      gruplar[anahtar].push(k);
+    });
+
+    // Her gruptan en yenisi hariç diğerlerini sil
+    let silinenSayisi = 0;
+    for (const grup of Object.values(gruplar)) {
+      if (grup.length <= 1) continue;
+      // En yeni kaydı tut
+      grup.sort((a, b) => b.tarih - a.tarih);
+      for (let i = 1; i < grup.length; i++) {
+        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await deleteDoc(doc(db, 'sinyaller', grup[i].id));
+        silinenSayisi++;
+      }
+    }
+
+    hideLoading();
+    showToast(`${silinenSayisi} mükerrer kayıt silindi ✓`);
+    await loadSinyalGecmisi();
+    renderSinyalGecmisi();
+  } catch(e) {
+    hideLoading();
+    showToast('Hata: ' + e.message, 'error');
+  }
 };
 
 window.saveApiKey = async () => {
