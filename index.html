@@ -960,27 +960,70 @@ window.verileriGuncelle = async () => {
   showLoading('Veriler çekiliyor...');
   setStatus('loading', 'Güncelleniyor...');
 
-  const tumKodlar = BIST.map(b => b[0]);
-  const grupBoyutu = 100;
-
-  for (let i = 0; i < tumKodlar.length; i += grupBoyutu) {
-    const grup = tumKodlar.slice(i, i + grupBoyutu);
-    setLoadingMsg(`Çekiliyor... ${Math.min(i + grupBoyutu, tumKodlar.length)}/${tumKodlar.length} hisse`);
-    try {
-      const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?semboller=${grup.join(',')}`;
-      const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(30000)});
-      if (res.ok) {
-        const topluVeri = await res.json();
-        for (const [sembol, json] of Object.entries(topluVeri)) {
-          const v = parseYahooVeri(sembol, json);
-          if (v) veriler[sembol] = v;
+  // 1. Bigpara - tüm anlık fiyatlar tek seferde
+  setLoadingMsg('Bigpara'dan anlık fiyatlar alınıyor...');
+  try {
+    const bpRes = await fetch(
+      'https://hissematik-proxy.ugurserkan.workers.dev/?tumhisseler=1',
+      {signal: AbortSignal.timeout(15000)}
+    );
+    if (bpRes.ok) {
+      const bpData = await bpRes.json();
+      const hisseler = bpData?.data || [];
+      hisseler.forEach(h => {
+        const kod = h.KOD || h.kod || h.SEMBOL;
+        if (!kod) return;
+        const fiyat = parseFloat(h.KAPANIS || h.SON || h.kapanis || 0);
+        const degisim = parseFloat(h.YUZDE || h.yuzde || 0);
+        const hacim = parseFloat(h.HACIM || h.hacim || 0);
+        if (fiyat > 0) {
+          if (!veriler[kod]) veriler[kod] = {};
+          veriler[kod].fiyat = +fiyat.toFixed(2);
+          veriler[kod].degisim = +degisim.toFixed(2);
+          veriler[kod].hacim = hacim;
+          veriler[kod].ts = Date.now();
+          veriler[kod].sinyal = veriler[kod].sinyal || 'BEKLE';
         }
-      }
-    } catch(e) { console.error('Grup hatası:', e); }
-    filterHisseler();
+      });
+      setLoadingMsg(`${hisseler.length} hisse fiyatı alındı...`);
+    }
+  } catch(e) { console.error('Bigpara hatası:', e); }
+
+  // Anlık fiyatları hemen göster
+  filterHisseler();
+
+  // 2. Yahoo - sadece takip edilenler için geçmiş veri (RSI/MACD)
+  const takipKodlar = [...takipEdilen];
+  if (takipKodlar.length > 0) {
+    setLoadingMsg('Teknik analiz için geçmiş veri çekiliyor...');
+    const grupBoyutu = 100;
+    for (let i = 0; i < takipKodlar.length; i += grupBoyutu) {
+      const grup = takipKodlar.slice(i, i + grupBoyutu);
+      try {
+        const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?semboller=${grup.join(',')}`;
+        const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(30000)});
+        if (res.ok) {
+          const topluVeri = await res.json();
+          for (const [sembol, json] of Object.entries(topluVeri)) {
+            const v = parseYahooVeri(sembol, json);
+            if (v) {
+              veriler[sembol] = {
+                ...veriler[sembol],
+                rsi: v.rsi, macd: v.macd, macdSignal: v.macdSignal,
+                macdHist: v.macdHist, ma20: v.ma20, ma50: v.ma50,
+                kapanis: v.kapanis, sinyal: v.sinyal,
+                hacimFark: v.hacimFark,
+              };
+            }
+          }
+        }
+      } catch(e) { console.error('Yahoo grup hatası:', e); }
+    }
   }
 
-  // Akıllı AI tetikleme - sadece gerektiğinde
+  filterHisseler();
+
+  // 3. AI analiz
   let aiYorum = '';
   if (aiGerekliMi()) {
     setLoadingMsg('AI analiz yapılıyor...');
@@ -991,19 +1034,18 @@ window.verileriGuncelle = async () => {
       ]).catch(() => '');
     } catch(e) { aiYorum = ''; }
   }
+
   await sinyalKaydet(aiYorum);
   await saveUserData();
   hideLoading();
   setStatus('live', 'Canlı');
   renderDashboard();
   renderPortfoy();
-  filterHisseler(); // Hisse kartlarını renklendir
+  filterHisseler();
   updateSummary();
-  // Aktif paneli yenile
-  const aktifPanel = document.querySelector('.panel.active');
-  if (aktifPanel?.id === 'panel-hisseler') filterHisseler();
-  showToast(`${Object.keys(veriler).length} hisse güncellendi ✓`);
+  showToast(`${Object.keys(veriler).filter(k => veriler[k].fiyat).length} hisse güncellendi ✓`);
 };
+
 
 function parseYahooVeri(sembol, json) {
   try {
