@@ -961,7 +961,7 @@ window.verileriGuncelle = async () => {
   setStatus('loading', 'Güncelleniyor...');
 
   // 1. Bigpara - tüm anlık fiyatlar tek seferde
-  setLoadingMsg('Bigpara'dan anlık fiyatlar alınıyor...');
+  setLoadingMsg("Bigpara'dan anlık fiyatlar alınıyor...");
   try {
     const bpRes = await fetch(
       'https://hissematik-proxy.ugurserkan.workers.dev/?tumhisseler=1',
