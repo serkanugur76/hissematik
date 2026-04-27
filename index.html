@@ -922,26 +922,24 @@ window.filterHisseler = () => {
     if (v) {
       if (degisim > 0) cardStyle = 'border-color:rgba(0,229,160,0.4);background:rgba(0,229,160,0.05)';
       else if (degisim < 0) cardStyle = 'border-color:rgba(255,69,96,0.4);background:rgba(255,69,96,0.05)';
-      degisimHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem">
-          <span style="font-family:var(--mono);font-size:0.78rem;font-weight:500">${fiyat} ₺</span>
-          <span style="font-family:var(--mono);font-size:0.7rem;color:${degisim>=0?'var(--accent)':'var(--red)'}">${degisim>=0?'+':''}${degisim}%</span>
-        </div>`;
+      degisimHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem"><span style="font-family:var(--mono);font-size:0.78rem;font-weight:500">' + fiyat + ' ₺</span><span style="font-family:var(--mono);font-size:0.7rem;color:' + (degisim>=0?'var(--accent)':'var(--red)') + '">' + (degisim>=0?'+':'') + degisim + '%</span></div>';
     }
 
     card.className = 'hisse-card' + (isTakip?' takip':'') + (isPF?' portfoy':'');
     if (cardStyle) card.setAttribute('style', cardStyle);
     
-    card.innerHTML = `
-      <div class="h-check">${isTakip?'✓':''}</div>
-      <div class="h-kod">${k}</div>
-      <div class="h-ad">${a}</div>
-      ${degisimHTML}
-      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:0.3rem">
-        ${isTakip ? `<span class="pill ${sinyal?(sinyal.includes('AL')?'al':sinyal.includes('SAT')?'sat':'bekle'):'al'}" style="font-size:0.6rem">${sinyal||'TAKİP'}</span>` : ''}
-        ${isPF?'<span class="pill bekle" style="font-size:0.6rem">PORTFÖY</span>':''}
-        ${v && !isTakip && sinyal ? `<span class="pill ${sinyal.includes('AL')?'guclu-al':sinyal.includes('SAT')?'guclu-sat':'bekle'}" style="font-size:0.58rem">${sinyal}</span>` : ''}
-      </div>`;
+    const sinyalCls = sinyal?(sinyal.includes('AL')?'al':sinyal.includes('SAT')?'sat':'bekle'):'al';
+    const sinyalCls2 = sinyal?(sinyal.includes('AL')?'guclu-al':sinyal.includes('SAT')?'guclu-sat':'bekle'):'bekle';
+    card.innerHTML = 
+      '<div class="h-check">' + (isTakip?'✓':'') + '</div>' +
+      '<div class="h-kod">' + k + '</div>' +
+      '<div class="h-ad">' + a + '</div>' +
+      degisimHTML +
+      '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:0.3rem">' +
+        (isTakip ? '<span class="pill ' + sinyalCls + '" style="font-size:0.6rem">' + (sinyal||'TAKİP') + '</span>' : '') +
+        (isPF ? '<span class="pill bekle" style="font-size:0.6rem">PORTFÖY</span>' : '') +
+        (v && !isTakip && sinyal ? '<span class="pill ' + sinyalCls2 + '" style="font-size:0.58rem">' + sinyal + '</span>' : '') +
+      '</div>';
     card.onclick = () => toggleTakip(k);
     card.oncontextmenu = (e) => { e.preventDefault(); portfoyModal(k, a); };
     grid.appendChild(card);
@@ -1399,30 +1397,11 @@ async function aiAnalizYap() {
   const piyasaBaglam = piyasaVerisi.xu100 ? 
     `BIST100: ${piyasaVerisi.xu100.fiyat?.toLocaleString()} (${piyasaVerisi.xu100.degisim >= 0 ? '+' : ''}${piyasaVerisi.xu100.degisim}%), USD/TRY: ${piyasaVerisi.usdtry?.fiyat?.toFixed(2)}` : '';
 
-  const prompt = `Sen tecrübeli bir BIST teknik analiz uzmanısın. Geçmiş sinyal performansına, piyasa koşullarına ve mevcut hisse verilerine dayanarak analiz yap.
-
-${piyasaBaglam ? `GENEL PİYASA DURUMU:
-${piyasaBaglam}
-` : ''}
-
-${toplam > 0 ? `GEÇMIŞ SİNYAL PERFORMANSI:
-Toplam değerlendirilen: ${toplam} sinyal | İsabet: %${isabet}
-
-Başarılı sinyal örüntüleri:
-${basariliPatternler || 'Henüz yok'}
-
-Başarısız sinyal örüntüleri:
-${basarisizPatternler || 'Henüz yok'}` : 'İlk analiz — geçmiş veri henüz yok.'}
-
-GÜNCEL VERİLER:
-${guncelVeri}
-
-Lütfen:
-1. Öne çıkan fırsatları ve riskleri belirt
-2. Geçmiş başarısız sinyal örüntüleriyle örtüşen durumlar varsa uyar
-3. Hacim-fiyat ilişkisini yorumla
-4. Her hisse için 1 cümle, sonunda genel piyasa yorumu yap
-Kısa, net, Türkçe.`;
+  const piyasaBaglamStr = piyasaBaglam ? ('GENEL PİYASA DURUMU:\n' + piyasaBaglam + '\n') : '';
+  const gecmisStr = toplam > 0 
+    ? ('GEÇMIŞ SİNYAL PERFORMANSI:\nToplam: ' + toplam + ' sinyal | İsabet: %' + isabet + '\nBaşarılı: ' + (basariliPatternler||'Henüz yok') + '\nBaşarısız: ' + (basarisizPatternler||'Henüz yok'))
+    : 'İlk analiz — geçmiş veri henüz yok.';
+  const prompt = 'Sen tecrübeli bir BIST teknik analiz uzmanısın. Geçmiş sinyal performansına, piyasa koşullarına ve mevcut hisse verilerine dayanarak analiz yap.\n\n' + piyasaBaglamStr + gecmisStr + '\n\nGÜNCEL VERİLER:\n' + guncelVeri + '\n\nLütfen:\n1. Öne çıkan fırsatları ve riskleri belirt\n2. Geçmiş başarısız sinyal örüntüleriyle örtüşen durumlar varsa uyar\n3. Hacim-fiyat ilişkisini yorumla\n4. Her hisse için 1 cümle, sonunda genel piyasa yorumu yap\nKısa, net, Türkçe.';
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1463,15 +1442,7 @@ window.renderDashboard = () => {
   // AI yorumunu göster
   const lastSinyal = sinyalGecmisi[0];
   if (lastSinyal?.aiYorum) {
-    document.getElementById('aiBoxContainer').innerHTML = `
-      <div class="ai-box">
-        <div class="ai-box-header">
-          <div class="ai-icon">⬡</div>
-          <div class="ai-box-title">Claude AI Analizi</div>
-          <div class="ai-box-time">${new Date(lastSinyal.tarih).toLocaleString('tr-TR')}</div>
-        </div>
-        <div class="ai-content">${lastSinyal.aiYorum}</div>
-      </div>`;
+    document.getElementById('aiBoxContainer').innerHTML = '<div class="ai-box"><div class="ai-box-header"><div class="ai-icon">⬡</div><div class="ai-box-title">Claude AI Analizi</div><div class="ai-box-time">' + new Date(lastSinyal.tarih).toLocaleString('tr-TR') + '</div></div><div class="ai-content">' + lastSinyal.aiYorum + '</div></div>';
   }
 
   tbody.innerHTML = rows.map(([k, v]) => {
@@ -1479,7 +1450,7 @@ window.renderDashboard = () => {
     const rsiColor = v.rsi<30?'var(--accent)':v.rsi>70?'var(--red)':'var(--yellow)';
     const cls = sinyalClass(v.sinyal);
     const degCls = v.degisim>=0?'pos':'neg';
-    const hacimTxt = v.hacimFark > 0 ? `<span class="pos">+${v.hacimFark}%</span>` : v.hacimFark < 0 ? `<span class="neg">${v.hacimFark}%</span>` : '—';
+    const hacimTxt = v.hacimFark > 0 ? '<span class="pos">+' + v.hacimFark + '%</span>' : v.hacimFark < 0 ? '<span class="neg">' + v.hacimFark + '%</span>' : '—';
     return `<tr>
       <td><span class="mono" style="font-weight:500">${k}</span></td>
       <td class="mono">${v.fiyat} ₺</td>
@@ -1868,13 +1839,7 @@ window.gunSonuOzetOlustur = async () => {
     }
 
     // Özet prompt
-    const analizOzeti = bugunAnalizler.map(a => 
-      `Haber: ${a.haberBaslik}
-Etkilenen: ${a.hisseler?.map(x=>`${x.kod}(${x.etki})`).join(', ')}
-Yorum: ${a.yorum}`
-    ).join('
----
-');
+    const analizOzeti = bugunAnalizler.map(a => `Haber: ${a.haberBaslik} | Etkilenen: ${a.hisseler?.map(x=>x.kod+'('+x.etki+')').join(', ')} | Yorum: ${a.yorum}`).join('\n---\n');
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -2538,10 +2503,7 @@ async function terimSorAPI(terim) {
         max_tokens: 300,
         messages: [{
           role: 'user',
-          content: `Borsa yatırımcısına "${terim}" terimini açıkla. 
-          Kısa, sade, anlaşılır Türkçe. 2-3 cümle. 
-          Günlük hayattan basit bir örnek ver. 
-          Teknik jargon kullanma.`
+          content: `Borsa yatırımcısına "${terim}" terimini açıkla. Kısa, sade, anlaşılır Türkçe. 2-3 cümle. Günlük hayattan basit bir örnek ver. Teknik jargon kullanma.`
         }]
       })
     });
