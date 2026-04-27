@@ -411,8 +411,21 @@ tr:last-child td { border-bottom:none; }
   <!-- SİNYAL GEÇMİŞİ -->
   <div class="panel" id="panel-sinyaller">
     <div class="section-header">
-      <div><div class="section-title">Sinyal Geçmişi & Doğrulama</div><div class="section-sub">AI kararları gerçek piyasa sonuçlarıyla karşılaştırır ve öğrenir</div></div>
-      <button class="btn primary" onclick="sinyalleriGuncelle()">Sonuçları Kontrol Et</button>
+      <div>
+        <div class="section-title">Sinyal Geçmişi & Doğrulama</div>
+        <div class="section-sub">AI kararları gerçek piyasa sonuçlarıyla karşılaştırır ve öğrenir</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--muted)">
+          Doğrulama süresi:
+          <select id="dogrulamaSuresi" class="form-input" style="padding:0.3rem 0.6rem;width:auto;font-size:0.78rem" onchange="dogrulamaSuresiDegis()">
+            <option value="1">1 Gün</option>
+            <option value="3">3 Gün</option>
+            <option value="7" selected>7 Gün</option>
+          </select>
+        </div>
+        <button class="btn primary" onclick="sinyalleriGuncelle()">Sonuçları Kontrol Et</button>
+      </div>
     </div>
     <div class="grid-4" style="margin-bottom:1.5rem">
       <div class="card"><div class="card-title">Toplam Sinyal</div><div class="card-value mono" id="sinTopToplam">—</div></div>
@@ -1202,6 +1215,14 @@ async function loadSinyalGecmisi() {
   } catch(e) { console.error('Sinyal yükleme hatası:', e); }
 }
 
+let DOGRULAMA_GUN = 7; // Varsayılan 7 gün
+
+window.dogrulamaSuresiDegis = () => {
+  DOGRULAMA_GUN = parseInt(document.getElementById('dogrulamaSuresi').value);
+  renderSinyalGecmisi();
+  showToast(`Doğrulama süresi ${DOGRULAMA_GUN} gün olarak ayarlandı`);
+};
+
 window.sinyalleriGuncelle = async () => {
   showLoading('Sinyal sonuçları kontrol ediliyor...');
   await sinyalleriDogrula();
@@ -1213,8 +1234,8 @@ window.sinyalleriGuncelle = async () => {
 
 async function sinyalleriDogrula() {
   // 7 günden eski sinyaller için sonuçları kontrol et
-  const yediGunOnce = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const bekleyenler = sinyalGecmisi.filter(s => s.sonuc === null && s.tarih < yediGunOnce);
+  const gunOnce = Date.now() - DOGRULAMA_GUN * 24 * 60 * 60 * 1000;
+  const bekleyenler = sinyalGecmisi.filter(s => s.sonuc === null && s.tarih < gunOnce);
 
   for (const sinyal of bekleyenler) {
     const v = await fetchYahoo(sinyal.sembol);
@@ -1409,7 +1430,7 @@ window.renderSinyalGecmisi = () => {
     const tarih = new Date(s.tarih).toLocaleDateString('tr-TR');
     const saat = new Date(s.tarih).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
     const sonucPill = s.dogrulandi === null
-      ? '<span class="pill bekliyor">⏳ Bekleniyor</span>'
+      ? `<span class="pill bekliyor">⏳ ${DOGRULAMA_GUN} gün bekleniyor</span>`
       : s.dogrulandi
         ? `<span class="pill dogrulandi">✓ Doğrulandı</span>`
         : `<span class="pill yanlis">✗ Yanlışlandı</span>`;
