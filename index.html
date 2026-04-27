@@ -2008,8 +2008,13 @@ window.mukerrerTemizle = async () => {
 window.saveApiKey = async () => {
   const key = document.getElementById('adminApiKey').value.trim();
   anthropicKey = key;
-  // Kullanıcı kendi doc'una kaydet
+  havuzKey = key; // Havuz key güncelle
+  // Hem kullanıcı doc'una hem config/global'e kaydet
   await updateDoc(doc(db, 'users', currentUser.uid), { apiKey: key });
+  try {
+    const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await setDoc(doc(db, 'config', 'global'), { anthropicKey: key }, { merge: true });
+  } catch(e) {}
   showToast('API anahtarı kaydedildi ✓');
   document.getElementById('apiStatus').textContent = key ? '✓ Tanımlı' : 'Tanımlı değil';
   document.getElementById('apiStatus').style.color = key ? 'var(--accent)' : 'var(--muted)';
