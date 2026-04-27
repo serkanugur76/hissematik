@@ -2131,6 +2131,65 @@ function renderHaberler(haberler) {
 window.tekHaberAnalizEt = async (idx) => {
   const h = haberlerData[idx];
   if (!h) return;
+  const btn = document.getElementById('analiz-btn-' + idx);
+  const analizEl = document.getElementById('analiz-' + idx);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...'; }
+  const key = havuzKey || anthropicKey;
+  if (!key) { showToast('API anahtarı gerekli!', 'error'); if(btn){btn.disabled=false;btn.textContent='⬡ AI Analiz';} return; }
+  const haberHash = btoa(unescape(encodeURIComponent(h.baslik || ''))).substring(0, 40);
+  const analizDocId = currentUser.uid + '_' + haberHash;
+  try {
+    const mevcutSnap = await getDoc(doc(db, 'haberAnalizleri', analizDocId));
+    if (mevcutSnap.exists()) {
+      haberAnalizGoster(analizEl, mevcutSnap.data());
+      if (btn) btn.remove();
+      return;
+    }
+  } catch(e) {}
+  try {
+    const cleanKey = key.replace(/[^\x00-\x7F]/g, '').trim();
+    const haberMetin = (h.baslik || '').substring(0, 300);
+    const takipKodlari = [...takipEdilen].join(', ') || 'Yok';
+    const analizPrompt = 'BIST hisse senedi haberi analiz et. Sadece JSON don. Haber: ' + haberMetin + '. Takip edilen hisseler: ' + takipKodlari + '. JSON format: {"hisseler":[{"kod":"THYAO","etki":"olumlu","tip":"direkt"}],"yorum":"2 cumle turkce yorum","sure":"Kisa/Orta/Uzun vadeli"}';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': cleanKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: analizPrompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data?.content?.[0]?.text || '';
+    const kullanilanToken = (data?.usage?.input_tokens||0) + (data?.usage?.output_tokens||0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+    let analiz = null;
+    try { const m = text.match(/[{][\s\S]*[}]/); if (m) analiz = JSON.parse(m[0]); } catch(e) {}
+    if (analiz) {
+      const analizData = { ...analiz, haberBaslik: h.baslik, haberLink: h.link||'', uid: currentUser.uid, kullaniciAd: currentUser.displayName||currentUser.email, tarih: Date.now(), takipEdilen: [...takipEdilen] };
+      try { await setDoc(doc(db, 'haberAnalizleri', analizDocId), analizData); } catch(e) {}
+      if (analizEl) haberAnalizGoster(analizEl, analizData);
+      analiz.hisseler?.forEach(x => {
+        if (takipEdilen.has(x.kod)) {
+          if (x.etki==='olumsuz') showToast('⚠️ ' + x.kod + ' olumsuz etkilenebilir!', 'error');
+          else if (x.etki==='olumlu') showToast('💡 ' + x.kod + ' olumlu etkilenebilir!');
+        }
+      });
+    }
+    if (btn) btn.remove();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '⬡ AI Analiz'; }
+    showToast('Analiz hatası: ' + e.message, 'error');
+  }
+};window.tekHaberAnalizEt = async (idx) => {
+  const h = haberlerData[idx];
+  if (!h) return;
 
   const btn = document.getElementById(`analiz-btn-${idx}`);
   const analizEl = document.getElementById(`analiz-${idx}`);
@@ -2153,6 +2212,28 @@ window.tekHaberAnalizEt = async (idx) => {
       return;
     }
   } catch(e) {}
+
+  try {
+    const bistKodlari = BIST.map(b => b[0]).join(', ');
+    const takipKodlari = [...takipEdilen].join(', ') || 'Yok';
+    const cleanKey = (key || '').replace(/[^\x00-\x7F]/g, '').trim();
+    const haberMetin = (h.baslik || '').substring(0, 300);
+    const analizPrompt = 'BIST hisse senedi haberi analiz et. Sadece JSON don. Haber: ' + haberMetin + '. Takip edilen: ' + takipKodlari + '. Format: {"hisseler":[{"kod":"THYAO","etki":"olumlu","tip":"direkt"}],"yorum":"2 cumle turkce","sure":"Kisa/Orta/Uzun vadeli"}';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': cleanKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: analizPrompt }]
+      })
+    });
 
   try {
     const bistKodlari = BIST.map(b => b[0]).join(', ');
