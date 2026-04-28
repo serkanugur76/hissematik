@@ -1002,18 +1002,25 @@ window.filterHisseler = () => {
         (v && !isTakip && sinyal ? '<span class="pill ' + sinyalCls2 + '" style="font-size:0.58rem">' + sinyal + '</span>' : '') +
       '</div>' +
       '</div>';
-    if (v) {
-      const analizBtn = document.createElement('div');
-      analizBtn.style.cssText = 'margin-top:0.4rem';
-      const btn = document.createElement('button');
-      btn.textContent = '🔍 Analiz Et';
-      btn.style.cssText = 'font-size:0.62rem;padding:2px 8px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:4px;color:var(--accent);cursor:pointer;width:100%';
-      btn.onclick = (e) => { e.stopPropagation(); hisseDetayPanelAc(k); };
-      analizBtn.appendChild(btn);
-      card.innerHTML += analizBtn.outerHTML;
-    }
+    // Karta tıklama
+    card.onclick = (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+      toggleTakip(k);
+    };
     card.oncontextmenu = (e) => { e.preventDefault(); portfoyModal(k, a); };
     grid.appendChild(card);
+
+    // Analiz butonunu DOM'a ekle (innerHTML değil appendChild ile)
+    if (v) {
+      const analizDiv = document.createElement('div');
+      analizDiv.style.cssText = 'margin-top:0.4rem';
+      const analizBtnEl = document.createElement('button');
+      analizBtnEl.textContent = '🔍 Analiz Et';
+      analizBtnEl.style.cssText = 'font-size:0.62rem;padding:2px 8px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:4px;color:var(--accent);cursor:pointer;width:100%';
+      analizBtnEl.addEventListener('click', (e) => { e.stopPropagation(); hisseDetayPanelAc(k); });
+      analizDiv.appendChild(analizBtnEl);
+      card.appendChild(analizDiv);
+    }
   });
 };
 
