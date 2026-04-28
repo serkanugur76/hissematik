@@ -632,6 +632,67 @@ tr:last-child td { border-bottom:none; }
   </div>
 </div>
 
+<!-- HİSSE DETAY ANALİZ MODALI -->
+<div class="modal-overlay" id="hisseDetayModal" style="align-items:flex-start;padding:1rem;overflow-y:auto">
+  <div class="modal" style="max-width:640px;width:100%;margin:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div>
+        <div class="modal-title" id="detayHisseAdi">—</div>
+        <div class="modal-sub" id="detayHisseSirket"></div>
+      </div>
+      <button onclick="closeModal('hisseDetayModal')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+
+    <!-- Özet kartlar -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1.25rem" id="detayOzetKartlar"></div>
+
+    <!-- Teknik göstergeler -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
+      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Teknik Göstergeler</div>
+      <div id="detayTeknik" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.78rem"></div>
+    </div>
+
+    <!-- Piyasa bağlamı -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
+      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Piyasa Bağlamı</div>
+      <div id="detayPiyasa" style="font-size:0.78rem"></div>
+    </div>
+
+    <!-- İlgili haberler -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem" id="detayHaberlerBlok">
+      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">İlgili Haberler</div>
+      <div id="detayHaberler" style="font-size:0.78rem"></div>
+    </div>
+
+    <!-- Portföy durumu -->
+    <div id="detayPortfoyBlok" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
+      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Portföyündeki Durumu</div>
+      <div id="detayPortfoy" style="font-size:0.78rem"></div>
+    </div>
+
+    <!-- AI Karar Analizi -->
+    <div id="detayAiBlok" style="background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.15);border-radius:10px;padding:1rem;margin-bottom:1.25rem">
+      <div style="font-size:0.7rem;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;font-family:var(--mono)">⬡ AI Karar Analizi</div>
+      <div id="detayAiIcerik" style="font-size:0.82rem;color:var(--muted)">
+        Analiz için aşağıdaki butona bas...
+      </div>
+    </div>
+
+    <!-- Butonlar -->
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn primary" style="flex:1;font-size:0.85rem" onclick="hisseAiAnalizEt()" id="detayAiBtn">
+        ⬡ AI ile Analiz Et
+      </button>
+      <button class="btn" onclick="portfoyModal(window._detayKod, window._detayAd)" style="font-size:0.85rem">
+        + Portföye Ekle
+      </button>
+      <button class="btn" onclick="toggleTakip(window._detayKod);closeModal('hisseDetayModal')" id="detayTakipBtn" style="font-size:0.85rem">
+        ★ Takibe Al
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="pushModal">
   <div class="modal">
     <div class="modal-title">📢 Push Mesajı Gönder</div>
@@ -939,8 +1000,18 @@ window.filterHisseler = () => {
         (isTakip ? '<span class="pill ' + sinyalCls + '" style="font-size:0.6rem">' + (sinyal||'TAKİP') + '</span>' : '') +
         (isPF ? '<span class="pill bekle" style="font-size:0.6rem">PORTFÖY</span>' : '') +
         (v && !isTakip && sinyal ? '<span class="pill ' + sinyalCls2 + '" style="font-size:0.58rem">' + sinyal + '</span>' : '') +
+      '</div>' +
       '</div>';
-    card.onclick = () => toggleTakip(k);
+    if (v) {
+      const analizBtn = document.createElement('div');
+      analizBtn.style.cssText = 'margin-top:0.4rem';
+      const btn = document.createElement('button');
+      btn.textContent = '🔍 Analiz Et';
+      btn.style.cssText = 'font-size:0.62rem;padding:2px 8px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:4px;color:var(--accent);cursor:pointer;width:100%';
+      btn.onclick = (e) => { e.stopPropagation(); hisseDetayPanelAc(k); };
+      analizBtn.appendChild(btn);
+      card.innerHTML += analizBtn.outerHTML;
+    }
     card.oncontextmenu = (e) => { e.preventDefault(); portfoyModal(k, a); };
     grid.appendChild(card);
   });
@@ -1452,7 +1523,10 @@ window.renderDashboard = () => {
     const degCls = v.degisim>=0?'pos':'neg';
     const hacimTxt = v.hacimFark > 0 ? '<span class="pos">+' + v.hacimFark + '%</span>' : v.hacimFark < 0 ? '<span class="neg">' + v.hacimFark + '%</span>' : '—';
     return `<tr>
-      <td><span class="mono" style="font-weight:500">${k}</span></td>
+      <td>
+        <span class="mono" style="font-weight:500;cursor:pointer;color:var(--accent)" 
+          onclick="hisseDetayPanelAc('${k}')">${k}</span>
+      </td>
       <td class="mono">${v.fiyat} ₺</td>
       <td class="mono ${degCls}">${v.degisim>=0?'+':''}${v.degisim}%</td>
       <td>
@@ -2044,6 +2118,238 @@ function showToast(msg, type='success') {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════
+// HİSSE DETAY ANALİZ PANELİ
+// ══════════════════════════════════════════════
+
+window.hisseDetayPanelAc = (kod) => {
+  const v = veriler[kod];
+  const ad = BIST.find(b => b[0] === kod)?.[1] || '';
+  window._detayKod = kod;
+  window._detayAd = ad;
+
+  // Başlık
+  document.getElementById('detayHisseAdi').textContent = kod;
+  document.getElementById('detayHisseSirket').textContent = ad;
+
+  // Takip butonu
+  const takipBtn = document.getElementById('detayTakipBtn');
+  if (takipEdilen.has(kod)) {
+    takipBtn.textContent = '★ Takipte';
+    takipBtn.style.color = 'var(--accent)';
+  } else {
+    takipBtn.textContent = '☆ Takibe Al';
+    takipBtn.style.color = '';
+  }
+
+  // Özet kartlar
+  const ozetEl = document.getElementById('detayOzetKartlar');
+  if (v) {
+    const degCls = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
+    const sinyalRenk = v.sinyal?.includes('AL') ? 'var(--accent)' : v.sinyal?.includes('SAT') ? 'var(--red)' : 'var(--yellow)';
+    ozetEl.innerHTML = `
+      <div class="card" style="text-align:center">
+        <div class="card-title">Fiyat</div>
+        <div class="card-value" style="font-size:1.1rem">${v.fiyat} ₺</div>
+        <div style="font-size:0.72rem;color:${degCls};font-family:var(--mono)">${v.degisim>=0?'+':''}${v.degisim}%</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">RSI</div>
+        <div class="card-value" style="font-size:1.1rem;color:${v.rsi<30?'var(--accent)':v.rsi>70?'var(--red)':'var(--yellow)'}">${v.rsi}</div>
+        <div style="font-size:0.7rem;color:var(--muted)">${v.rsi<30?'Aşırı Satım':v.rsi>70?'Aşırı Alım':'Nötr'}</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">Sinyal</div>
+        <div style="font-size:0.9rem;font-weight:600;color:${sinyalRenk};margin-top:0.3rem">${v.sinyal||'—'}</div>
+      </div>`;
+  } else {
+    ozetEl.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>';
+  }
+
+  // Teknik göstergeler
+  const teknikEl = document.getElementById('detayTeknik');
+  if (v) {
+    const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
+    const maRenk = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
+    teknikEl.innerHTML = `
+      <div><span style="color:var(--muted)">MACD Hist:</span> <span style="color:${macdRenk};font-family:var(--mono)">${v.macdHist?.toFixed(3)}</span></div>
+      <div><span style="color:var(--muted)">Hacim:</span> <span style="font-family:var(--mono);color:${v.hacimFark>0?'var(--accent)'  : 'var(--red)'}">${v.hacimFark>0?'+':''}${v.hacimFark}%</span></div>
+      <div><span style="color:var(--muted)">MA20:</span> <span style="font-family:var(--mono)">${v.ma20?.toFixed(2)} ₺</span></div>
+      <div><span style="color:var(--muted)">MA50:</span> <span style="font-family:var(--mono)">${v.ma50?.toFixed(2)} ₺</span></div>
+      <div><span style="color:var(--muted)">MA Trend:</span> <span style="color:${maRenk}">${v.ma20>v.ma50?'📈 Yükseliş':'📉 Düşüş'}</span></div>
+      <div><span style="color:var(--muted)">Hacim/Ort:</span> <span style="font-family:var(--mono)">${v.hacimFark>50?'⚡ Spike':'Normal'}</span></div>`;
+  } else {
+    teknikEl.innerHTML = '<div style="color:var(--muted)">Veri yok</div>';
+  }
+
+  // Piyasa bağlamı
+  const piyasaEl = document.getElementById('detayPiyasa');
+  const xu = piyasaVerisi.xu100;
+  const usd = piyasaVerisi.usdtry;
+  piyasaEl.innerHTML = `
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+      <div><span style="color:var(--muted)">BIST100:</span> <span style="font-family:var(--mono);color:${xu?.degisim>=0?'var(--accent)':'var(--red)'}">${xu?xu.fiyat?.toLocaleString('tr-TR',{maximumFractionDigits:0})+'  '+( xu.degisim>=0?'+':'')+xu.degisim+'%':'—'}</span></div>
+      <div><span style="color:var(--muted)">USD/TRY:</span> <span style="font-family:var(--mono)">${usd?usd.fiyat?.toFixed(2)+' ₺':'—'}</span></div>
+      <div><span style="color:var(--muted)">Piyasa:</span> <span style="color:${xu?.degisim>0?'var(--accent)':xu?.degisim<-1?'var(--red)':'var(--yellow)'}">${xu?.degisim>1?'🟢 Yükseliş':xu?.degisim<-1?'🔴 Düşüş':'🟡 Yatay'}</span></div>
+    </div>`;
+
+  // İlgili haberler
+  const haberEl = document.getElementById('detayHaberler');
+  const ilgiliHaberler = haberlerData.filter(h =>
+    h.baslik?.includes(kod) || h.baslik?.includes(ad.split(' ')[0])
+  ).slice(0, 3);
+  if (ilgiliHaberler.length > 0) {
+    haberEl.innerHTML = ilgiliHaberler.map(h =>
+      `<div style="padding:0.4rem 0;border-bottom:1px solid var(--border);line-height:1.4">${h.baslik}</div>`
+    ).join('');
+    document.getElementById('detayHaberlerBlok').style.display = 'block';
+  } else {
+    document.getElementById('detayHaberlerBlok').style.display = 'none';
+  }
+
+  // Portföy durumu
+  const pf = portfoy[kod];
+  if (pf && v) {
+    const kz = (v.fiyat - pf.alisFiyati) * pf.adet;
+    const kzp = ((v.fiyat - pf.alisFiyati) / pf.alisFiyati * 100).toFixed(1);
+    document.getElementById('detayPortfoyBlok').style.display = 'block';
+    document.getElementById('detayPortfoy').innerHTML = `
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+        <div><span style="color:var(--muted)">Adet:</span> <span class="mono">${pf.adet}</span></div>
+        <div><span style="color:var(--muted)">Alış:</span> <span class="mono">${pf.alisFiyati} ₺</span></div>
+        <div><span style="color:var(--muted)">K/Z:</span> <span class="mono" style="color:${kz>=0?'var(--accent)':'var(--red)'}">
+          ${kz>=0?'+':''}${kz.toFixed(0)} ₺ (${kzp}%)</span></div>
+      </div>`;
+  } else {
+    document.getElementById('detayPortfoyBlok').style.display = 'none';
+  }
+
+  // AI içeriğini sıfırla
+  document.getElementById('detayAiIcerik').innerHTML = '<span style="color:var(--muted)">Analiz için butona bas...</span>';
+  document.getElementById('detayAiBtn').disabled = false;
+  document.getElementById('detayAiBtn').textContent = '⬡ AI ile Analiz Et';
+
+  // Daha önce analiz yapıldı mı kontrol et
+  if (currentUser) {
+    const analizKey = 'hisseAnaliz_' + currentUser.uid + '_' + kod;
+    getDoc(doc(db, 'hisseAnalizleri', analizKey)).then(snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        // Bugünkü analiz mi?
+        if (Date.now() - d.tarih < 24 * 60 * 60 * 1000) {
+          hisseAnalizGoster(d);
+          document.getElementById('detayAiBtn').textContent = '⬡ Yeniden Analiz Et';
+        }
+      }
+    }).catch(() => {});
+  }
+
+  document.getElementById('hisseDetayModal').classList.add('show');
+};
+
+function hisseAnalizGoster(analiz) {
+  const el = document.getElementById('detayAiIcerik');
+  if (!el || !analiz) return;
+  const kararRenk = analiz.karar==='AL' ? 'var(--accent)' : analiz.karar==='ALMA' ? 'var(--red)' : 'var(--yellow)';
+  el.innerHTML = `
+    <div style="text-align:center;margin-bottom:1rem">
+      <div style="font-size:1.8rem;font-weight:700;color:${kararRenk}">${analiz.karar||'—'}</div>
+      <div style="font-size:0.72rem;color:var(--muted);font-family:var(--mono)">AI Kararı</div>
+    </div>
+    <div style="font-size:0.82rem;line-height:1.8;color:#b0d8c8;margin-bottom:0.75rem">${analiz.gerekce||''}</div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:0.75rem">
+      ${analiz.girisFiyati ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Giriş:</span> <span class="mono">${analiz.girisFiyati} ₺</span></div>` : ''}
+      ${analiz.stopLoss ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Stop:</span> <span class="mono" style="color:var(--red)">${analiz.stopLoss} ₺</span></div>` : ''}
+      ${analiz.hedefFiyat ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Hedef:</span> <span class="mono" style="color:var(--accent)">${analiz.hedefFiyat} ₺</span></div>` : ''}
+      ${analiz.risk ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Risk:</span> <span>${analiz.risk}</span></div>` : ''}
+    </div>
+    <div style="font-size:0.65rem;color:var(--muted);margin-top:0.75rem;font-family:var(--mono)">
+      ${new Date(analiz.tarih).toLocaleString('tr-TR')}
+    </div>`;
+}
+
+window.hisseAiAnalizEt = async () => {
+  const kod = window._detayKod;
+  const v = veriler[kod];
+  const key = havuzKey || anthropicKey;
+
+  if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
+
+  const btn = document.getElementById('detayAiBtn');
+  const el = document.getElementById('detayAiIcerik');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analiz ediliyor...';
+  el.innerHTML = '<div style="color:var(--muted);font-size:0.8rem">Claude analiz yapıyor...</div>';
+
+  try {
+    const cleanKey = key.replace(/[^a-zA-Z0-9\-_]/g, '').trim();
+    const xu = piyasaVerisi.xu100;
+    const pf = portfoy[kod];
+    
+    // Geçmiş sinyaller bu hisse için
+    const gecmisSinyaller = sinyalGecmisi
+      .filter(s => s.sembol === kod && s.dogrulandi !== null)
+      .slice(0, 5)
+      .map(s => `${s.sinyal}: ${s.dogrulandi ? '✓' : '✗'} (${s.sonucYuzde?.toFixed(1)}%)`)
+      .join(', ');
+
+    // İlgili haberler
+    const haberOzeti = haberlerData
+      .filter(h => h.baslik?.includes(kod) || h.baslik?.includes(BIST.find(b=>b[0]===kod)?.[1]?.split(' ')[0]||''))
+      .slice(0, 3)
+      .map(h => h.baslik)
+      .join(' | ');
+
+    const prompt = 'BIST hisse al/sat analizi. JSON don. Hisse:' + kod + ' Fiyat:' + (v?.fiyat||'?') + 'TL RSI:' + (v?.rsi||'?') + ' Sinyal:' + (v?.sinyal||'?') + ' BIST100:' + (xu?.degisim||0) + '% ' + (gecmisSinyaller?'Gecmis:'+gecmisSinyaller:'') + (haberOzeti?' Haberler:'+haberOzeti.substring(0,200):'') + (pf?' Portfoy:'+pf.adet+'adet':'') + ' Format:{"karar":"AL/ALMA/BEKLE","gerekce":"2-3 cumle","girisFiyati":0.0,"stopLoss":0.0,"hedefFiyat":0.0,"risk":"Dusuk/Orta/Yuksek"}';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': cleanKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data?.content?.[0]?.text || '';
+    const kullanilanToken = (data?.usage?.input_tokens||0) + (data?.usage?.output_tokens||0);
+    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
+
+    let analiz = null;
+    try { const m = text.match(/[{][\s\S]*[}]/); if (m) analiz = JSON.parse(m[0]); } catch(e) {}
+
+    if (analiz) {
+      analiz.tarih = Date.now();
+      analiz.kod = kod;
+      // Firestore'a kaydet
+      try {
+        const analizKey = 'hisseAnaliz_' + currentUser.uid + '_' + kod;
+        await setDoc(doc(db, 'hisseAnalizleri', analizKey), {
+          ...analiz, uid: currentUser.uid, sembol: kod
+        });
+      } catch(e) {}
+      hisseAnalizGoster(analiz);
+      btn.textContent = '⬡ Yeniden Analiz Et';
+    } else {
+      el.innerHTML = '<div style="color:var(--red)">Analiz alınamadı, tekrar dene</div>';
+      btn.textContent = '⬡ AI ile Analiz Et';
+    }
+    btn.disabled = false;
+
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red)">Hata: ' + e.message + '</div>';
+    btn.disabled = false;
+    btn.textContent = '⬡ AI ile Analiz Et';
+  }
+};
 
 // ══════════════════════════════════════════════
 // HABERLER SİSTEMİ
