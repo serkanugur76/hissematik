@@ -2320,7 +2320,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // HİSSE DETAY ANALİZ PANELİ
 // ══════════════════════════════════════════════
 
-window.hisseDetayPanelAc = (kod) => {
+window.hisseDetayPanelAc = async (kod) => {
   const v = veriler[kod];
   const ad = BIST.find(b => b[0] === kod)?.[1] || '';
   window._detayKod = kod;
@@ -2448,7 +2448,64 @@ window.hisseDetayPanelAc = (kod) => {
   }
 
   document.getElementById('hisseDetayModal').classList.add('show');
+
+  // Eğer gelişmiş indikatörler yoksa Yahoo'dan çek
+  if (!veriler[kod]?.bollinger) {
+    const detayAiEl = document.getElementById('detayAiIcerik');
+    if (detayAiEl) detayAiEl.innerHTML = '<span style="color:var(--muted);font-size:0.78rem">⏳ Teknik veriler yükleniyor...</span>';
+    try {
+      const proxyUrl = 'https://hissematik-proxy.ugurserkan.workers.dev/?semboller=' + kod;
+      const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
+      if (res.ok) {
+        const topluVeri = await res.json();
+        const v = parseYahooVeri(kod, topluVeri[kod]);
+        if (v) {
+          veriler[kod] = {...veriler[kod], ...v};
+          // Paneli güncelle
+          hisseDetayPanelGuncelle(kod);
+        }
+      }
+    } catch(e) {}
+    if (detayAiEl) detayAiEl.innerHTML = '<span style="color:var(--muted)">Analiz için butona bas...</span>';
+  }
 };
+
+function hisseDetayPanelGuncelle(kod) {
+  const v = veriler[kod];
+  if (!v) return;
+  const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
+  const maRenk = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
+  const teknikEl = document.getElementById('detayTeknik');
+  if (teknikEl) {
+    teknikEl.innerHTML =
+      '<div><span style="color:var(--muted)">MACD Hist:</span> <span style="color:' + macdRenk + ';font-family:var(--mono)">' + (v.macdHist?.toFixed(3)||'—') + '</span></div>' +
+      '<div><span style="color:var(--muted)">Stoch RSI K:</span> <span style="font-family:var(--mono);color:' + (v.stochRsi?.k<20?'var(--accent)':v.stochRsi?.k>80?'var(--red)':'inherit') + '">' + (v.stochRsi?v.stochRsi.k:'—') + '</span></div>' +
+      '<div><span style="color:var(--muted)">Bollinger %:</span> <span style="font-family:var(--mono);color:' + (v.bollinger?.yuzde<25?'var(--accent)':v.bollinger?.yuzde>75?'var(--red)':'inherit') + '">' + (v.bollinger?v.bollinger.yuzde+'%':'—') + '</span></div>' +
+      '<div><span style="color:var(--muted)">Williams %R:</span> <span style="font-family:var(--mono);color:' + (v.williamsR<-80?'var(--accent)':v.williamsR>-20?'var(--red)':'inherit') + '">' + (v.williamsR||'—') + '</span></div>' +
+      '<div><span style="color:var(--muted)">MFI:</span> <span style="font-family:var(--mono);color:' + (v.mfi<30?'var(--accent)':v.mfi>70?'var(--red)':'inherit') + '">' + (v.mfi||'—') + '</span></div>' +
+      '<div><span style="color:var(--muted)">Güven Skoru:</span> <span style="font-family:var(--mono);color:' + ((v.guvenSkoru||0)>=70?'var(--accent)':(v.guvenSkoru||0)>=50?'var(--yellow)':'var(--red)') + '">' + (v.guvenSkoru||'—') + '%</span></div>' +
+      '<div><span style="color:var(--muted)">MA20:</span> <span style="font-family:var(--mono)">' + (v.ma20||'—') + ' ₺</span></div>' +
+      '<div><span style="color:var(--muted)">MA50:</span> <span style="font-family:var(--mono)">' + (v.ma50||'—') + ' ₺</span></div>' +
+      '<div><span style="color:var(--muted)">MA Trend:</span> <span style="color:' + maRenk + '">' + (v.ma20>v.ma50?'📈 Yükseliş':'📉 Düşüş') + '</span></div>' +
+      '<div><span style="color:var(--muted)">Hacim/Ort:</span> <span>' + (v.hacimFark>50?'⚡ Spike':'Normal') + '</span></div>' +
+      (v.pivot ? '<div style="grid-column:1/-1;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border)"><span style="color:var(--muted)">Pivot:</span> <span class="mono">' + v.pivot.pivot + '</span> <span style="color:var(--muted)">R1:</span> <span class="mono" style="color:var(--red)">' + v.pivot.r1 + '</span> <span style="color:var(--muted)">S1:</span> <span class="mono" style="color:var(--accent)">' + v.pivot.s1 + '</span></div>' : '') +
+      (v.fib ? '<div style="grid-column:1/-1"><span style="color:var(--muted)">Fib 0.382:</span> <span class="mono">' + v.fib.f382 + ' ₺</span> <span style="color:var(--muted)">Fib 0.618:</span> <span class="mono">' + v.fib.f618 + ' ₺</span></div>' : '') +
+      (v.hafta52H ? '<div style="grid-column:1/-1"><span style="color:var(--muted)">52H:</span> <span class="mono" style="color:var(--red)">' + v.hafta52H + ' ₺</span> <span style="color:var(--muted)">52L:</span> <span class="mono" style="color:var(--accent)">' + v.hafta52L + ' ₺</span> <span style="color:var(--muted)">Poz:</span> <span class="mono">' + v.hafta52Yuzde + '%</span></div>' : '');
+  }
+  // Sinyal güncelle
+  const sinyalEl = document.getElementById('detayOzetKartlar');
+  if (sinyalEl && v.sinyal) {
+    const sinyalRenk = v.sinyal?.includes('AL') ? 'var(--accent)' : v.sinyal?.includes('SAT') ? 'var(--red)' : 'var(--yellow)';
+    const guvenEl = sinyalEl.querySelector('.sinyal-guncelle');
+    if (!guvenEl) {
+      const div = document.createElement('div');
+      div.className = 'card sinyal-guncelle';
+      div.style.cssText = 'text-align:center;grid-column:span 3';
+      div.innerHTML = '<div class="card-title">Güven Skoru</div><div style="font-size:1.1rem;font-weight:600;color:' + ((v.guvenSkoru||0)>=70?'var(--accent)':'var(--yellow)') + '">' + (v.guvenSkoru||'—') + '%</div>';
+      sinyalEl.appendChild(div);
+    }
+  }
+}
 
 function hisseAnalizGoster(analiz) {
   const el = document.getElementById('detayAiIcerik');
