@@ -1162,6 +1162,7 @@ window.verileriGuncelle = async () => {
     } catch(e) { aiYorum = ''; }
   }
 
+  if (aiYorum) aiCalistiKaydet();
   await sinyalKaydet(aiYorum);
   await saveUserData();
   hideLoading();
@@ -1180,33 +1181,67 @@ function parseYahooVeri(sembol, json) {
     const result = json?.chart?.result?.[0];
     if (!result) return null;
     const meta = result.meta;
-    const kapanis = (result.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
-    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
+    const q = result.indicators?.quote?.[0] || {};
+    const kapanis = (q.close||[]).filter(x=>x>0);
+    const hacimler = (q.volume||[]).filter(x=>x>0);
     if (kapanis.length < 5) return null;
+
     const fiyat = meta.regularMarketPrice || kapanis.at(-1);
     const onceki = meta.chartPreviousClose || kapanis.at(-2);
-    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+    const degisim = onceki > 0 ? +((fiyat-onceki)/onceki*100).toFixed(2) : 0;
     const hacimOrt = avg(hacimler.slice(-20));
-    const hacimSon = hacimler.at(-1) || 0;
-    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
+    const hacimSon = hacimler.at(-1)||0;
+    const hacimFark = hacimOrt>0 ? +((hacimSon/hacimOrt-1)*100).toFixed(0) : 0;
+
+    // Temel
     const rsi = calcRSI(kapanis, 14);
     const macd = calcMACD(kapanis);
-    const ma20 = avg(kapanis.slice(-20));
-    const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
-    const ham_sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
-    const sinyal = sinyalPiyasaAyarla(ham_sinyal, degisim);
+    const ma20 = +avg(kapanis.slice(-20)).toFixed(2);
+    const ma50 = +(kapanis.length>=50?avg(kapanis.slice(-50)):avg(kapanis)).toFixed(2);
+    const ma200 = +(kapanis.length>=200?avg(kapanis.slice(-200)):avg(kapanis)).toFixed(2);
+    const ma9 = +avg(kapanis.slice(-9)).toFixed(2);
+
+    // Gelişmiş
+    const bollinger = calcBollinger(kapanis);
+    const stochRsi = calcStochRSI(kapanis);
+    const williamsR = calcWilliamsR(kapanis);
+    const mfi = calcMFI(kapanis, hacimler);
+    const obv = calcOBV(kapanis, hacimler);
+    const pivot = calcPivot(kapanis);
+    const fib = calcFibonacci(kapanis);
+
+    // 52 hafta yüksek/düşük
+    const son52h = kapanis.slice(-252);
+    const hafta52H = +Math.max(...son52h).toFixed(2);
+    const hafta52L = +Math.min(...son52h).toFixed(2);
+    const hafta52Yuzde = hafta52H>hafta52L ? +((fiyat-hafta52L)/(hafta52H-hafta52L)*100).toFixed(1) : 50;
+
+    // Ağırlıklı sinyal skoru
+    const v_tmp = {rsi,stochRsi,macd:macd.macd,macdSignal:macd.sinyal,macdHist:macd.histogram,
+      bollinger,ma20,ma50,hacimFark,williamsR,mfi};
+    const skorSonuc = gelismisSkor(v_tmp);
+    const ham_sinyal = sinyalPiyasaAyarla(skorSonuc.sinyal, degisim);
+
     return {
       fiyat: +fiyat.toFixed(2), degisim,
       rsi: +rsi.toFixed(1),
+      stochRsi,
       macd: +macd.macd.toFixed(4),
       macdSignal: +macd.sinyal.toFixed(4),
       macdHist: +macd.histogram.toFixed(4),
-      ma20: +ma20.toFixed(2), ma50: +ma50.toFixed(2),
+      ma9, ma20, ma50, ma200,
+      bollinger, williamsR, mfi, obv,
+      pivot, fib,
+      hafta52H, hafta52L, hafta52Yuzde,
       hacim: hacimSon, hacimFark,
-      sinyal, kapanis: kapanis.slice(-60),
+      guvenSkoru: skorSonuc.guven,
+      alYuzde: skorSonuc.alYuzde,
+      satYuzde: skorSonuc.satYuzde,
+      sinyal: ham_sinyal,
+      kapanis: kapanis.slice(-60),
       ts: Date.now()
     };
-  } catch(e) { return null; }
+  } catch(e) { console.error(sembol,e); return null; }
 }
 
 async function fetchYahoo(sembol) {
@@ -1281,6 +1316,148 @@ function calcMACD(k) {
 }
 
 function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+
+// ── GELİŞMİŞ TEKNİK HESAPLAMALAR ──
+
+function calcBollinger(k, p=20) {
+  if(!k||k.length<p) return {ust:0,orta:0,alt:0,bw:0,yuzde:50};
+  const s=k.slice(-p), o=avg(s);
+  const std=Math.sqrt(s.reduce((x,y)=>x+(y-o)**2,0)/p);
+  const ust=o+2*std, alt=o-2*std, f=k.at(-1);
+  return {ust:+ust.toFixed(2),orta:+o.toFixed(2),alt:+alt.toFixed(2),
+    bw:+((ust-alt)/o*100).toFixed(2),
+    yuzde:ust===alt?50:+((f-alt)/(ust-alt)*100).toFixed(1)};
+}
+
+function calcStochRSI(k, p=14) {
+  if(!k||k.length<p*2) return {k:50,d:50};
+  const rsiArr=[];
+  for(let i=p;i<=k.length;i++) {
+    const sl=k.slice(i-p,i);
+    let g=0,l=0;
+    for(let j=1;j<sl.length;j++){const d=sl[j]-sl[j-1];if(d>0)g+=d;else l+=Math.abs(d);}
+    const ag=g/p,al=l/p;
+    rsiArr.push(al===0?100:+(100-(100/(1+ag/al))).toFixed(2));
+  }
+  const son=rsiArr.slice(-p);
+  const mn=Math.min(...son),mx=Math.max(...son);
+  const stk=mx===mn?50:+((rsiArr.at(-1)-mn)/(mx-mn)*100).toFixed(2);
+  return {k:stk,d:+avg(rsiArr.slice(-3)).toFixed(2)};
+}
+
+function calcWilliamsR(k, p=14) {
+  if(!k||k.length<p) return -50;
+  const son=k.slice(-p);
+  const hh=Math.max(...son),ll=Math.min(...son);
+  if(hh===ll) return -50;
+  return +((hh-k.at(-1))/(hh-ll)*-100).toFixed(2);
+}
+
+function calcMFI(kapanis, hacim, p=14) {
+  if(!kapanis||kapanis.length<p+1) return 50;
+  let poz=0,neg=0;
+  for(let i=Math.max(1,kapanis.length-p);i<kapanis.length;i++){
+    const mf=kapanis[i]*(hacim[i]||0);
+    if(kapanis[i]>kapanis[i-1]) poz+=mf; else neg+=mf;
+  }
+  if(neg===0) return 100;
+  return +(100-(100/(1+poz/neg))).toFixed(2);
+}
+
+function calcOBV(kapanis, hacim) {
+  if(!kapanis||kapanis.length<2) return 0;
+  let obv=0;
+  for(let i=1;i<kapanis.length;i++){
+    if(kapanis[i]>kapanis[i-1]) obv+=hacim[i]||0;
+    else if(kapanis[i]<kapanis[i-1]) obv-=hacim[i]||0;
+  }
+  return obv;
+}
+
+function calcPivot(k) {
+  if(!k||k.length<2) return {};
+  const h=Math.max(...k.slice(-5)),l=Math.min(...k.slice(-5)),c=k.at(-1);
+  const p=(h+l+c)/3;
+  return {pivot:+p.toFixed(2),r1:+(2*p-l).toFixed(2),r2:+(p+h-l).toFixed(2),
+    s1:+(2*p-h).toFixed(2),s2:+(p-h+l).toFixed(2)};
+}
+
+function calcFibonacci(k) {
+  if(!k||k.length<20) return {};
+  const son=k.slice(-Math.min(52,k.length));
+  const h=Math.max(...son),l=Math.min(...son),f=h-l;
+  return {h:+h.toFixed(2),l:+l.toFixed(2),
+    f236:+(h-f*0.236).toFixed(2),f382:+(h-f*0.382).toFixed(2),
+    f500:+(h-f*0.500).toFixed(2),f618:+(h-f*0.618).toFixed(2)};
+}
+
+function gelismisSkor(v) {
+  let al=0, sat=0, toplam=0;
+  
+  const ekle=(a,s,t)=>{al+=a;sat+=s;toplam+=t;};
+  
+  // RSI (15 puan)
+  if(v.rsi<25)ekle(15,0,15); else if(v.rsi<35)ekle(10,0,15); else if(v.rsi<45)ekle(5,0,15);
+  else if(v.rsi>75)ekle(0,15,15); else if(v.rsi>65)ekle(0,10,15); else if(v.rsi>55)ekle(0,5,15);
+  else ekle(0,0,15);
+
+  // Stoch RSI (10 puan)
+  if(v.stochRsi){
+    const {k,d}=v.stochRsi;
+    if(k<20&&k>d)ekle(10,0,10); else if(k<20)ekle(5,0,10);
+    else if(k>80&&k<d)ekle(0,10,10); else if(k>80)ekle(0,5,10);
+    else ekle(0,0,10);
+  }
+
+  // MACD (15 puan)
+  if(v.macdHist>0&&v.macd>v.macdSignal)ekle(15,0,15);
+  else if(v.macdHist>0)ekle(8,0,15);
+  else if(v.macdHist<0&&v.macd<v.macdSignal)ekle(0,15,15);
+  else ekle(0,8,15);
+
+  // Bollinger (10 puan)
+  if(v.bollinger){
+    const {yuzde}=v.bollinger;
+    if(yuzde<10)ekle(10,0,10); else if(yuzde<25)ekle(5,0,10);
+    else if(yuzde>90)ekle(0,10,10); else if(yuzde>75)ekle(0,5,10);
+    else ekle(0,0,10);
+  }
+
+  // MA (15 puan)
+  if(v.ma20>v.ma50)ekle(10,0,15); else ekle(0,10,15);
+
+  // Hacim+OBV (10 puan)
+  if(v.hacimFark>50&&v.macdHist>0)ekle(10,0,10);
+  else if(v.hacimFark>50&&v.macdHist<0)ekle(0,8,10);
+  else ekle(0,0,10);
+
+  // Williams %R (8 puan)
+  if(v.williamsR!==undefined){
+    if(v.williamsR<-80)ekle(8,0,8); else if(v.williamsR<-60)ekle(4,0,8);
+    else if(v.williamsR>-20)ekle(0,8,8); else if(v.williamsR>-40)ekle(0,4,8);
+    else ekle(0,0,8);
+  }
+
+  // MFI (8 puan)
+  if(v.mfi!==undefined){
+    if(v.mfi<20)ekle(8,0,8); else if(v.mfi<35)ekle(4,0,8);
+    else if(v.mfi>80)ekle(0,8,8); else if(v.mfi>65)ekle(0,4,8);
+    else ekle(0,0,8);
+  }
+
+  const alY=toplam>0?Math.round(al/toplam*100):50;
+  const satY=toplam>0?Math.round(sat/toplam*100):50;
+  const guven=Math.max(alY,satY);
+  
+  let sinyal;
+  if(alY>=65)sinyal='GÜÇLÜ AL';
+  else if(alY>=45&&alY>satY)sinyal='AL';
+  else if(satY>=65)sinyal='GÜÇLÜ SAT';
+  else if(satY>=45&&satY>alY)sinyal='SAT';
+  else sinyal='BEKLE';
+
+  return {sinyal,guven,alYuzde:alY,satYuzde:satY};
+}
 
 function genelSinyal(rsi, macd, ma20, ma50, hacimFark) {
   let al=0, sat=0;
@@ -1542,10 +1719,15 @@ window.renderDashboard = () => {
           <span class="mono" style="font-size:0.75rem;color:${rsiColor}">${v.rsi}</span>
         </div>
       </td>
-      <td class="mono" style="font-size:0.75rem;color:${v.macdHist>0?'var(--accent)':'var(--red)'}">${v.macdHist?.toFixed(3)}</td>
-      <td style="font-size:0.75rem">${hacimTxt}</td>
+      <td class="mono" style="font-size:0.72rem;color:${v.stochRsi?.k<20?'var(--accent)':v.stochRsi?.k>80?'var(--red)':'var(--muted)'}">${v.stochRsi?v.stochRsi.k:'—'}</td>
+      <td class="mono" style="font-size:0.72rem;color:${v.macdHist>0?'var(--accent)':'var(--red)'}">${v.macdHist?.toFixed(3)}</td>
+      <td class="mono" style="font-size:0.72rem;color:${v.bollinger?.yuzde<25?'var(--accent)':v.bollinger?.yuzde>75?'var(--red)':'var(--muted)'}">${v.bollinger?v.bollinger.yuzde+'%':'—'}</td>
+      <td>
+        <div style="font-size:0.72rem;font-family:var(--mono);color:${(v.guvenSkoru||0)>=70?'var(--accent)':(v.guvenSkoru||0)>=50?'var(--yellow)':'var(--muted)'}">
+          ${v.guvenSkoru||'—'}%
+        </div>
+      </td>
       <td><span class="pill ${cls}">${v.sinyal}</span></td>
-      <td class="mono muted" style="font-size:0.68rem">${v.ts ? new Date(v.ts).toLocaleTimeString('tr-TR') : '—'}</td>
     </tr>`;
   }).join('');
 };
@@ -2029,22 +2211,31 @@ function aiGerekliMi() {
   // Havuz key yoksa AI çalışmaz
   if (!havuzKey && !anthropicKey) return false;
 
+  // Bugün zaten çalıştı mı kontrol et
+  const bugun = new Date().toLocaleDateString('tr-TR');
+  const sonAiTarih = localStorage.getItem('sonAiTarih_' + (currentUser?.uid||''));
+  if (sonAiTarih === bugun) return false; // Bugün zaten çalıştı
+
+  // Kritik durum var mı?
+  let kritikVar = false;
   for (const k of takipEdilen) {
     const v = veriler[k];
     if (!v) continue;
-    // RSI aşırı bölge
-    if (v.rsi < 30 || v.rsi > 70) return true;
-    // Güçlü sinyal
-    if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') return true;
-    // Büyük fiyat hareketi
-    if (Math.abs(v.degisim) >= 3) return true;
+    if (v.rsi < 25 || v.rsi > 75) { kritikVar = true; break; }
+    if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') { kritikVar = true; break; }
+    if (Math.abs(v.degisim) >= 5) { kritikVar = true; break; }
   }
 
-  // Sabah ilk güncelleme (09:30-10:30 arası)
+  // Sabah ilk güncelleme (09:30-10:30)
   const saat = new Date().getHours();
-  if (saat >= 9 && saat <= 10) return true;
+  if (saat >= 9 && saat <= 10) kritikVar = true;
 
-  return false;
+  return kritikVar;
+}
+
+function aiCalistiKaydet() {
+  const bugun = new Date().toLocaleDateString('tr-TR');
+  localStorage.setItem('sonAiTarih_' + (currentUser?.uid||''), bugun);
 }
 
 window.mukerrerTemizle = async () => {
@@ -2181,6 +2372,11 @@ window.hisseDetayPanelAc = (kod) => {
     const maRenk = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
     teknikEl.innerHTML = `
       <div><span style="color:var(--muted)">MACD Hist:</span> <span style="color:${macdRenk};font-family:var(--mono)">${v.macdHist?.toFixed(3)}</span></div>
+      <div><span style="color:var(--muted)">Stoch RSI K:</span> <span style="font-family:var(--mono);color:${v.stochRsi?.k<20?'var(--accent)':v.stochRsi?.k>80?'var(--red)':'inherit'}">${v.stochRsi?v.stochRsi.k:'—'}</span></div>
+      <div><span style="color:var(--muted)">Bollinger %:</span> <span style="font-family:var(--mono);color:${v.bollinger?.yuzde<25?'var(--accent)':v.bollinger?.yuzde>75?'var(--red)':'inherit'}">${v.bollinger?v.bollinger.yuzde+'%':'—'}</span></div>
+      <div><span style="color:var(--muted)">Williams %R:</span> <span style="font-family:var(--mono);color:${v.williamsR<-80?'var(--accent)':v.williamsR>-20?'var(--red)':'inherit'}">${v.williamsR||'—'}</span></div>
+      <div><span style="color:var(--muted)">MFI:</span> <span style="font-family:var(--mono);color:${v.mfi<30?'var(--accent)':v.mfi>70?'var(--red)':'inherit'}">${v.mfi||'—'}</span></div>
+      <div><span style="color:var(--muted)">Güven Skoru:</span> <span style="font-family:var(--mono);color:${(v.guvenSkoru||0)>=70?'var(--accent)':(v.guvenSkoru||0)>=50?'var(--yellow)':'var(--red)'}">${v.guvenSkoru||'—'}%</span></div>
       <div><span style="color:var(--muted)">Hacim:</span> <span style="font-family:var(--mono);color:${v.hacimFark>0?'var(--accent)'  : 'var(--red)'}">${v.hacimFark>0?'+':''}${v.hacimFark}%</span></div>
       <div><span style="color:var(--muted)">MA20:</span> <span style="font-family:var(--mono)">${v.ma20?.toFixed(2)} ₺</span></div>
       <div><span style="color:var(--muted)">MA50:</span> <span style="font-family:var(--mono)">${v.ma50?.toFixed(2)} ₺</span></div>
