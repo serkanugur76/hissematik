@@ -1340,7 +1340,7 @@ async function sinyalleriDogrula() {
 // AI ANALİZ
 // ══════════════════════════════════════════════
 // Token kullanımını kaydet
-async function tokenKaydet(kullanim, model = 'claude-sonnet-4-20250514') {
+async function tokenKaydet(kullanim, model = 'claude-sonnet-4-5-20251022') {
   if (!currentUser) return;
   try {
     const ay = new Date().toISOString().slice(0, 7); // 2026-04
@@ -1413,7 +1413,7 @@ async function aiAnalizYap() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251022',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -1850,7 +1850,7 @@ window.gunSonuOzetOlustur = async () => {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251022',
         max_tokens: 600,
         messages: [{
           role: 'user',
@@ -2160,7 +2160,7 @@ window.tekHaberAnalizEt = async (idx) => {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251022',
         max_tokens: 400,
         messages: [{ role: 'user', content: analizPrompt }]
       })
@@ -2354,7 +2354,7 @@ async function terimSorAPI(terim) {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251022',
         max_tokens: 300,
         messages: [{
           role: 'user',
