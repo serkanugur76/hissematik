@@ -686,7 +686,7 @@ tr:last-child td { border-bottom:none; }
       <button class="btn" onclick="portfoyModal(window._detayKod, window._detayAd)" style="font-size:0.85rem">
         + Portföye Ekle
       </button>
-      <button class="btn" onclick="toggleTakip(window._detayKod);closeModal('hisseDetayModal')" id="detayTakipBtn" style="font-size:0.85rem">
+      <button class="btn" onclick="detayTakipToggle()" id="detayTakipBtn" style="font-size:0.85rem">
         ★ Takibe Al
       </button>
     </div>
@@ -2268,6 +2268,33 @@ function hisseAnalizGoster(analiz) {
       ${new Date(analiz.tarih).toLocaleString('tr-TR')}
     </div>`;
 }
+
+window.detayTakipToggle = () => {
+  const kod = window._detayKod;
+  if (!kod) return;
+  if (takipEdilen.has(kod)) {
+    if (!confirm(kod + ' takipten çıkarılsın mı?')) return;
+    takipEdilen.delete(kod);
+    delete veriler[kod];
+  } else {
+    takipEdilen.add(kod);
+  }
+  saveUserData();
+  filterHisseler();
+  updateSummary();
+  // Butonu güncelle
+  const btn = document.getElementById('detayTakipBtn');
+  if (btn) {
+    if (takipEdilen.has(kod)) {
+      btn.textContent = '★ Takipte';
+      btn.style.color = 'var(--accent)';
+    } else {
+      btn.textContent = '☆ Takibe Al';
+      btn.style.color = '';
+    }
+  }
+  showToast(takipEdilen.has(kod) ? kod + ' takibe alındı ✓' : kod + ' takipten çıkarıldı');
+};
 
 window.hisseAiAnalizEt = async () => {
   const kod = window._detayKod;
