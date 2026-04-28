@@ -2211,10 +2211,9 @@ function aiGerekliMi() {
   // Havuz key yoksa AI çalışmaz
   if (!havuzKey && !anthropicKey) return false;
 
-  // Bugün zaten çalıştı mı kontrol et
+  // Bugün zaten çalıştı mı kontrol et (state'den)
   const bugun = new Date().toLocaleDateString('tr-TR');
-  const sonAiTarih = localStorage.getItem('sonAiTarih_' + (currentUser?.uid||''));
-  if (sonAiTarih === bugun) return false; // Bugün zaten çalıştı
+  if (window._sonAiTarih === bugun) return false;
 
   // Kritik durum var mı?
   let kritikVar = false;
@@ -2235,7 +2234,7 @@ function aiGerekliMi() {
 
 function aiCalistiKaydet() {
   const bugun = new Date().toLocaleDateString('tr-TR');
-  localStorage.setItem('sonAiTarih_' + (currentUser?.uid||''), bugun);
+  window._sonAiTarih = bugun;
 }
 
 window.mukerrerTemizle = async () => {
