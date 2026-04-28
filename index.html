@@ -2094,7 +2094,7 @@ window.haberleriYenile = async () => {
 
 // Haberleri render et
 let haberlerData = [];
-function renderHaberler(haberler) {
+async function renderHaberler(haberler) {
   haberlerData = haberler;
   const el = document.getElementById('haberListesi');
   const apiVar = havuzKey || anthropicKey;
@@ -2125,6 +2125,23 @@ function renderHaberler(haberler) {
       <div id="analiz-${idx}"></div>
     </div>`;
   }).join('');
+
+  // Firestore'dan mevcut analizleri yükle
+  if (currentUser) {
+    haberler.forEach(async (h, idx) => {
+      try {
+        const haberHash = btoa(unescape(encodeURIComponent(h.baslik || ''))).substring(0, 40);
+        const analizDocId = currentUser.uid + '_' + haberHash;
+        const snap = await getDoc(doc(db, 'haberAnalizleri', analizDocId));
+        if (snap.exists()) {
+          const analizEl = document.getElementById('analiz-' + idx);
+          const btn = document.getElementById('analiz-btn-' + idx);
+          if (analizEl) haberAnalizGoster(analizEl, snap.data());
+          if (btn) btn.remove();
+        }
+      } catch(e) {}
+    });
+  }
 }
 
 // Tek haber analizi
