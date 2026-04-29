@@ -359,6 +359,12 @@ tr:last-child td { border-bottom:none; }
       Google ile Giriş Yap
     </button>
     <div class="auth-note">Sadece yetkili e-posta adresleri giriş yapabilir.<br>Erişim için <a href="mailto:admin@hissematik.com">yöneticiye</a> başvurun.</div>
+    <div style="margin-top:1.25rem;padding:0.875rem;background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.2);border-radius:8px;font-size:0.72rem;color:#b8a060;line-height:1.6;text-align:left">
+      ⚠️ <strong style="color:var(--yellow)">Yasal Uyarı:</strong> HisseMatik bir teknik analiz ve hesaplama aracıdır. 
+      Sunulan veriler, göstergeler ve AI analizleri yatırım tavsiyesi niteliği taşımaz. 
+      Tüm yatırım kararları kullanıcının kendi sorumluluğundadır. 
+      Sermaye piyasası araçlarına yatırım yapmak zarar riskini içerir.
+    </div>
   </div>
 </div>
 
@@ -388,6 +394,12 @@ tr:last-child td { border-bottom:none; }
       </div>
       <button class="btn" onclick="logout()">Çıkış</button>
     </div>
+  </div>
+
+  <!-- SPK UYARI BANDI -->
+  <div id="spkUyari" style="background:rgba(255,209,102,0.06);border-bottom:1px solid rgba(255,209,102,0.15);padding:0.4rem 1.5rem;display:flex;align-items:center;justify-content:space-between;font-size:0.7rem;color:#a89050">
+    <span>⚠️ Bu platform teknik analiz aracıdır. Sunulan veriler yatırım tavsiyesi değildir. Tüm yatırım kararları kullanıcının sorumluluğundadır.</span>
+    <button onclick="document.getElementById('spkUyari').style.display='none'" style="background:none;border:none;color:#a89050;cursor:pointer;font-size:1rem;padding:0 0.5rem">✕</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -448,7 +460,9 @@ tr:last-child td { border-bottom:none; }
       <button class="btn" onclick="takibiKaldir()">Seçimi Temizle</button>
     </div>
     <div class="search-row">
-      <input class="search-input" id="searchInput" placeholder="Hisse kodu veya şirket ara..." oninput="filterHisseler()">
+      <input class="search-input" id="searchInput" placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)" 
+  oninput="filterHisseler()" 
+  onkeydown="if(event.key==='Enter') hisseAra(this.value)">
       <button class="chip active" onclick="setFilter('tum',this)">Tümü</button>
       <button class="chip" onclick="setFilter('bist30',this)">BIST 30</button>
       <button class="chip" onclick="setFilter('bist100',this)">BIST 100</button>
@@ -837,6 +851,28 @@ const BIST = [
   ["VESTL","Vestel Elektronik"],["WINTA","Wintax"],["YATAS","Yataş"],
   ["YKBNK","Yapı Kredi"],["YONGA","Yonga Mobilya"],["YUNSA","Yünsa"],
   ["ZOREN","Zorlu Enerji"],["ZRGYO","Ziraat GYO"],
+  // Ek hisseler
+  ["ARMGD","Armada Gıda"],["BHMDR","Bahadır Kimya"],
+  ["AGROT","Agrotür"],["AHSGY","Ahlatcı Sosyal GYO"],
+  ["ATAGY","Ata GYO"],["ALTNY","Altınyunus"],
+  ["ALVES","Alves"],["ALCTL","Alcatel"],
+  ["AKSGY","Aksa GYO"],["AKSUE","Aksu Enerji"],
+  ["ARDYZ","Ardyz"],["ARTMS","Artemas"],["ARZUM","Arzum"],
+  ["ARASE","Arase"],["ASGYO","As GYO"],
+  ["ATEKS","Altınyıldız Tekstil"],["ATLAS","Atlas Menkul"],
+  ["AVGYO","Avrasya GYO"],["AVHOL","Avrasya Holding"],
+  ["AVOD","A.V.O.D."],["AZTEK","Aztek"],
+  ["BAKAB","Bak Ambalaj"],["BASCM","Başkent Çimento"],
+  ["BASGZ","Başer Gaz"],["BEGYO","Beykoz GYO"],
+  ["BERA","Bera Holding"],["BIGCH","Birleşik Çimento"],
+  ["BIGEN","Bigen"],["BIENY","Bienyatırım"],
+  ["BTCIM","Batı Çimento"],["BFREN","Bosch Fren"],
+  ["BARMA","Barma"],["BALSU","Bal Su"],
+  ["BESTE","Beste"],["BEYAZ","Beyaz Filo"],
+  ["ACSEL","Açıselsan"],["ADESE","Adese AVM"],
+  ["ADGYO","Adnan Gıda GYO"],["AFYON","Afyon Çimento"],
+  ["AGESA","AgeS Emeklilik"],["AGHOL","AG Anadolu"],
+  ["AGYO","Atakule GYO"],["AHGAZ","Ahlatcı Doğalgaz"],
 ];// ══════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════
@@ -954,6 +990,41 @@ window.switchTab = (name) => {
 // ══════════════════════════════════════════════
 // HİSSE LİSTESİ
 // ══════════════════════════════════════════════
+// Listede olmayan hisseyi ara
+window.hisseAra = async (kod) => {
+  kod = kod.trim().toUpperCase();
+  if (!kod) return;
+  
+  // Listede var mı?
+  if (BIST.find(b => b[0] === kod)) {
+    filterHisseler();
+    return;
+  }
+
+  // Yoksa Yahoo'dan dene
+  showToast(kod + ' aranıyor...');
+  try {
+    const proxyUrl = 'https://hissematik-proxy.ugurserkan.workers.dev/?semboller=' + kod;
+    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(10000)});
+    if (!res.ok) { showToast(kod + ' bulunamadı', 'error'); return; }
+    const data = await res.json();
+    const v = parseYahooVeri(kod, data[kod]);
+    if (v) {
+      // Geçici olarak listeye ekle
+      if (!BIST.find(b => b[0] === kod)) {
+        BIST.push([kod, kod + ' (Özel)']);
+      }
+      veriler[kod] = v;
+      showToast(kod + ' bulundu ve eklendi ✓');
+      filterHisseler();
+    } else {
+      showToast(kod + ' Yahoo Finance'te bulunamadı', 'error');
+    }
+  } catch(e) {
+    showToast('Arama hatası: ' + e.message, 'error');
+  }
+};
+
 window.filterHisseler = () => {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
   const grid = document.getElementById('hisseGrid');
