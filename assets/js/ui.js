@@ -563,9 +563,10 @@ export function renderHisseDetay(kod) {
   el('detayAiBtn').disabled     = false;
   el('detayAiBtn').textContent  = '⬡ AI ile Analiz Et';
 
-  const overlay = el('hisseDetayModal');
-  if (overlay) overlay.scrollTop = 0;
   openModal('hisseDetayModal');
+  // Modal body'yi en üste sıfırla
+  const modalBody = document.querySelector('#hisseDetayModal .modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
 }
 
 export function renderDetayTeknik(kod) {
