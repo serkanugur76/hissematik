@@ -462,6 +462,8 @@ export function renderHisseDetay(kod) {
     const rsiColor   = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)';
     const rsiEtiket  = v.rsi < 30 ? 'Aşırı Satım' : v.rsi > 70 ? 'Aşırı Alım' : 'Nötr';
     const macdRenk   = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
+    const stochRenk  = (v.stochRsi?.k ?? 50) < 20 ? 'var(--accent)' : (v.stochRsi?.k ?? 50) > 80 ? 'var(--red)' : 'var(--text)';
+    const stochSub   = (v.stochRsi?.k ?? 50) < 20 ? 'Aşırı Satım' : (v.stochRsi?.k ?? 50) > 80 ? 'Aşırı Alım' : 'Nötr';
 
     ozetEl.innerHTML = `
       <!-- Hero: Fiyat + Sinyal -->
@@ -494,10 +496,10 @@ export function renderHisseDetay(kod) {
 
       <div class="detay-micro-card">
         <div class="detay-mc-label">Stoch RSI K</div>
-        <div class="detay-mc-value" style="color:${v.stochRsi?.k < 20 ? 'var(--accent)' : v.stochRsi?.k > 80 ? 'var(--red)' : 'var(--text)'}">
+        <div class="detay-mc-value" style="color:${stochRenk}">
           ${v.stochRsi ? v.stochRsi.k : '—'}
         </div>
-        <div class="detay-mc-sub">${v.stochRsi?.k < 20 ? 'Aşırı Satım' : v.stochRsi?.k > 80 ? 'Aşırı Alım' : 'Nötr'}</div>
+        <div class="detay-mc-sub">${stochSub}</div>
       </div>`;
   } else {
     ozetEl.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>`;
@@ -569,44 +571,47 @@ export function renderDetayTeknik(kod) {
   const teknikEl = el('detayTeknik');
   if (!v || !teknikEl) return;
 
-  const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
-  const maRenk   = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
-  const bolRenk  = v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
-  const wRenk    = v.williamsR < -80 ? 'var(--accent)' : v.williamsR > -20 ? 'var(--red)' : 'var(--muted)';
-  const mfiRenk  = v.mfi < 30 ? 'var(--accent)' : v.mfi > 70 ? 'var(--red)' : 'var(--muted)';
+  // Renk hesapları — template dışında
+  const maRenk  = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
+  const bolRenk = !v.bollinger ? 'var(--muted)'
+    : v.bollinger.yuzde < 25 ? 'var(--accent)'
+    : v.bollinger.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
+  const wRenk   = v.williamsR < -80 ? 'var(--accent)' : v.williamsR > -20 ? 'var(--red)' : 'var(--muted)';
+  const mfiRenk = v.mfi < 30 ? 'var(--accent)' : v.mfi > 70 ? 'var(--red)' : 'var(--muted)';
+  const hRenk   = v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)';
+  const gRenk   = v.guvenSkoru >= 70 ? 'var(--accent)' : v.guvenSkoru >= 50 ? 'var(--yellow)' : 'var(--red)';
 
-  const mc = (label, value, sub = '', color = '') => {
-    const style = color ? ` style='color:${color}'` : '';
-    const subHtml = sub ? `<div class='mc-sub'>${sub}</div>` : '';
-    return `<div class='micro-card'>
-      <div class='mc-label'>${label}</div>
-      <div class='mc-value'${style}>${value}</div>
-      ${subHtml}
-    </div>`;
+  // Değer string'leri
+  const bolVal  = v.bollinger ? v.bollinger.yuzde + '%' : '—';
+  const bolSub  = v.bollinger?.yuzde < 25 ? 'Alt bant' : v.bollinger?.yuzde > 75 ? 'Üst bant' : 'Orta';
+  const wVal    = v.williamsR ?? '—';
+  const wSub    = v.williamsR < -80 ? 'Aşırı Satım' : v.williamsR > -20 ? 'Aşırı Alım' : 'Nötr';
+  const mfiSub  = v.mfi < 30 ? 'Para çıkışı' : v.mfi > 70 ? 'Para girişi' : 'Dengeli';
+  const hVal    = v.hacimFark > 0 ? '+' + v.hacimFark + '%' : v.hacimFark + '%';
+  const hSub    = v.hacimFark > 50 ? 'Spike' : 'Normal';
+
+  // Kart üreteci — backtick, tek tırnak yok
+  const mc = (lbl, val, sub, renk) => {
+    const st = renk ? ` style="color:${renk}"` : '';
+    const sb = sub  ? `<div class="mc-sub">${sub}</div>` : '';
+    return `<div class="micro-card"><div class="mc-label">${lbl}</div><div class="mc-value"${st}>${val}</div>${sb}</div>`;
   };
 
+  // 4 sütun grid — 8 sabit kart her zaman görünür
   teknikEl.className = 'micro-grid';
   teknikEl.innerHTML =
-    mc('Bollinger %', v.bollinger ? v.bollinger.yuzde + '%' : '—', v.bollinger?.yuzde < 25 ? 'Alt bant' : v.bollinger?.yuzde > 75 ? 'Üst bant' : 'Orta', bolRenk) +
-    mc('Williams %R', v.williamsR ?? '—', v.williamsR < -80 ? 'Aşırı Satım' : v.williamsR > -20 ? 'Aşırı Alım' : 'Nötr', wRenk) +
-    mc('MFI', v.mfi ?? '—', v.mfi < 30 ? 'Para çıkışı' : v.mfi > 70 ? 'Para girişi' : 'Dengeli', mfiRenk) +
-    mc('MA 20', v.ma20 ? v.ma20.toFixed(2) + ' ₺' : '—', '') +
-    mc('MA 50', v.ma50 ? v.ma50.toFixed(2) + ' ₺' : '—', '') +
-    mc('MA Trend', v.ma20 > v.ma50 ? 'Yükseliş' : 'Düşüş', 'MA20 / MA50', maRenk) +
-    (() => {
-      const hRenk = v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)';
-      const hDeg  = v.hacimFark > 0 ? '+' + v.hacimFark + '%' : v.hacimFark + '%';
-      const hSub  = v.hacimFark > 50 ? 'Spike!' : 'Normal';
-      return mc('Hacim', hDeg, hSub, hRenk);
-    })() +
-    (() => {
-      const gRenk = v.guvenSkoru >= 70 ? 'var(--accent)' : v.guvenSkoru >= 50 ? 'var(--yellow)' : 'var(--red)';
-      return mc('Güven', (v.guvenSkoru ?? '—') + '%', 'Ağırlıklı skor', gRenk);
-    })() +
-    (v.pivot ? mc('Pivot', v.pivot.pivot + ' ₺', `R1: ${v.pivot.r1} | S1: ${v.pivot.s1}`) : '') +
-    (v.fib ? mc('Fib 0.382', v.fib.f382 + ' ₺', 'Fib 0.618: ' + v.fib.f618 + ' ₺') : '') +
-    (v.hafta52H ? mc('52H Yüksek', v.hafta52H + ' ₺', 'Pozisyon: ' + v.hafta52Yuzde + '%', 'var(--red)') : '') +
-    (v.hafta52L ? mc('52H Düşük', v.hafta52L + ' ₺', '', 'var(--accent)') : '');
+    mc('Bollinger %', bolVal,   bolSub,           bolRenk) +
+    mc('Williams %R', wVal,     wSub,             wRenk)   +
+    mc('MFI',         v.mfi ?? '—', mfiSub,       mfiRenk) +
+    mc('MA 20',       v.ma20 ? v.ma20.toFixed(2) + ' ₺' : '—', '', '') +
+    mc('MA 50',       v.ma50 ? v.ma50.toFixed(2) + ' ₺' : '—', '', '') +
+    mc('MA Trend',    v.ma20 > v.ma50 ? 'Yükseliş' : 'Düşüş', 'MA20/MA50', maRenk) +
+    mc('Hacim',       hVal,    hSub,              hRenk)   +
+    mc('Güven',       (v.guvenSkoru ?? '—') + '%', 'Skor', gRenk) +
+    (v.pivot   ? mc('Pivot',   v.pivot.pivot + ' ₺', 'R1: ' + v.pivot.r1, '') : '') +
+    (v.fib     ? mc('Fib 38%', v.fib.f382 + ' ₺',   'Fib 62%: ' + v.fib.f618 + ' ₺', '') : '') +
+    (v.hafta52H ? mc('52H Max', v.hafta52H + ' ₺',  'Poz: ' + v.hafta52Yuzde + '%', 'var(--red)') : '') +
+    (v.hafta52L ? mc('52H Min', v.hafta52L + ' ₺',  '', 'var(--accent)') : '');
 }
 
 
