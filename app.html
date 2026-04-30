@@ -100,32 +100,11 @@
   ════════════════════════════════════════ -->
   <main class="panel active" id="panel-dashboard">
 
-    <!-- Piyasa genel durum kartları -->
-    <div class="grid-4 piyasa-grid" id="piyasaKartlari">
-      <div class="card">
-        <div class="card-title">BIST 100</div>
-        <div class="card-value" id="xu100Deger">—</div>
-        <div id="xu100Degisim" class="card-sub mono"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">USD / TRY</div>
-        <div class="card-value" id="usdtryDeger">—</div>
-        <div id="usdtryDegisim" class="card-sub mono"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">EUR / TRY</div>
-        <div class="card-value" id="eurtryDeger">—</div>
-        <div id="eurtryDegisim" class="card-sub mono"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Piyasa Yönü</div>
-        <div class="card-value" id="piyasaYonu">—</div>
-        <div id="piyasaYonuAciklama" class="card-sub"></div>
-      </div>
-    </div>
+    <!-- Piyasa ticker bandi — js tarafından doldurulur -->
+    <div class="ticker-bar" id="piyasaKartlari"></div>
 
     <!-- Özet sayaçlar -->
-    <div class="grid-4" id="summaryCards">
+    <div class="summary-grid" id="summaryCards">
       <div class="card">
         <div class="card-title">Takip Edilen</div>
         <div class="card-value" id="sumTakip">—</div>
@@ -163,11 +142,11 @@
               <th>Fiyat</th>
               <th>Değişim</th>
               <th>RSI</th>
-              <th>Stoch RSI</th>
-              <th>MACD Hist</th>
-              <th>Bollinger %</th>
-              <th>Güven</th>
               <th>Sinyal</th>
+              <th>Güven</th>
+              <th>MACD Hist</th>
+              <th>Hacim</th>
+              <th>Bollinger %</th>
             </tr>
           </thead>
           <tbody id="dashTableBody">
@@ -536,12 +515,12 @@
     </div>
 
     <!-- Özet kartlar (3 sütun, js doldurur) -->
-    <div class="detay-ozet-grid" id="detayOzetKartlar"></div>
+    <div class="detay-micro-grid" id="detayOzetKartlar"></div>
 
     <!-- Teknik göstergeler -->
     <section class="detay-bolum">
       <div class="detay-bolum-baslik">Teknik Göstergeler</div>
-      <div class="detay-teknik-grid" id="detayTeknik"></div>
+      <div class="micro-grid" id="detayTeknik"></div>
     </section>
 
     <!-- Piyasa bağlamı -->
@@ -563,8 +542,8 @@
     </section>
 
     <!-- AI Karar Analizi -->
-    <section class="detay-ai-bolum">
-      <div class="detay-ai-baslik">⬡ AI Karar Analizi</div>
+    <section class="detay-ai-glass">
+      <div class="detay-ai-label">⬡ AI Karar Analizi</div>
       <div id="detayAiIcerik" class="detay-ai-icerik">
         Analiz için aşağıdaki butona bas...
       </div>
