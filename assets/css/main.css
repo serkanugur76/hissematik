@@ -357,3 +357,317 @@ tr:last-child td { border-bottom:none; }
   .grid-2 { grid-template-columns:1fr; }
   .grid-4 { grid-template-columns:repeat(2,1fr); }
 }
+
+/* ══════════════════════════════════════════════
+   MODERN DASHBOARD EK STİLLER
+   ══════════════════════════════════════════════ */
+
+/* ── PİYASA TİCKER BANDI ── */
+.ticker-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ticker-bar::-webkit-scrollbar { display: none; }
+
+.ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1.25rem;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ticker-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ticker-value {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.ticker-change {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.ticker-change.pos { background: rgba(0,229,160,0.12); color: var(--accent); }
+.ticker-change.neg { background: rgba(255,69,96,0.12);  color: var(--red); }
+.ticker-yon {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+.ticker-yon.yukselis { border-color: rgba(0,229,160,0.3); color: var(--accent); background: rgba(0,229,160,0.06); }
+.ticker-yon.dusus    { border-color: rgba(255,69,96,0.3);  color: var(--red);    background: rgba(255,69,96,0.06); }
+.ticker-yon.yatay    { border-color: rgba(255,209,102,0.3); color: var(--yellow); background: rgba(255,209,102,0.06); }
+
+/* ── MİKRO KART GRID ── */
+.micro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+.micro-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  transition: border-color 0.15s;
+}
+.micro-card:hover { border-color: var(--border2); }
+.micro-card.accent { border-color: rgba(0,229,160,0.25); background: rgba(0,229,160,0.04); }
+.micro-card.danger { border-color: rgba(255,69,96,0.25);  background: rgba(255,69,96,0.04); }
+.micro-card.warn   { border-color: rgba(255,209,102,0.25); background: rgba(255,209,102,0.04); }
+.mc-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.mc-value {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.mc-sub {
+  font-size: 0.64rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+/* ── SINYAL ROZET (büyük, hiyerarşik) ── */
+.sinyal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.sinyal-badge.guclu-al  { background: rgba(0,229,160,0.18);  color: var(--accent); border: 1.5px solid rgba(0,229,160,0.4); }
+.sinyal-badge.al        { background: rgba(0,229,160,0.1);   color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
+.sinyal-badge.guclu-sat { background: rgba(255,69,96,0.18);  color: var(--red);    border: 1.5px solid rgba(255,69,96,0.4); }
+.sinyal-badge.sat       { background: rgba(255,69,96,0.1);   color: var(--red);    border: 1px solid rgba(255,69,96,0.25); }
+.sinyal-badge.bekle     { background: rgba(255,209,102,0.1); color: var(--yellow); border: 1px solid rgba(255,209,102,0.25); }
+
+/* ── GUVEN ÇUBUĞU ── */
+.guven-wrap { display: flex; align-items: center; gap: 6px; margin-top: 0.35rem; }
+.guven-bar  { flex: 1; height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.guven-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+.guven-fill.high   { background: var(--accent); }
+.guven-fill.medium { background: var(--yellow); }
+.guven-fill.low    { background: var(--red); }
+.guven-pct  { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); min-width: 28px; text-align: right; }
+
+/* ── DASHBOARD SATIRI (tablo yerine kart satırı) ── */
+.dash-row {
+  display: grid;
+  grid-template-columns: 90px 80px 70px 1fr 90px 1fr 110px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: 0.8rem;
+}
+.dash-row:hover  { background: rgba(255,255,255,0.02); }
+.dash-row:last-child { border-bottom: none; }
+.dash-row-header {
+  grid-template-columns: 90px 80px 70px 1fr 90px 1fr 110px;
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: default;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.dash-row-header:hover { background: transparent; }
+
+/* ── AI GLASSMORPHISM KUTU ── */
+.ai-glass {
+  position: relative;
+  background: linear-gradient(135deg,
+    rgba(0,229,160,0.06) 0%,
+    rgba(76,201,240,0.04) 50%,
+    rgba(124,58,237,0.04) 100%
+  );
+  border: 1px solid rgba(0,229,160,0.2);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+.ai-glass::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.ai-glass-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+.ai-glass-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(0,229,160,0.15);
+  border: 1px solid rgba(0,229,160,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; flex-shrink: 0;
+}
+.ai-glass-title {
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  font-weight: 500;
+}
+.ai-glass-time {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: auto;
+  font-family: var(--mono);
+}
+.ai-glass-content {
+  font-size: 0.83rem;
+  line-height: 1.85;
+  color: #b8ddd0;
+  white-space: pre-wrap;
+}
+
+/* ── DETAY MODALİ — yeniden tasarım ── */
+.detay-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg3);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+.detay-hero-fiyat {
+  font-family: var(--mono);
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1;
+}
+.detay-hero-degisim {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+.detay-micro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.detay-micro-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+.detay-mc-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.detay-mc-value { font-family: var(--mono); font-size: 0.9rem; font-weight: 500; margin-top: 0.2rem; }
+.detay-mc-sub   { font-size: 0.62rem; color: var(--muted); margin-top: 0.15rem; }
+
+.detay-teknik-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+.detay-ai-glass {
+  background: linear-gradient(135deg, rgba(0,229,160,0.05), rgba(76,201,240,0.03));
+  border: 1px solid rgba(0,229,160,0.18);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.detay-ai-label {
+  font-size: 0.65rem;
+  color: var(--accent);
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+/* ── ÖZET KARTLARI (dashboard üstü) ── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.summary-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.summary-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent-color, var(--border2));
+  opacity: 0.6;
+}
+.summary-card.s-green { --accent-color: var(--accent); }
+.summary-card.s-red   { --accent-color: var(--red); }
+.summary-card.s-yellow{ --accent-color: var(--yellow); }
+.sc-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.35rem; }
+.sc-value { font-family: var(--mono); font-size: 1.5rem; font-weight: 500; }
+.sc-value.green  { color: var(--accent); }
+.sc-value.red    { color: var(--red); }
+.sc-value.yellow { color: var(--yellow); }
+
+/* ── PİYASA YÖN CHIP ── */
+.piyasa-yon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .ticker-item  { padding: 0.5rem 0.875rem; }
+  .dash-row     { grid-template-columns: 70px 70px 60px; }
+  .dash-row > *:nth-child(n+4) { display: none; }
+  .detay-micro-grid { grid-template-columns: 1fr 1fr; }
+  .detay-teknik-grid-v2 { grid-template-columns: 1fr 1fr; }
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+}
