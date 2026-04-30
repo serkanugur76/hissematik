@@ -242,10 +242,44 @@ tr:last-child td { border-bottom:none; }
   background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius-lg);
   padding:1.5rem; width:100%; max-width:520px; animation:modalIn 0.2s ease;
 }
-/* Hisse detay modal daha geniş */
+/* Hisse detay modal — sabit yükseklik, içi scroll */
 .modal--wide {
   max-width: 600px;
-  padding: 1.25rem 1.5rem;
+  padding: 0;                              /* iç padding bölümlerde */
+  max-height: calc(100vh - 2rem);          /* viewport'a sığ */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;                        /* taşmayı modal kesiyor */
+}
+
+/* Modal header — sabit */
+.modal--wide .modal-header {
+  padding: 1rem 1.25rem 0.875rem;
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+/* Modal body — scroll eden alan */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+.modal-body::-webkit-scrollbar       { width: 4px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* Modal footer — sabit */
+.modal--wide .detay-aksiyonlar {
+  padding: 0.875rem 1.25rem;
+  margin-top: 0;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 @keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
 .modal-title { font-size:1.1rem; font-weight:600; margin-bottom:0.25rem; }
@@ -720,16 +754,9 @@ tr:last-child td { border-bottom:none; }
 
 /* Scroll edilebilir overlay (hisse detay modal) */
 .modal-overlay--scroll {
-  align-items: flex-start;
-  overflow-y: auto;
-  padding: 1.5rem 1rem;
-}
-/* Geniş ekranda ortala */
-@media (min-width: 641px) {
-  .modal-overlay--scroll {
-    align-items: center;
-    padding: 2rem 1rem;
-  }
+  align-items: center;      /* modal dikeyde ortala */
+  padding: 1rem;
+  overflow: hidden;         /* overlay scroll etmez */
 }
 
 /* Modal başlık satırı */
