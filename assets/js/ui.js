@@ -457,7 +457,7 @@ export function renderHisseDetay(kod) {
   if (v) {
     const degCls     = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
     const sinyalCls  = sinyalClass(v.sinyal);
-    const guven      = v.guvenSkoru || 0;
+    const guven      = v.guvenSkoru ?? 0;
     const guvenCls   = guven >= 70 ? 'high' : guven >= 50 ? 'medium' : 'low';
     const rsiColor   = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)';
     const rsiEtiket  = v.rsi < 30 ? 'Aşırı Satım' : v.rsi > 70 ? 'Aşırı Alım' : 'Nötr';
@@ -563,6 +563,8 @@ export function renderHisseDetay(kod) {
   el('detayAiBtn').disabled     = false;
   el('detayAiBtn').textContent  = '⬡ AI ile Analiz Et';
 
+  const overlay = el('hisseDetayModal');
+  if (overlay) overlay.scrollTop = 0;
   openModal('hisseDetayModal');
 }
 
@@ -579,7 +581,7 @@ export function renderDetayTeknik(kod) {
   const wRenk   = v.williamsR < -80 ? 'var(--accent)' : v.williamsR > -20 ? 'var(--red)' : 'var(--muted)';
   const mfiRenk = v.mfi < 30 ? 'var(--accent)' : v.mfi > 70 ? 'var(--red)' : 'var(--muted)';
   const hRenk   = v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)';
-  const gRenk   = v.guvenSkoru >= 70 ? 'var(--accent)' : v.guvenSkoru >= 50 ? 'var(--yellow)' : 'var(--red)';
+  const gRenk   = (v.guvenSkoru ?? 0) >= 70 ? 'var(--accent)' : (v.guvenSkoru ?? 0) >= 50 ? 'var(--yellow)' : 'var(--muted)';
 
   // Değer string'leri
   const bolVal  = v.bollinger ? v.bollinger.yuzde + '%' : '—';
@@ -607,7 +609,7 @@ export function renderDetayTeknik(kod) {
     mc('MA 50',       v.ma50 ? v.ma50.toFixed(2) + ' ₺' : '—', '', '') +
     mc('MA Trend',    v.ma20 > v.ma50 ? 'Yükseliş' : 'Düşüş', 'MA20/MA50', maRenk) +
     mc('Hacim',       hVal,    hSub,              hRenk)   +
-    mc('Güven',       (v.guvenSkoru ?? '—') + '%', 'Skor', gRenk) +
+    mc('Güven',       v.guvenSkoru != null ? v.guvenSkoru + '%' : '—', 'Ağırlıklı', gRenk) +
     (v.pivot   ? mc('Pivot',   v.pivot.pivot + ' ₺', 'R1: ' + v.pivot.r1, '') : '') +
     (v.fib     ? mc('Fib 38%', v.fib.f382 + ' ₺',   'Fib 62%: ' + v.fib.f618 + ' ₺', '') : '') +
     (v.hafta52H ? mc('52H Max', v.hafta52H + ' ₺',  'Poz: ' + v.hafta52Yuzde + '%', 'var(--red)') : '') +
