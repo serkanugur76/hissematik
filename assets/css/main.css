@@ -240,7 +240,12 @@ tr:last-child td { border-bottom:none; }
 .modal-overlay.show { display:flex; }
 .modal {
   background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius-lg);
-  padding:2rem; width:100%; max-width:480px; animation:modalIn 0.2s ease;
+  padding:1.5rem; width:100%; max-width:520px; animation:modalIn 0.2s ease;
+}
+/* Hisse detay modal daha geniş */
+.modal--wide {
+  max-width: 600px;
+  padding: 1.25rem 1.5rem;
 }
 @keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
 .modal-title { font-size:1.1rem; font-weight:600; margin-bottom:0.25rem; }
@@ -416,37 +421,45 @@ tr:last-child td { border-bottom:none; }
 /* ── MİKRO KART GRID ── */
 .micro-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.4rem;
 }
 .micro-card {
   background: var(--bg3);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.6rem 0.75rem;
+  border-radius: 9px;
+  padding: 0.5rem 0.65rem;
   transition: border-color 0.15s;
+  min-width: 0;                      /* grid taşmasını önler */
 }
 .micro-card:hover { border-color: var(--border2); }
 .micro-card.accent { border-color: rgba(0,229,160,0.25); background: rgba(0,229,160,0.04); }
 .micro-card.danger { border-color: rgba(255,69,96,0.25);  background: rgba(255,69,96,0.04); }
 .micro-card.warn   { border-color: rgba(255,209,102,0.25); background: rgba(255,209,102,0.04); }
 .mc-label {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: var(--muted);
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .mc-value {
   font-family: var(--mono);
-  font-size: 0.92rem;
+  font-size: 0.85rem;
   font-weight: 500;
   line-height: 1.2;
+  word-break: break-all;             /* uzun sayılar taşmasın */
 }
 .mc-sub {
-  font-size: 0.64rem;
+  font-size: 0.6rem;
   color: var(--muted);
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── SINYAL ROZET (büyük, hiyerarşik) ── */
@@ -573,7 +586,7 @@ tr:last-child td { border-bottom:none; }
 }
 .detay-hero-fiyat {
   font-family: var(--mono);
-  font-size: 1.9rem;
+  font-size: 1.6rem;
   font-weight: 500;
   line-height: 1;
 }
@@ -588,15 +601,21 @@ tr:last-child td { border-bottom:none; }
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
+/* Modal içi micro-grid — daha geniş kartlar */
+.modal .micro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.45rem;
+}
 .detay-micro-card {
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 0.6rem 0.75rem;
+  padding: 0.55rem 0.7rem;
 }
-.detay-mc-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
-.detay-mc-value { font-family: var(--mono); font-size: 0.9rem; font-weight: 500; margin-top: 0.2rem; }
-.detay-mc-sub   { font-size: 0.62rem; color: var(--muted); margin-top: 0.15rem; }
+.detay-mc-label { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detay-mc-value { font-family: var(--mono); font-size: 0.85rem; font-weight: 500; margin-top: 0.15rem; line-height: 1.2; }
+.detay-mc-sub   { font-size: 0.6rem; color: var(--muted); margin-top: 0.1rem; }
 
 .detay-teknik-grid-v2 {
   display: grid;
@@ -607,8 +626,8 @@ tr:last-child td { border-bottom:none; }
   background: linear-gradient(135deg, rgba(0,229,160,0.05), rgba(76,201,240,0.03));
   border: 1px solid rgba(0,229,160,0.18);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 0.75rem;
 }
 .detay-ai-label {
   font-size: 0.65rem;
@@ -670,4 +689,27 @@ tr:last-child td { border-bottom:none; }
   .detay-micro-grid { grid-template-columns: 1fr 1fr; }
   .detay-teknik-grid-v2 { grid-template-columns: 1fr 1fr; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── DETAY MODAL BÖLÜM BAŞLIKLARI ── */
+.detay-bolum {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 0.875rem;
+  margin-bottom: 0.625rem;
+}
+.detay-bolum-baslik {
+  font-size: 0.62rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+/* Responsive: modal dar ekranlarda */
+@media (max-width: 480px) {
+  .modal--wide { padding: 1rem; }
+  .detay-micro-grid { grid-template-columns: 1fr 1fr; }
+  .micro-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+  .detay-hero-fiyat { font-size: 1.3rem; }
 }
