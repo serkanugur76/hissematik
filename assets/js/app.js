@@ -182,14 +182,119 @@ onAuthStateChanged(auth, async (user) => {
 // TAB YÖNETİMİ
 // ─────────────────────────────────────────────
 
-window.switchTab = (name) => {
-  switchTab(name, event.target);
+/**
+ * Tab geçişini tetikler.
+ * @param {string} name - panel adı (örn. 'hisseler')
+ * @param {Element} [btnEl] - aktif class verilecek buton
+ */
+function _switchTab(name, btnEl) {
+  switchTab(name, btnEl);                        // ui.js: DOM günceller
   if (name === 'sinyaller') renderSinyalGecmisi();
   if (name === 'portfoy')   renderPortfoy();
   if (name === 'admin')     loadAdminPanel();
   if (name === 'sozluk')    _loadSozluk();
   if (name === 'haberler')  _loadHaberler();
-};
+}
+
+// ─────────────────────────────────────────────
+// DOM HAZIR — TÜM EVENT LISTENER'LAR
+// Tüm statik buton ve kontrol bağlamaları burada.
+// Dinamik olarak oluşturulan elemanlar için
+// window._uiCallbacks köprüsü kullanılır.
+// ─────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ── Tab navigasyonu (data-tab delegation) ──
+  el('mainNav').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-tab]');
+    if (!btn) return;
+    _switchTab(btn.dataset.tab, btn);
+  });
+
+  // ── Hisse filtre chip'leri (data-filter delegation) ──
+  document.querySelectorAll('.chip[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setState({ aktifFilter: btn.dataset.filter });
+      document.querySelectorAll('.chip[data-filter]').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      renderHisseler();
+    });
+  });
+
+  // ── Modal kapat (data-modal-close delegation) ──
+  document.addEventListener('click', (e) => {
+    const id = e.target.dataset.modalClose;
+    if (id) closeModal(id);
+    // Overlay'e tıklama ile kapat
+    if (e.target.classList.contains('modal-overlay')) {
+      e.target.classList.remove('show');
+    }
+  });
+
+  // ── Auth ──
+  el('btnGoogleLogin')?.addEventListener('click', () => window.googleLogin());
+  el('btnLogout')?.addEventListener('click', () => window.logout());
+
+  // ── Topbar ──
+  el('btnGuncelle')?.addEventListener('click', () => window.verileriGuncelle());
+
+  // ── SPK uyarı bant kapatma ──
+  el('btnSpkKapat')?.addEventListener('click', () => {
+    el('spkUyari').style.display = 'none';
+  });
+
+  // ── Hisse arama ──
+  el('searchInput')?.addEventListener('input', () => renderHisseler());
+  el('searchInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') window.hisseAra(e.target.value);
+  });
+  el('btnTakibiKaldir')?.addEventListener('click', () => window.takibiKaldir());
+
+  // ── Sinyal geçmişi ──
+  el('dogrulamaSuresi')?.addEventListener('change', (e) => {
+    setState({ dogrulamaGun: parseInt(e.target.value) });
+    renderSinyalGecmisi();
+    showToast(`Doğrulama süresi ${state.dogrulamaGun} gün olarak ayarlandı`);
+  });
+  el('btnSinyalleriGuncelle')?.addEventListener('click', () => window.sinyalleriGuncelle());
+
+  // ── Haberler ──
+  el('btnHaberleriYenile')?.addEventListener('click', () => _haberleriYenile());
+
+  // ── Sözlük ──
+  el('sozlukSearch')?.addEventListener('input', (e) => {
+    renderSozluk(sozlukVeriler, e.target.value);
+  });
+  el('btnTerimiSor')?.addEventListener('click', () => {
+    const q = el('sozlukSearch').value.trim();
+    if (!q) { showToast('Önce terim yaz!', 'error'); return; }
+    terimSorAPI(q);
+  });
+  el('btnPushGonder')?.addEventListener('click', () => openModal('pushModal'));
+
+  // ── Push modal ──
+  el('btnPushGonderOnayla')?.addEventListener('click', () => window.pushGonderOnay());
+
+  // ── Portföy modal ──
+  el('btnPortfoyKaydet')?.addEventListener('click', () => window.portfoyKaydet());
+
+  // ── Hisse detay modal ──
+  el('detayAiBtn')?.addEventListener('click', () => window.hisseAiAnalizEt());
+  el('detayTakipBtn')?.addEventListener('click', () => window.detayTakipToggle());
+  el('detayPortfoyEkleBtn')?.addEventListener('click', () => {
+    if (state.detayKod) portfoyModalAc(state.detayKod, hisseAdi(state.detayKod));
+  });
+
+  // ── Admin ──
+  el('btnKullaniciEkle')?.addEventListener('click', () => openModal('addUserModal'));
+  el('btnKullaniciEkleOnayla')?.addEventListener('click', () => window.kullaniciEkle());
+  el('btnSaveApiKey')?.addEventListener('click', () => window.saveApiKey());
+  el('btnMukerrerTemizle')?.addEventListener('click', () => window.mukerrerTemizle());
+  el('btnTokenYenile')?.addEventListener('click', () => window.loadTokenIstatistik());
+  el('btnGunSonuOzet')?.addEventListener('click', () => window.gunSonuOzetOlustur());
+
+});
 
 // ─────────────────────────────────────────────
 // VERİ GÜNCELLEME DÖNGÜSÜ
@@ -345,11 +450,7 @@ window.sinyalleriGuncelle = async () => {
   showToast('Sinyal sonuçları güncellendi ✓');
 };
 
-window.dogrulamaSuresiDegis = () => {
-  setState({ dogrulamaGun: parseInt(el('dogrulamaSuresi').value) });
-  renderSinyalGecmisi();
-  showToast(`Doğrulama süresi ${state.dogrulamaGun} gün olarak ayarlandı`);
-};
+// dogrulamaSuresiDegis → DOMContentLoaded içindeki listener yönetiyor
 
 // ─────────────────────────────────────────────
 // HİSSE TAKİP
@@ -378,12 +479,7 @@ window.takibiKaldir = () => {
 window.filterHisseler = () => renderHisseler();
 window.renderHisseler = () => renderHisseler();
 
-window.setFilter = (f, btnEl) => {
-  setState({ aktifFilter: f });
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  btnEl.classList.add('active');
-  renderHisseler();
-};
+// setFilter → DOMContentLoaded içindeki data-filter listener yönetiyor
 
 window.hisseAra = async (kod) => {
   kod = kod.trim().toUpperCase();

@@ -653,10 +653,15 @@ export function showPushBildirim(baslik, mesaj) {
 // ─────────────────────────────────────────────
 
 export function switchTab(name, buttonEl) {
+  // Tüm nav butonlarından active kaldır
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  // Hem <div> hem <main> panel'lerini gizle
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  // Seçilen butonu vurgula
   if (buttonEl) buttonEl.classList.add('active');
-  el('panel-' + name)?.classList.add('active');
+  // Hedef paneli göster
+  const target = el('panel-' + name);
+  if (target) target.classList.add('active');
 }
 
 // ─────────────────────────────────────────────
