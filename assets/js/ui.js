@@ -67,48 +67,55 @@ export function renderTopbar() {
 // PİYASA KARTLARI (BIST100 / USD / EUR)
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// YARDIMCI — piyasa yön bilgisi hesapla
+// ─────────────────────────────────────────────
+function _piyasaYonBilgi(deg) {
+  if (deg >= 1.5)  return { etiket: 'Güçlü Yükseliş', cls: 'yukselis', aciklama: 'AL sinyalleri güçlü' };
+  if (deg >= 0)    return { etiket: 'Yatay / Hafif +', cls: 'yatay',    aciklama: 'Seçici alım yapılabilir' };
+  if (deg >= -1.5) return { etiket: 'Hafif Düşüş',    cls: 'yatay',    aciklama: 'AL sinyallerine dikkat' };
+  return             { etiket: 'Güçlü Düşüş',    cls: 'dusus',    aciklama: 'SAT baskısı var' };
+}
+
 export function renderPiyasaKartlari() {
   const { xu100, usdtry, eurtry } = state.piyasaVerisi;
+  const container = el('piyasaKartlari');
+  if (!container) return;
 
-  if (xu100) {
-    el('xu100Deger').textContent  = xu100.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 });
-    const xuDeg = el('xu100Degisim');
-    xuDeg.textContent  = `${xu100.degisim >= 0 ? '+' : ''}${xu100.degisim}%`;
-    xuDeg.style.color  = xu100.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
-  }
+  const _item = (label, deger, degisim, tersCls = false) => {
+    if (!deger) return '';
+    const d = parseFloat(degisim) || 0;
+    // tersCls=true: TL güçlenirse kötü, USD yükselirse kötü
+    const posCls = tersCls ? 'neg' : 'pos';
+    const negCls = tersCls ? 'pos' : 'neg';
+    return `<div class="ticker-item">
+      <span class="ticker-label">${label}</span>
+      <span class="ticker-value">${deger}</span>
+      <span class="ticker-change ${d >= 0 ? posCls : negCls}">${d >= 0 ? '+' : ''}${d}%</span>
+    </div>`;
+  };
 
-  if (usdtry) {
-    el('usdtryDeger').textContent = usdtry.fiyat?.toFixed(2) + ' ₺';
-    const usdDeg = el('usdtryDegisim');
-    usdDeg.textContent = `${usdtry.degisim >= 0 ? '+' : ''}${usdtry.degisim}%`;
-    usdDeg.style.color = usdtry.degisim >= 0 ? 'var(--red)' : 'var(--accent)'; // TL için ters
-  }
+  const xu100Html = xu100
+    ? (() => {
+        const { etiket, cls } = _piyasaYonBilgi(xu100.degisim);
+        return `<div class="ticker-item">
+          <span class="ticker-label">BIST 100</span>
+          <span class="ticker-value">${xu100.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+          <span class="ticker-change ${xu100.degisim >= 0 ? 'pos' : 'neg'}">${xu100.degisim >= 0 ? '+' : ''}${xu100.degisim}%</span>
+          <span class="ticker-yon ${cls}">${etiket}</span>
+        </div>`;
+      })()
+    : '';
 
-  if (eurtry) {
-    el('eurtryDeger').textContent = eurtry.fiyat?.toFixed(2) + ' ₺';
-    const eurDeg = el('eurtryDegisim');
-    eurDeg.textContent = `${eurtry.degisim >= 0 ? '+' : ''}${eurtry.degisim}%`;
-    eurDeg.style.color = eurtry.degisim >= 0 ? 'var(--red)' : 'var(--accent)';
-  }
-
-  renderPiyasaYonu();
+  container.innerHTML =
+    xu100Html +
+    _item('USD / TRY', usdtry ? usdtry.fiyat?.toFixed(2) + ' ₺' : null, usdtry?.degisim, true) +
+    _item('EUR / TRY', eurtry ? eurtry.fiyat?.toFixed(2) + ' ₺' : null, eurtry?.degisim, true);
 }
 
 export function renderPiyasaYonu() {
-  const xu100 = state.piyasaVerisi.xu100;
-  if (!xu100) return;
-
-  const deg = xu100.degisim;
-  let yon, aciklama, renk;
-
-  if      (deg >= 1.5)  { yon = '🟢 Güçlü Yükseliş'; aciklama = 'AL sinyalleri güçlü';    renk = 'var(--accent)'; }
-  else if (deg >= 0)    { yon = '🟡 Yatay/Hafif +';  aciklama = 'Seçici alım yapılabilir'; renk = 'var(--yellow)'; }
-  else if (deg >= -1.5) { yon = '🟠 Hafif Düşüş';    aciklama = 'AL sinyallerine dikkat';  renk = 'var(--yellow)'; }
-  else                  { yon = '🔴 Güçlü Düşüş';    aciklama = 'SAT baskısı var';          renk = 'var(--red)'; }
-
-  el('piyasaYonu').textContent          = yon;
-  el('piyasaYonu').style.fontSize       = '0.9rem';
-  el('piyasaYonuAciklama').textContent  = aciklama;
+  // artık renderPiyasaKartlari içinde inline yapılıyor
+  renderPiyasaKartlari();
 }
 
 // ─────────────────────────────────────────────
@@ -119,16 +126,43 @@ export function renderSummary() {
   const { veriler, takipEdilen } = state;
   const { dogru, yanlis, toplam, isabet } = sinyalIstatistik();
 
-  el('sumTakip').textContent  = takipEdilen.size;
-  el('sumAl').textContent     = Object.values(veriler).filter(v => v.sinyal === 'GÜÇLÜ AL').length  || '—';
-  el('sumSat').textContent    = Object.values(veriler).filter(v => v.sinyal === 'GÜÇLÜ SAT').length || '—';
-  el('sumIsabet').textContent = toplam > 0 ? `%${isabet}` : '—';
+  const sumAl  = Object.values(veriler).filter(v => v.sinyal === 'GÜÇLÜ AL').length;
+  const sumSat = Object.values(veriler).filter(v => v.sinyal === 'GÜÇLÜ SAT').length;
+
+  // Summary kartlarını summary-grid class'ı ile yeniden render et
+  const summaryCards = el('summaryCards');
+  if (summaryCards) {
+    summaryCards.className = 'summary-grid';
+    summaryCards.innerHTML = `
+      <div class="summary-card">
+        <div class="sc-label">Takip Edilen</div>
+        <div class="sc-value">${takipEdilen.size}</div>
+      </div>
+      <div class="summary-card s-green">
+        <div class="sc-label">Güçlü AL</div>
+        <div class="sc-value green">${sumAl || '—'}</div>
+      </div>
+      <div class="summary-card s-red">
+        <div class="sc-label">Güçlü SAT</div>
+        <div class="sc-value red">${sumSat || '—'}</div>
+      </div>
+      <div class="summary-card s-yellow">
+        <div class="sc-label">Sinyal İsabeti</div>
+        <div class="sc-value yellow">${toplam > 0 ? '%' + isabet : '—'}</div>
+      </div>`;
+  } else {
+    // Fallback: eski id'ler
+    el('sumTakip')  && (el('sumTakip').textContent  = takipEdilen.size);
+    el('sumAl')     && (el('sumAl').textContent     = sumAl  || '—');
+    el('sumSat')    && (el('sumSat').textContent     = sumSat || '—');
+    el('sumIsabet') && (el('sumIsabet').textContent  = toplam > 0 ? '%' + isabet : '—');
+  }
 
   // Sinyal tab özet
-  el('sinTopToplam').textContent  = state.sinyalGecmisi.length;
-  el('sinTopDogru').textContent   = dogru;
-  el('sinTopYanlis').textContent  = yanlis;
-  el('sinTopIsabet').textContent  = toplam > 0 ? `%${isabet}` : '—';
+  el('sinTopToplam') && (el('sinTopToplam').textContent = state.sinyalGecmisi.length);
+  el('sinTopDogru')  && (el('sinTopDogru').textContent  = dogru);
+  el('sinTopYanlis') && (el('sinTopYanlis').textContent = yanlis);
+  el('sinTopIsabet') && (el('sinTopIsabet').textContent = toplam > 0 ? '%' + isabet : '—');
 }
 
 // ─────────────────────────────────────────────
@@ -137,60 +171,76 @@ export function renderSummary() {
 
 export function renderDashboard() {
   const { veriler, takipEdilen, sinyalGecmisi } = state;
-  const tbody = el('dashTableBody');
-  const rows  = Object.entries(veriler).filter(([k]) => takipEdilen.has(k));
+  const container = el('dashTableBody');
+  const rows = Object.entries(veriler).filter(([k]) => takipEdilen.has(k));
 
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--muted)">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle\'ye bas.</td></tr>';
+    if (container) container.innerHTML =
+      '<tr><td colspan="9" class="empty-state" style="padding:3rem">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle'ye bas.</td></tr>';
     return;
   }
 
-  // AI yorumunu göster
+  // AI yorumunu glassmorphism kutusu ile göster
   const lastSinyal = sinyalGecmisi[0];
-  if (lastSinyal?.aiYorum) {
-    el('aiBoxContainer').innerHTML =
-      '<div class="ai-box">' +
-        '<div class="ai-box-header">' +
-          '<div class="ai-icon">⬡</div>' +
-          '<div class="ai-box-title">Claude AI Analizi</div>' +
-          '<div class="ai-box-time">' + new Date(lastSinyal.tarih).toLocaleString('tr-TR') + '</div>' +
-        '</div>' +
-        '<div class="ai-content">' + lastSinyal.aiYorum + '</div>' +
-      '</div>';
+  const aiBox = el('aiBoxContainer');
+  if (aiBox && lastSinyal?.aiYorum) {
+    aiBox.innerHTML = `<div class="ai-glass">
+      <div class="ai-glass-header">
+        <div class="ai-glass-icon">⬡</div>
+        <span class="ai-glass-title">Claude AI Portföy Analizi</span>
+        <span class="ai-glass-time">${new Date(lastSinyal.tarih).toLocaleString('tr-TR')}</span>
+      </div>
+      <div class="ai-glass-content">${lastSinyal.aiYorum}</div>
+    </div>`;
   }
 
-  tbody.innerHTML = rows.map(([k, v]) => {
-    const rsiPct  = Math.min(100, Math.max(0, v.rsi));
-    const rsiColor = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)';
-    const cls     = sinyalClass(v.sinyal);
-    const degCls  = v.degisim >= 0 ? 'pos' : 'neg';
-    const hacimTxt = v.hacimFark > 0
-      ? `<span class="pos">+${v.hacimFark}%</span>`
-      : v.hacimFark < 0 ? `<span class="neg">${v.hacimFark}%</span>` : '—';
+  // Dashboard: table body satırları (sütunlar: Hisse, Fiyat, Değişim, RSI, Sinyal, Güven, MACD, Hacim, Bollinger)
+  if (container) {
+    container.innerHTML = rows.map(([k, v]) => {
+      const rsiPct   = Math.min(100, Math.max(0, v.rsi || 50));
+      const rsiColor = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)';
+      const cls      = sinyalClass(v.sinyal);
+      const degCls   = v.degisim >= 0 ? 'pos' : 'neg';
+      const guven    = v.guvenSkoru || 0;
+      const guvenCls = guven >= 70 ? 'high' : guven >= 50 ? 'medium' : 'low';
+      const hacimTxt = v.hacimFark > 0
+        ? `<span class="pos">+${v.hacimFark}%</span>`
+        : v.hacimFark < 0 ? `<span class="neg">${v.hacimFark}%</span>` : '<span class="muted">—</span>';
 
-    return `<tr>
-      <td>
-        <span class="mono" style="font-weight:500;cursor:pointer;color:var(--accent)"
-          onclick="hisseDetayAc('${k}')">${k}</span>
-      </td>
-      <td class="mono">${v.fiyat} ₺</td>
-      <td class="mono ${degCls}">${v.degisim >= 0 ? '+' : ''}${v.degisim}%</td>
-      <td>
-        <div class="rsi-wrap">
-          <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
-          <span class="mono" style="font-size:0.75rem;color:${rsiColor}">${v.rsi}</span>
-        </div>
-      </td>
-      <td class="mono" style="font-size:0.72rem;color:${v.stochRsi?.k < 20 ? 'var(--accent)' : v.stochRsi?.k > 80 ? 'var(--red)' : 'var(--muted)'}">
-        ${v.stochRsi ? v.stochRsi.k : '—'}
-      </td>
-      <td class="mono" style="font-size:0.72rem;color:${v.macdHist > 0 ? 'var(--accent)' : 'var(--red)'}">
-        ${v.macdHist?.toFixed(3) ?? '—'}
-      </td>
-      <td>${hacimTxt}</td>
-      <td><span class="pill ${cls}">${v.sinyal}</span></td>
-    </tr>`;
-  }).join('');
+      return `<tr>
+        <td>
+          <span class="mono" style="font-weight:600;cursor:pointer;color:var(--accent)"
+            onclick="hisseDetayAc('${k}')">${k}</span>
+        </td>
+        <td class="mono" style="font-weight:500">${v.fiyat ?? '—'} ₺</td>
+        <td class="mono ${degCls}">${v.degisim >= 0 ? '+' : ''}${v.degisim}%</td>
+        <td>
+          <div class="rsi-wrap">
+            <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
+            <span class="mono" style="font-size:0.75rem;color:${rsiColor};min-width:28px">${v.rsi}</span>
+          </div>
+        </td>
+        <td>
+          <span class="sinyal-badge ${cls}">${v.sinyal}</span>
+        </td>
+        <td>
+          <div class="guven-wrap">
+            <div class="guven-bar"><div class="guven-fill ${guvenCls}" style="width:${guven}%"></div></div>
+            <span class="guven-pct">${guven}%</span>
+          </div>
+        </td>
+        <td class="mono" style="font-size:0.72rem;color:${v.macdHist > 0 ? 'var(--accent)' : 'var(--red)'}">
+          ${v.macdHist?.toFixed(3) ?? '—'}
+        </td>
+        <td>${hacimTxt}</td>
+        <td class="mono" style="font-size:0.72rem;color:${v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)'}">
+          ${v.bollinger ? v.bollinger.yuzde + '%' : '—'}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+}
+
 }
 
 // ─────────────────────────────────────────────
@@ -401,25 +451,52 @@ export function renderHisseDetay(kod) {
   if (takipEdilen.has(kod)) { takipBtn.textContent = '★ Takipte'; takipBtn.style.color = 'var(--accent)'; }
   else                       { takipBtn.textContent = '☆ Takibe Al'; takipBtn.style.color = ''; }
 
-  // Özet kartlar
+  // Hero + Özet kartlar
   const ozetEl = el('detayOzetKartlar');
   if (v) {
-    const degCls    = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
-    const sinyalRenk = v.sinyal?.includes('AL') ? 'var(--accent)' : v.sinyal?.includes('SAT') ? 'var(--red)' : 'var(--yellow)';
+    const degCls     = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
+    const sinyalCls  = sinyalClass(v.sinyal);
+    const guven      = v.guvenSkoru || 0;
+    const guvenCls   = guven >= 70 ? 'high' : guven >= 50 ? 'medium' : 'low';
+    const rsiColor   = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)';
+    const rsiEtiket  = v.rsi < 30 ? 'Aşırı Satım' : v.rsi > 70 ? 'Aşırı Alım' : 'Nötr';
+    const macdRenk   = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
+
     ozetEl.innerHTML = `
-      <div class="card" style="text-align:center">
-        <div class="card-title">Fiyat</div>
-        <div class="card-value" style="font-size:1.1rem">${v.fiyat} ₺</div>
-        <div style="font-size:0.72rem;color:${degCls};font-family:var(--mono)">${v.degisim >= 0 ? '+' : ''}${v.degisim}%</div>
+      <!-- Hero: Fiyat + Sinyal -->
+      <div class="detay-hero" style="grid-column:1/-1">
+        <div>
+          <div class="detay-hero-fiyat">${v.fiyat} ₺</div>
+          <div class="detay-hero-degisim" style="color:${degCls}">${v.degisim >= 0 ? '+' : ''}${v.degisim}%</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
+          <span class="sinyal-badge ${sinyalCls}">${v.sinyal}</span>
+          <div class="guven-wrap" style="justify-content:flex-end;min-width:100px">
+            <div class="guven-bar"><div class="guven-fill ${guvenCls}" style="width:${guven}%"></div></div>
+            <span class="guven-pct">${guven}%</span>
+          </div>
+        </div>
       </div>
-      <div class="card" style="text-align:center">
-        <div class="card-title">RSI</div>
-        <div class="card-value" style="font-size:1.1rem;color:${v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)'}">${v.rsi}</div>
-        <div style="font-size:0.7rem;color:var(--muted)">${v.rsi < 30 ? 'Aşırı Satım' : v.rsi > 70 ? 'Aşırı Alım' : 'Nötr'}</div>
+
+      <!-- Micro-kartlar: kritik göstergeler -->
+      <div class="detay-micro-card ${v.rsi < 30 ? 'accent' : v.rsi > 70 ? 'danger' : ''}">
+        <div class="detay-mc-label">RSI (14)</div>
+        <div class="detay-mc-value" style="color:${rsiColor}">${v.rsi}</div>
+        <div class="detay-mc-sub">${rsiEtiket}</div>
       </div>
-      <div class="card" style="text-align:center">
-        <div class="card-title">Sinyal</div>
-        <div style="font-size:0.9rem;font-weight:600;color:${sinyalRenk};margin-top:0.3rem">${v.sinyal || '—'}</div>
+
+      <div class="detay-micro-card ${v.macdHist > 0 ? 'accent' : 'danger'}">
+        <div class="detay-mc-label">MACD Hist</div>
+        <div class="detay-mc-value" style="color:${macdRenk}">${v.macdHist?.toFixed(3) ?? '—'}</div>
+        <div class="detay-mc-sub">${v.macdHist > 0 ? 'Momentum +' : 'Momentum −'}</div>
+      </div>
+
+      <div class="detay-micro-card">
+        <div class="detay-mc-label">Stoch RSI K</div>
+        <div class="detay-mc-value" style="color:${v.stochRsi?.k < 20 ? 'var(--accent)' : v.stochRsi?.k > 80 ? 'var(--red)' : 'var(--text)'}">
+          ${v.stochRsi ? v.stochRsi.k : '—'}
+        </div>
+        <div class="detay-mc-sub">${v.stochRsi?.k < 20 ? 'Aşırı Satım' : v.stochRsi?.k > 80 ? 'Aşırı Alım' : 'Nötr'}</div>
       </div>`;
   } else {
     ozetEl.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>';
@@ -483,41 +560,63 @@ export function renderDetayTeknik(kod) {
 
   const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
   const maRenk   = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
+  const bolRenk  = v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
+  const wRenk    = v.williamsR < -80 ? 'var(--accent)' : v.williamsR > -20 ? 'var(--red)' : 'var(--muted)';
+  const mfiRenk  = v.mfi < 30 ? 'var(--accent)' : v.mfi > 70 ? 'var(--red)' : 'var(--muted)';
 
+  const mc = (label, value, sub = '', color = '') =>
+    `<div class="micro-card">
+      <div class="mc-label">${label}</div>
+      <div class="mc-value" ${color ? `style="color:${color}"` : ''}>${value}</div>
+      ${sub ? `<div class="mc-sub">${sub}</div>` : ''}
+    </div>`;
+
+  teknikEl.className = 'micro-grid';
   teknikEl.innerHTML =
-    `<div><span style="color:var(--muted)">MACD Hist:</span> <span style="color:${macdRenk};font-family:var(--mono)">${v.macdHist?.toFixed(3) ?? '—'}</span></div>` +
-    `<div><span style="color:var(--muted)">Stoch RSI K:</span> <span style="font-family:var(--mono);color:${v.stochRsi?.k < 20 ? 'var(--accent)' : v.stochRsi?.k > 80 ? 'var(--red)' : 'inherit'}">${v.stochRsi ? v.stochRsi.k : '—'}</span></div>` +
-    `<div><span style="color:var(--muted)">Bollinger %:</span> <span style="font-family:var(--mono);color:${v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'inherit'}">${v.bollinger ? v.bollinger.yuzde + '%' : '—'}</span></div>` +
-    `<div><span style="color:var(--muted)">Williams %R:</span> <span style="font-family:var(--mono);color:${v.williamsR < -80 ? 'var(--accent)' : v.williamsR > -20 ? 'var(--red)' : 'inherit'}">${v.williamsR ?? '—'}</span></div>` +
-    `<div><span style="color:var(--muted)">MFI:</span> <span style="font-family:var(--mono);color:${v.mfi < 30 ? 'var(--accent)' : v.mfi > 70 ? 'var(--red)' : 'inherit'}">${v.mfi ?? '—'}</span></div>` +
-    `<div><span style="color:var(--muted)">Güven Skoru:</span> <span style="font-family:var(--mono);color:${(v.guvenSkoru || 0) >= 70 ? 'var(--accent)' : (v.guvenSkoru || 0) >= 50 ? 'var(--yellow)' : 'var(--red)'}">${v.guvenSkoru ?? '—'}%</span></div>` +
-    `<div><span style="color:var(--muted)">Hacim:</span> <span style="font-family:var(--mono);color:${v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)'}">${v.hacimFark > 0 ? '+' : ''}${v.hacimFark}%</span></div>` +
-    `<div><span style="color:var(--muted)">MA20:</span> <span style="font-family:var(--mono)">${v.ma20?.toFixed(2)} ₺</span></div>` +
-    `<div><span style="color:var(--muted)">MA50:</span> <span style="font-family:var(--mono)">${v.ma50?.toFixed(2)} ₺</span></div>` +
-    `<div><span style="color:var(--muted)">MA Trend:</span> <span style="color:${maRenk}">${v.ma20 > v.ma50 ? '📈 Yükseliş' : '📉 Düşüş'}</span></div>` +
-    `<div><span style="color:var(--muted)">Hacim/Ort:</span> <span>${v.hacimFark > 50 ? '⚡ Spike' : 'Normal'}</span></div>` +
-    (v.pivot ? `<div style="grid-column:1/-1;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border)"><span style="color:var(--muted)">Pivot:</span> <span class="mono">${v.pivot.pivot}</span> <span style="color:var(--muted)">R1:</span> <span class="mono" style="color:var(--red)">${v.pivot.r1}</span> <span style="color:var(--muted)">S1:</span> <span class="mono" style="color:var(--accent)">${v.pivot.s1}</span></div>` : '') +
-    (v.fib ? `<div style="grid-column:1/-1"><span style="color:var(--muted)">Fib 0.382:</span> <span class="mono">${v.fib.f382} ₺</span> <span style="color:var(--muted)">Fib 0.618:</span> <span class="mono">${v.fib.f618} ₺</span></div>` : '') +
-    (v.hafta52H ? `<div style="grid-column:1/-1"><span style="color:var(--muted)">52H:</span> <span class="mono" style="color:var(--red)">${v.hafta52H} ₺</span> <span style="color:var(--muted)">52L:</span> <span class="mono" style="color:var(--accent)">${v.hafta52L} ₺</span> <span style="color:var(--muted)">Poz:</span> <span class="mono">${v.hafta52Yuzde}%</span></div>` : '');
+    mc('Bollinger %', v.bollinger ? v.bollinger.yuzde + '%' : '—', v.bollinger?.yuzde < 25 ? 'Alt bant' : v.bollinger?.yuzde > 75 ? 'Üst bant' : 'Orta', bolRenk) +
+    mc('Williams %R', v.williamsR ?? '—', v.williamsR < -80 ? 'Aşırı Satım' : v.williamsR > -20 ? 'Aşırı Alım' : 'Nötr', wRenk) +
+    mc('MFI', v.mfi ?? '—', v.mfi < 30 ? 'Para çıkışı' : v.mfi > 70 ? 'Para girişi' : 'Dengeli', mfiRenk) +
+    mc('MA 20', v.ma20 ? v.ma20.toFixed(2) + ' ₺' : '—', '') +
+    mc('MA 50', v.ma50 ? v.ma50.toFixed(2) + ' ₺' : '—', '') +
+    mc('MA Trend', v.ma20 > v.ma50 ? 'Yükseliş' : 'Düşüş', 'MA20 / MA50', maRenk) +
+    mc('Hacim', v.hacimFark > 0 ? '+' + v.hacimFark + '%' : v.hacimFark + '%', v.hacimFark > 50 ? 'Spike!' : 'Normal', v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)') +
+    mc('Güven', (v.guvenSkoru ?? '—') + '%', 'Ağırlıklı skor', v.guvenSkoru >= 70 ? 'var(--accent)' : v.guvenSkoru >= 50 ? 'var(--yellow)' : 'var(--red)') +
+    (v.pivot ? mc('Pivot', v.pivot.pivot + ' ₺', `R1: ${v.pivot.r1} | S1: ${v.pivot.s1}`) : '') +
+    (v.fib ? mc('Fib 0.382', v.fib.f382 + ' ₺', 'Fib 0.618: ' + v.fib.f618 + ' ₺') : '') +
+    (v.hafta52H ? mc('52H Yüksek', v.hafta52H + ' ₺', 'Pozisyon: ' + v.hafta52Yuzde + '%', 'var(--red)') : '') +
+    (v.hafta52L ? mc('52H Düşük', v.hafta52L + ' ₺', '', 'var(--accent)') : '');
 }
+
 
 export function renderHisseAnalizSonucu(analiz) {
   const aiEl = el('detayAiIcerik');
   if (!aiEl || !analiz) return;
-  const kararRenk = analiz.karar === 'AL' ? 'var(--accent)' : analiz.karar === 'ALMA' ? 'var(--red)' : 'var(--yellow)';
+
+  const kararRenk = analiz.karar === 'AL'   ? 'var(--accent)' :
+                    analiz.karar === 'ALMA'  ? 'var(--red)'    : 'var(--yellow)';
+  const kararCls  = analiz.karar === 'AL'   ? 'guclu-al' :
+                    analiz.karar === 'ALMA'  ? 'guclu-sat' : 'bekle';
+
+  const fiyatChip = (label, val, color = '') =>
+    val ? `<div class="micro-card ${color ? '' : ''}">
+      <div class="mc-label">${label}</div>
+      <div class="mc-value mono" ${color ? `style="color:${color}"` : ''}>${val} ₺</div>
+    </div>` : '';
+
   aiEl.innerHTML = `
-    <div style="text-align:center;margin-bottom:1rem">
-      <div style="font-size:1.8rem;font-weight:700;color:${kararRenk}">${analiz.karar || '—'}</div>
-      <div style="font-size:0.72rem;color:var(--muted);font-family:var(--mono)">AI Kararı</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem">
+      <div>
+        <span class="sinyal-badge ${kararCls}" style="font-size:0.9rem;padding:0.4rem 1.1rem">${analiz.karar || '—'}</span>
+      </div>
+      <div style="font-size:0.65rem;color:var(--muted);font-family:var(--mono)">${new Date(analiz.tarih).toLocaleString('tr-TR')}</div>
     </div>
-    <div style="font-size:0.82rem;line-height:1.8;color:#b0d8c8;margin-bottom:0.75rem">${analiz.gerekce || ''}</div>
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:0.75rem">
-      ${analiz.girisFiyati ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Giriş:</span> <span class="mono">${analiz.girisFiyati} ₺</span></div>` : ''}
-      ${analiz.stopLoss    ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Stop:</span> <span class="mono" style="color:var(--red)">${analiz.stopLoss} ₺</span></div>` : ''}
-      ${analiz.hedefFiyat  ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Hedef:</span> <span class="mono" style="color:var(--accent)">${analiz.hedefFiyat} ₺</span></div>` : ''}
-      ${analiz.risk        ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Risk:</span> <span>${analiz.risk}</span></div>` : ''}
-    </div>
-    <div style="font-size:0.65rem;color:var(--muted);margin-top:0.75rem;font-family:var(--mono)">${new Date(analiz.tarih).toLocaleString('tr-TR')}</div>`;
+    <div style="font-size:0.83rem;line-height:1.85;color:#b8ddd0;margin-bottom:0.875rem">${analiz.gerekce || ''}</div>
+    <div class="micro-grid" style="grid-template-columns:repeat(auto-fill,minmax(100px,1fr))">
+      ${fiyatChip('Giriş Fiyatı', analiz.girisFiyati)}
+      ${fiyatChip('Stop Loss',    analiz.stopLoss,    'var(--red)')}
+      ${fiyatChip('Hedef Fiyat', analiz.hedefFiyat,  'var(--accent)')}
+      ${analiz.risk ? `<div class="micro-card"><div class="mc-label">Risk</div><div class="mc-value">${analiz.risk}</div></div>` : ''}
+    </div>`;
 }
 
 // ─────────────────────────────────────────────
