@@ -1,356 +1,33 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HisseMatik</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #060608;
-  --bg2: #0e0e12;
-  --bg3: #16161c;
-  --bg4: #1e1e26;
-  --border: rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.12);
-  --text: #e2e2ec;
-  --muted: #6b6b80;
-  --accent: #00e5a0;
-  --accent-dim: rgba(0,229,160,0.12);
-  --red: #ff4560;
-  --red-dim: rgba(255,69,96,0.12);
-  --yellow: #ffd166;
-  --yellow-dim: rgba(255,209,102,0.12);
-  --blue: #4cc9f0;
-  --purple: #7c3aed;
-  --font: 'Space Grotesk', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
-  --radius: 12px;
-  --radius-lg: 20px;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior: smooth; }
-body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; min-height:100vh; overflow-x:hidden; }
-
-/* ── LOADING ── */
-#loadingScreen {
-  position:fixed; inset:0; background:var(--bg);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  z-index:9999; transition:opacity 0.5s;
-}
-#loadingScreen.hide { opacity:0; pointer-events:none; }
-.load-logo { font-size:2rem; font-weight:700; letter-spacing:-1px; margin-bottom:1.5rem; }
-.load-logo span { color:var(--accent); }
-.load-bar { width:200px; height:2px; background:var(--border2); border-radius:1px; overflow:hidden; }
-.load-fill { height:100%; background:var(--accent); border-radius:1px; animation:loadAnim 2s ease forwards; }
-@keyframes loadAnim { from{width:0} to{width:100%} }
-
-/* ── AUTH SCREEN ── */
-#authScreen {
-  display:none; min-height:100vh;
-  align-items:center; justify-content:center;
-  background: radial-gradient(ellipse at 20% 50%, rgba(0,229,160,0.05) 0%, transparent 60%),
-              radial-gradient(ellipse at 80% 50%, rgba(76,201,240,0.04) 0%, transparent 60%),
-              var(--bg);
-}
-.auth-card {
-  background:var(--bg2); border:1px solid var(--border2);
-  border-radius:var(--radius-lg); padding:2.5rem;
-  width:100%; max-width:420px; text-align:center;
-  box-shadow: 0 0 60px rgba(0,0,0,0.5);
-}
-.auth-logo { font-size:1.8rem; font-weight:700; letter-spacing:-1px; margin-bottom:0.25rem; }
-.auth-logo span { color:var(--accent); }
-.auth-tagline { color:var(--muted); font-size:0.82rem; margin-bottom:2rem; }
-.google-btn {
-  display:flex; align-items:center; justify-content:center; gap:0.75rem;
-  width:100%; padding:0.875rem; background:white; color:#333;
-  border:none; border-radius:var(--radius); font-family:var(--font);
-  font-size:0.9rem; font-weight:500; cursor:pointer;
-  transition:all 0.2s; margin-bottom:1rem;
-}
-.google-btn:hover { background:#f5f5f5; transform:translateY(-1px); box-shadow:0 4px 20px rgba(0,0,0,0.3); }
-.google-icon { width:20px; height:20px; }
-.auth-note { font-size:0.75rem; color:var(--muted); line-height:1.6; }
-.auth-note a { color:var(--accent); text-decoration:none; }
-
-/* ── APP SHELL ── */
-#appShell { display:none; }
-
-/* TOPBAR */
-.topbar {
-  position:sticky; top:0; z-index:100;
-  background:rgba(6,6,8,0.9); backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0.75rem 1.5rem; gap:1rem;
-}
-.topbar-logo { font-size:1.1rem; font-weight:700; letter-spacing:-0.5px; }
-.topbar-logo span { color:var(--accent); }
-.topbar-center { display:flex; gap:0.25rem; }
-.nav-tab {
-  padding:0.4rem 0.9rem; border-radius:8px;
-  font-size:0.8rem; color:var(--muted); cursor:pointer;
-  transition:all 0.2s; border:none; background:none; font-family:var(--font);
-}
-.nav-tab:hover { color:var(--text); background:var(--bg3); }
-.nav-tab.active { color:var(--accent); background:var(--accent-dim); }
-.topbar-right { display:flex; align-items:center; gap:0.75rem; }
-.user-pill {
-  display:flex; align-items:center; gap:0.5rem;
-  padding:0.35rem 0.75rem 0.35rem 0.35rem;
-  background:var(--bg3); border:1px solid var(--border2);
-  border-radius:20px; font-size:0.75rem; color:var(--muted);
-}
-.user-avatar {
-  width:22px; height:22px; border-radius:50%; background:var(--accent-dim);
-  display:flex; align-items:center; justify-content:center;
-  font-size:0.65rem; color:var(--accent); font-weight:600;
-}
-.admin-badge {
-  background:rgba(124,58,237,0.2); color:#a78bfa;
-  border:1px solid rgba(124,58,237,0.3);
-  padding:2px 8px; border-radius:4px; font-size:0.65rem;
-  font-family:var(--mono); letter-spacing:0.05em;
-}
-.btn { padding:0.4rem 0.9rem; border-radius:8px; font-family:var(--font); font-size:0.78rem; cursor:pointer; transition:all 0.2s; border:1px solid var(--border2); background:var(--bg3); color:var(--text); }
-.btn:hover { background:var(--bg4); }
-.btn.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:600; }
-.btn.primary:hover { background:#00ffb3; }
-.btn.danger { background:var(--red-dim); color:var(--red); border-color:rgba(255,69,96,0.2); }
-
-/* STATUS */
-.status-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); display:inline-block; margin-right:4px; }
-.status-dot.live { background:var(--accent); box-shadow:0 0 8px var(--accent); animation:blink 2s infinite; }
-.status-dot.loading { background:var(--yellow); animation:blink 0.7s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-/* PANELS */
-.panel { display:none; padding:1.5rem; max-width:1400px; margin:0 auto; }
-.panel.active { display:block; }
-
-/* CARDS */
-.card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; }
-.card-title { font-size:0.72rem; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.4rem; }
-.card-value { font-family:var(--mono); font-size:1.6rem; font-weight:500; }
-.card-value.green { color:var(--accent); }
-.card-value.red { color:var(--red); }
-.card-value.yellow { color:var(--yellow); }
-
-.grid-4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.75rem; margin-bottom:1.5rem; }
-.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-
-/* TABLE */
-.table-wrap { overflow-x:auto; }
-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
-th { text-align:left; padding:0.6rem 0.75rem; color:var(--muted); font-weight:400; border-bottom:1px solid var(--border); font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase; white-space:nowrap; }
-td { padding:0.6rem 0.75rem; border-bottom:1px solid var(--border); vertical-align:middle; }
-tr:hover td { background:rgba(255,255,255,0.02); }
-tr:last-child td { border-bottom:none; }
-
-/* SİNYAL */
-.pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:0.68rem; font-family:var(--mono); white-space:nowrap; }
-.pill.al { background:var(--accent-dim); color:var(--accent); border:1px solid rgba(0,229,160,0.2); }
-.pill.guclu-al { background:rgba(0,229,160,0.2); color:var(--accent); border:1px solid rgba(0,229,160,0.4); font-weight:600; }
-.pill.sat { background:var(--red-dim); color:var(--red); border:1px solid rgba(255,69,96,0.2); }
-.pill.guclu-sat { background:rgba(255,69,96,0.2); color:var(--red); border:1px solid rgba(255,69,96,0.4); font-weight:600; }
-.pill.bekle { background:var(--yellow-dim); color:var(--yellow); border:1px solid rgba(255,209,102,0.2); }
-.pill.dogrulandi { background:var(--accent-dim); color:var(--accent); }
-.pill.yanlis { background:var(--red-dim); color:var(--red); }
-.pill.bekliyor { background:var(--yellow-dim); color:var(--yellow); }
-
-/* RSI BAR */
-.rsi-wrap { display:flex; align-items:center; gap:6px; }
-.rsi-bar { width:50px; height:3px; background:var(--bg4); border-radius:2px; overflow:hidden; flex-shrink:0; }
-.rsi-fill { height:100%; border-radius:2px; }
-
-/* MONO */
-.mono { font-family:var(--mono); }
-.pos { color:var(--accent); }
-.neg { color:var(--red); }
-.muted { color:var(--muted); }
-
-/* AI BOX */
-.ai-box {
-  background:linear-gradient(135deg, rgba(0,229,160,0.04), rgba(76,201,240,0.04));
-  border:1px solid rgba(0,229,160,0.15); border-radius:var(--radius);
-  padding:1.25rem; margin-bottom:1.5rem;
-}
-.ai-box-header { display:flex; align-items:center; gap:8px; margin-bottom:0.75rem; }
-.ai-icon { width:24px; height:24px; border-radius:6px; background:var(--accent-dim); display:flex; align-items:center; justify-content:center; font-size:0.7rem; }
-.ai-box-title { font-size:0.72rem; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; font-family:var(--mono); }
-.ai-box-time { font-size:0.68rem; color:var(--muted); margin-left:auto; font-family:var(--mono); }
-.ai-content { font-size:0.82rem; line-height:1.8; color:#b0d8c8; white-space:pre-wrap; }
-
-/* SECTION HEADER */
-.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-.section-title { font-size:0.9rem; font-weight:600; }
-.section-sub { font-size:0.75rem; color:var(--muted); margin-top:2px; }
-
-/* SEARCH */
-.search-row { display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; }
-.search-input {
-  flex:1; min-width:180px; background:var(--bg3); border:1px solid var(--border2);
-  border-radius:8px; padding:0.55rem 0.9rem; color:var(--text);
-  font-family:var(--font); font-size:0.82rem; outline:none;
-}
-.search-input:focus { border-color:var(--accent); }
-.chip { padding:0.3rem 0.75rem; border-radius:20px; font-size:0.72rem; cursor:pointer; border:1px solid var(--border2); color:var(--muted); transition:all 0.15s; background:none; }
-.chip.active { background:var(--accent-dim); border-color:rgba(0,229,160,0.3); color:var(--accent); }
-
-/* HİSSE GRID */
-.hisse-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.5rem; }
-.hisse-card {
-  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
-  padding:0.75rem; cursor:pointer; transition:all 0.15s; position:relative;
-}
-.hisse-card:hover { border-color:var(--border2); transform:translateY(-1px); }
-.hisse-card.takip { border-color:rgba(0,229,160,0.3); background:rgba(0,229,160,0.04); }
-.hisse-card.portfoy { border-color:rgba(255,209,102,0.3); background:rgba(255,209,102,0.04); }
-.h-kod { font-family:var(--mono); font-size:0.82rem; font-weight:500; margin-bottom:2px; }
-.h-ad { font-size:0.68rem; color:var(--muted); line-height:1.3; margin-bottom:0.4rem; }
-.h-check { position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:8px; transition:all 0.15s; }
-.hisse-card.takip .h-check { background:var(--accent); border-color:var(--accent); color:#000; }
-
-/* MODAL */
-.modal-overlay {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
-  z-index:500; align-items:center; justify-content:center; padding:1rem;
-}
-.modal-overlay.show { display:flex; }
-.modal {
-  background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius-lg);
-  padding:2rem; width:100%; max-width:480px; animation:modalIn 0.2s ease;
-}
-@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
-.modal-title { font-size:1.1rem; font-weight:600; margin-bottom:0.25rem; }
-.modal-sub { font-size:0.78rem; color:var(--muted); margin-bottom:1.5rem; }
-.form-group { margin-bottom:1rem; }
-.form-label { font-size:0.72rem; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; display:block; margin-bottom:0.4rem; }
-.form-input {
-  width:100%; background:var(--bg3); border:1px solid var(--border2);
-  border-radius:8px; padding:0.65rem 0.9rem; color:var(--text);
-  font-family:var(--font); font-size:0.85rem; outline:none;
-}
-.form-input:focus { border-color:var(--accent); }
-.modal-actions { display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1.5rem; }
-
-/* GLOBAL LOADING */
-#globalLoading {
-  display:none; position:fixed; inset:0; background:rgba(6,6,8,0.85);
-  z-index:400; flex-direction:column; align-items:center; justify-content:center; gap:1rem;
-}
-#globalLoading.show { display:flex; }
-.spinner { width:36px; height:36px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
-@keyframes spin { to{transform:rotate(360deg)} }
-.loading-msg { font-family:var(--mono); font-size:0.78rem; color:var(--accent); }
-
-/* ADMIN PANEL */
-.admin-bar { background:rgba(124,58,237,0.08); border:1px solid rgba(124,58,237,0.2); border-radius:var(--radius); padding:0.75rem 1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.75rem; font-size:0.8rem; }
-.admin-bar-icon { color:#a78bfa; font-size:1rem; }
-
-/* SINYAL GEÇMİŞİ */
-.sinyal-row { display:flex; flex-direction:column; gap:0.5rem; }
-.sinyal-item { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:0.875rem 1rem; }
-.sinyal-item-top { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; }
-.sinyal-item-meta { display:flex; gap:1.5rem; font-size:0.72rem; color:var(--muted); }
-.sinyal-item-meta span { display:flex; gap:4px; align-items:center; }
-.accuracy-bar-wrap { display:flex; align-items:center; gap:8px; margin-top:0.75rem; }
-.accuracy-bar { flex:1; height:4px; background:var(--bg4); border-radius:2px; overflow:hidden; }
-.accuracy-fill { height:100%; border-radius:2px; background:var(--accent); transition:width 1s ease; }
-
-/* PORTFÖY ÖZET */
-.portfoy-summary { background:linear-gradient(135deg, var(--bg2), var(--bg3)); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1.5rem; }
-
-/* TOAST */
-.toast {
-  position:fixed; bottom:1.5rem; right:1.5rem; z-index:600;
-  background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius);
-  padding:0.75rem 1rem; font-size:0.82rem; display:flex; align-items:center; gap:0.5rem;
-  transform:translateX(120%); transition:transform 0.3s ease;
-  max-width:300px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
-}
-.toast.show { transform:translateX(0); }
-.toast.success { border-color:rgba(0,229,160,0.3); }
-.toast.error { border-color:rgba(255,69,96,0.3); }
-
-/* HABERLER */
-.haber-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1rem 1.25rem;
-  margin-bottom: 0.75rem; transition: all 0.2s;
-}
-.haber-card:hover { border-color: var(--border2); transform: translateY(-1px); }
-.haber-baslik {
-  font-size: 0.88rem; font-weight: 600; line-height: 1.4;
-  margin-bottom: 0.4rem; color: var(--text);
-}
-.haber-baslik a { color: inherit; text-decoration: none; }
-.haber-baslik a:hover { color: var(--accent); }
-.haber-aciklama { font-size: 0.78rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem; }
-.haber-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
-.haber-ilgili {
-  display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem;
-}
-.haber-hisse-chip {
-  padding: 2px 8px; border-radius: 4px; font-size: 0.65rem;
-  background: var(--accent-dim); color: var(--accent);
-  font-family: var(--mono); cursor: pointer;
-}
-.haber-hisse-chip:hover { background: rgba(0,229,160,0.2); }
-
-/* SÖZLÜK */
-.terim-card {
-  background:var(--bg3); border:1px solid var(--border); border-radius:10px;
-  padding:1rem; margin-bottom:0.75rem; cursor:pointer; transition:all 0.2s;
-}
-.terim-card:hover { border-color:var(--border2); }
-.terim-card.acik { border-color:rgba(0,229,160,0.3); }
-.terim-baslik { font-weight:600; font-size:0.9rem; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.5rem; }
-.terim-aciklama { font-size:0.82rem; line-height:1.7; color:#b0d0c0; margin-top:0.5rem; }
-.terim-meta { font-size:0.68rem; color:var(--muted); margin-top:0.5rem; display:flex; gap:1rem; }
-.terim-chip {
-  padding:0.3rem 0.75rem; border-radius:20px; font-size:0.75rem;
-  cursor:pointer; border:1px solid var(--border2); color:var(--text);
-  transition:all 0.15s; background:var(--bg3);
-}
-.terim-chip:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
-
-/* PUSH MODAL */
-.push-preview {
-  background:var(--bg3); border:1px solid var(--border2); border-radius:12px;
-  padding:1rem; margin-top:1rem; font-size:0.82rem; line-height:1.6;
-}
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width:4px; height:4px; }
-::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
-
-/* MOBILE */
-@media (max-width:640px) {
-  .topbar-center { display:none; }
-  .panel { padding:1rem; }
-  .grid-2 { grid-template-columns:1fr; }
-  .grid-4 { grid-template-columns:repeat(2,1fr); }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HisseMatik</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
 
-<!-- LOADING -->
+<!-- ══════════════════════════════════════════
+     LOADING SCREEN
+══════════════════════════════════════════ -->
 <div id="loadingScreen">
   <div class="load-logo">Hisse<span>MATİK</span></div>
   <div class="load-bar"><div class="load-fill"></div></div>
 </div>
 
-<!-- AUTH -->
-<div id="authScreen" style="display:none">
+
+<!-- ══════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════ -->
+<div id="authScreen">
   <div class="auth-card">
     <div class="auth-logo">Hisse<span>MATİK</span></div>
     <div class="auth-tagline">BIST Karar Destek Sistemi</div>
-    <button class="google-btn" onclick="googleLogin()">
-      <svg class="google-icon" viewBox="0 0 24 24">
+
+    <button class="google-btn" id="btnGoogleLogin">
+      <svg class="google-icon" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -358,2819 +35,601 @@ tr:last-child td { border-bottom:none; }
       </svg>
       Google ile Giriş Yap
     </button>
-    <div class="auth-note">Sadece yetkili e-posta adresleri giriş yapabilir.<br>Erişim için <a href="mailto:admin@hissematik.com">yöneticiye</a> başvurun.</div>
-    <div style="margin-top:1.25rem;padding:0.875rem;background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.2);border-radius:8px;font-size:0.72rem;color:#b8a060;line-height:1.6;text-align:left">
-      ⚠️ <strong style="color:var(--yellow)">Yasal Uyarı:</strong> HisseMatik bir teknik analiz ve hesaplama aracıdır. 
-      Sunulan veriler, göstergeler ve AI analizleri yatırım tavsiyesi niteliği taşımaz. 
-      Tüm yatırım kararları kullanıcının kendi sorumluluğundadır. 
+
+    <p class="auth-note">
+      Sadece yetkili e-posta adresleri giriş yapabilir.<br>
+      Erişim için <a href="mailto:admin@hissematik.com">yöneticiye</a> başvurun.
+    </p>
+
+    <div class="auth-warning">
+      ⚠️ <strong>Yasal Uyarı:</strong> HisseMatik bir teknik analiz ve hesaplama aracıdır.
+      Sunulan veriler, göstergeler ve AI analizleri yatırım tavsiyesi niteliği taşımaz.
+      Tüm yatırım kararları kullanıcının kendi sorumluluğundadır.
       Sermaye piyasası araçlarına yatırım yapmak zarar riskini içerir.
     </div>
   </div>
 </div>
 
-<!-- APP -->
+
+<!-- ══════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════ -->
 <div id="appShell">
-  <div class="topbar">
+
+  <!-- ── TOPBAR ── -->
+  <header class="topbar">
     <div class="topbar-logo">Hisse<span>MATİK</span></div>
-    <div class="topbar-center">
-      <button class="nav-tab active" onclick="switchTab('dashboard')">Dashboard</button>
-      <button class="nav-tab" onclick="switchTab('hisseler')">Hisseler</button>
-      <button class="nav-tab" onclick="switchTab('sinyaller')">Sinyal Geçmişi</button>
-      <button class="nav-tab" onclick="switchTab('portfoy')">Portföy</button>
-      <button class="nav-tab" onclick="switchTab('haberler')">📰 Haberler</button>
-      <button class="nav-tab" onclick="switchTab('sozluk')">📚 Sözlük</button>
-      <button class="nav-tab admin-only" onclick="switchTab('admin')" style="display:none">⚙ Admin</button>
-    </div>
+
+    <nav class="topbar-center" id="mainNav">
+      <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+      <button class="nav-tab" data-tab="hisseler">Hisseler</button>
+      <button class="nav-tab" data-tab="sinyaller">Sinyal Geçmişi</button>
+      <button class="nav-tab" data-tab="portfoy">Portföy</button>
+      <button class="nav-tab" data-tab="haberler">📰 Haberler</button>
+      <button class="nav-tab" data-tab="sozluk">📚 Sözlük</button>
+      <button class="nav-tab admin-only" data-tab="admin">⚙ Admin</button>
+    </nav>
+
     <div class="topbar-right">
       <span id="statusIndicator">
         <span class="status-dot" id="statusDot"></span>
-        <span id="statusText" style="font-size:0.72rem;color:var(--muted)">Bekleniyor</span>
+        <span id="statusText">Bekleniyor</span>
       </span>
-      <button class="btn primary" onclick="verileriGuncelle()" id="updateBtn">⟳ Güncelle</button>
+
+      <button class="btn primary" id="btnGuncelle">⟳ Güncelle</button>
+
       <div class="user-pill">
         <div class="user-avatar" id="userAvatar">?</div>
-        <span id="userName" style="font-size:0.75rem">...</span>
-        <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
+        <span id="userName">...</span>
+        <span class="admin-badge" id="adminBadge">ADMIN</span>
       </div>
-      <button class="btn" onclick="logout()">Çıkış</button>
+
+      <button class="btn" id="btnLogout">Çıkış</button>
     </div>
-  </div>
+  </header>
 
-  <!-- SPK UYARI BANDI -->
-  <div id="spkUyari" style="background:rgba(255,209,102,0.06);border-bottom:1px solid rgba(255,209,102,0.15);padding:0.4rem 1.5rem;display:flex;align-items:center;justify-content:space-between;font-size:0.7rem;color:#a89050">
+  <!-- ── SPK UYARI BANDI ── -->
+  <div id="spkUyari" class="spk-bar">
     <span>⚠️ Bu platform teknik analiz aracıdır. Sunulan veriler yatırım tavsiyesi değildir. Tüm yatırım kararları kullanıcının sorumluluğundadır.</span>
-    <button onclick="document.getElementById('spkUyari').style.display='none'" style="background:none;border:none;color:#a89050;cursor:pointer;font-size:1rem;padding:0 0.5rem">✕</button>
+    <button id="btnSpkKapat" class="spk-kapat">✕</button>
   </div>
 
-  <!-- DASHBOARD -->
-  <div class="panel active" id="panel-dashboard">
-    <!-- Piyasa Genel Durum -->
-    <div class="grid-4" style="margin-bottom:0.75rem" id="piyasaKartlari">
+
+  <!-- ════════════════════════════════════════
+       PANEL: DASHBOARD
+  ════════════════════════════════════════ -->
+  <main class="panel active" id="panel-dashboard">
+
+    <!-- Piyasa genel durum kartları -->
+    <div class="grid-4 piyasa-grid" id="piyasaKartlari">
       <div class="card">
         <div class="card-title">BIST 100</div>
         <div class="card-value" id="xu100Deger">—</div>
-        <div id="xu100Degisim" style="font-size:0.75rem;font-family:var(--mono);margin-top:2px"></div>
+        <div id="xu100Degisim" class="card-sub mono"></div>
       </div>
       <div class="card">
-        <div class="card-title">USD/TRY</div>
+        <div class="card-title">USD / TRY</div>
         <div class="card-value" id="usdtryDeger">—</div>
-        <div id="usdtryDegisim" style="font-size:0.75rem;font-family:var(--mono);margin-top:2px"></div>
+        <div id="usdtryDegisim" class="card-sub mono"></div>
       </div>
       <div class="card">
-        <div class="card-title">EUR/TRY</div>
+        <div class="card-title">EUR / TRY</div>
         <div class="card-value" id="eurtryDeger">—</div>
-        <div id="eurtryDegisim" style="font-size:0.75rem;font-family:var(--mono);margin-top:2px"></div>
+        <div id="eurtryDegisim" class="card-sub mono"></div>
       </div>
       <div class="card">
         <div class="card-title">Piyasa Yönü</div>
         <div class="card-value" id="piyasaYonu">—</div>
-        <div id="piyasaYonuAciklama" style="font-size:0.72rem;color:var(--muted);margin-top:2px"></div>
+        <div id="piyasaYonuAciklama" class="card-sub"></div>
       </div>
     </div>
 
+    <!-- Özet sayaçlar -->
     <div class="grid-4" id="summaryCards">
-      <div class="card"><div class="card-title">Takip Edilen</div><div class="card-value" id="sumTakip">—</div></div>
-      <div class="card"><div class="card-title">Güçlü AL</div><div class="card-value green" id="sumAl">—</div></div>
-      <div class="card"><div class="card-title">Güçlü SAT</div><div class="card-value red" id="sumSat">—</div></div>
-      <div class="card"><div class="card-title">Sinyal İsabeti</div><div class="card-value yellow" id="sumIsabet">—</div></div>
+      <div class="card">
+        <div class="card-title">Takip Edilen</div>
+        <div class="card-value" id="sumTakip">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Güçlü AL</div>
+        <div class="card-value green" id="sumAl">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Güçlü SAT</div>
+        <div class="card-value red" id="sumSat">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sinyal İsabeti</div>
+        <div class="card-value yellow" id="sumIsabet">—</div>
+      </div>
     </div>
+
+    <!-- AI analiz kutusu (js tarafından doldurulur) -->
     <div id="aiBoxContainer"></div>
+
+    <!-- Takip edilen hisseler tablosu -->
     <div class="card">
       <div class="section-header">
-        <div><div class="section-title">Takip Edilen Hisseler</div><div class="section-sub">Sinyaller ve teknik göstergeler</div></div>
+        <div>
+          <div class="section-title">Takip Edilen Hisseler</div>
+          <div class="section-sub">Sinyaller ve teknik göstergeler</div>
+        </div>
       </div>
       <div class="table-wrap">
         <table id="dashTable">
-          <thead><tr>
-            <th>Hisse</th><th>Fiyat</th><th>Değişim</th>
-            <th>RSI</th><th>MACD</th><th>Hacim</th><th>Sinyal</th><th>Güncelleme</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>Hisse</th>
+              <th>Fiyat</th>
+              <th>Değişim</th>
+              <th>RSI</th>
+              <th>Stoch RSI</th>
+              <th>MACD Hist</th>
+              <th>Bollinger %</th>
+              <th>Güven</th>
+              <th>Sinyal</th>
+            </tr>
+          </thead>
           <tbody id="dashTableBody">
-            <tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--muted)">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle'ye bas.</td></tr>
+            <tr>
+              <td colspan="9" class="empty-state">
+                Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle'ye bas.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
-  </div>
 
-  <!-- HİSSELER -->
-  <div class="panel" id="panel-hisseler">
+  </main>
+
+
+  <!-- ════════════════════════════════════════
+       PANEL: HİSSELER
+  ════════════════════════════════════════ -->
+  <main class="panel" id="panel-hisseler">
+
     <div class="section-header">
-      <div><div class="section-title">Tüm BIST Hisseleri</div><div class="section-sub">Tıkla → takibe al &nbsp;|&nbsp; Sağ tıkla → portföye ekle</div></div>
-      <button class="btn" onclick="takibiKaldir()">Seçimi Temizle</button>
+      <div>
+        <div class="section-title">Tüm BIST Hisseleri</div>
+        <div class="section-sub">Tıkla → takibe al &nbsp;|&nbsp; Sağ tıkla → portföye ekle</div>
+      </div>
+      <button class="btn" id="btnTakibiKaldir">Seçimi Temizle</button>
     </div>
-    <div class="search-row">
-      <input class="search-input" id="searchInput" placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)" 
-  oninput="filterHisseler()" 
-  onkeydown="if(event.key==='Enter') hisseAra(this.value)">
-      <button class="chip active" onclick="setFilter('tum',this)">Tümü</button>
-      <button class="chip" onclick="setFilter('bist30',this)">BIST 30</button>
-      <button class="chip" onclick="setFilter('bist100',this)">BIST 100</button>
-      <button class="chip" onclick="setFilter('takip',this)">Takip</button>
-      <button class="chip" onclick="setFilter('portfoy',this)">Portföy</button>
-    </div>
-    <div class="hisse-grid" id="hisseGrid"></div>
-  </div>
 
-  <!-- SİNYAL GEÇMİŞİ -->
-  <div class="panel" id="panel-sinyaller">
+    <div class="search-row">
+      <input
+        class="search-input"
+        id="searchInput"
+        placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)"
+        autocomplete="off"
+      >
+      <button class="chip active" data-filter="tum">Tümü</button>
+      <button class="chip" data-filter="bist30">BIST 30</button>
+      <button class="chip" data-filter="bist100">BIST 100</button>
+      <button class="chip" data-filter="takip">Takip</button>
+      <button class="chip" data-filter="portfoy">Portföy</button>
+    </div>
+
+    <div class="hisse-grid" id="hisseGrid"></div>
+
+  </main>
+
+
+  <!-- ════════════════════════════════════════
+       PANEL: SİNYAL GEÇMİŞİ
+  ════════════════════════════════════════ -->
+  <main class="panel" id="panel-sinyaller">
+
     <div class="section-header">
       <div>
         <div class="section-title">Sinyal Geçmişi & Doğrulama</div>
         <div class="section-sub">AI kararları gerçek piyasa sonuçlarıyla karşılaştırır ve öğrenir</div>
       </div>
-      <div style="display:flex;align-items:center;gap:0.75rem">
-        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--muted)">
+      <div class="sinyal-controls">
+        <label class="sinyal-sure-label">
           Doğrulama süresi:
-          <select id="dogrulamaSuresi" class="form-input" style="padding:0.3rem 0.6rem;width:auto;font-size:0.78rem" onchange="dogrulamaSuresiDegis()">
+          <select id="dogrulamaSuresi" class="form-input sinyal-sure-select">
             <option value="1">1 Gün</option>
             <option value="3">3 Gün</option>
             <option value="7" selected>7 Gün</option>
           </select>
-        </div>
-        <button class="btn primary" onclick="sinyalleriGuncelle()">Sonuçları Kontrol Et</button>
+        </label>
+        <button class="btn primary" id="btnSinyalleriGuncelle">Sonuçları Kontrol Et</button>
       </div>
     </div>
-    <div class="grid-4" style="margin-bottom:1.5rem">
-      <div class="card"><div class="card-title">Toplam Sinyal</div><div class="card-value mono" id="sinTopToplam">—</div></div>
-      <div class="card"><div class="card-title">Doğrulanan</div><div class="card-value green mono" id="sinTopDogru">—</div></div>
-      <div class="card"><div class="card-title">Yanlışlanan</div><div class="card-value red mono" id="sinTopYanlis">—</div></div>
-      <div class="card"><div class="card-title">İsabet Oranı</div><div class="card-value yellow mono" id="sinTopIsabet">—</div></div>
+
+    <!-- Sinyal özet sayaçlar -->
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-title">Toplam Sinyal</div>
+        <div class="card-value mono" id="sinTopToplam">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Doğrulanan</div>
+        <div class="card-value green mono" id="sinTopDogru">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Yanlışlanan</div>
+        <div class="card-value red mono" id="sinTopYanlis">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">İsabet Oranı</div>
+        <div class="card-value yellow mono" id="sinTopIsabet">—</div>
+      </div>
     </div>
+
     <div class="card">
       <div class="sinyal-row" id="sinyalListesi">
-        <div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok. Veri güncellendiğinde sinyaller burada birikir.</div>
+        <div class="empty-state">
+          Henüz sinyal geçmişi yok. Veri güncellendiğinde sinyaller burada birikir.
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- PORTFÖY -->
-  <div class="panel" id="panel-portfoy">
+  </main>
+
+
+  <!-- ════════════════════════════════════════
+       PANEL: PORTFÖY
+  ════════════════════════════════════════ -->
+  <main class="panel" id="panel-portfoy">
+    <!-- js tarafından tamamen doldurulur -->
     <div id="portfoyContent"></div>
-  </div>
+  </main>
 
-  <!-- HABERLER -->
-  <div class="panel" id="panel-haberler">
+
+  <!-- ════════════════════════════════════════
+       PANEL: HABERLER
+  ════════════════════════════════════════ -->
+  <main class="panel" id="panel-haberler">
+
     <div class="section-header">
       <div>
         <div class="section-title">📰 Piyasa Haberleri</div>
         <div class="section-sub">Finans dünyasından son dakika haberleri</div>
       </div>
-      <button class="btn primary" onclick="haberleriYenile()">⟳ Yenile</button>
+      <button class="btn primary" id="btnHaberleriYenile">⟳ Yenile</button>
     </div>
+
     <div id="haberListesi">
-      <div style="text-align:center;padding:3rem;color:var(--muted)">
-        <div style="font-size:2rem;margin-bottom:1rem">📰</div>
+      <div class="empty-state">
+        <div class="empty-icon">📰</div>
         <div>Haberler yükleniyor...</div>
       </div>
     </div>
-  </div>
 
-  <!-- SÖZLÜK -->
-  <div class="panel" id="panel-sozluk">
+  </main>
+
+
+  <!-- ════════════════════════════════════════
+       PANEL: SÖZLÜK
+  ════════════════════════════════════════ -->
+  <main class="panel" id="panel-sozluk">
+
     <div class="section-header">
       <div>
         <div class="section-title">📚 Finans Terimleri Sözlüğü</div>
         <div class="section-sub">Anlamını merak ettiğin terime tıkla → Claude açıklar → Listene eklenir</div>
       </div>
-      <div style="display:flex;gap:0.5rem" id="adminSozlukBtns" style="display:none">
-        <button class="btn primary" onclick="pushGonder()">📢 Push Gönder</button>
+      <div id="adminSozlukBtns">
+        <button class="btn primary" id="btnPushGonder">📢 Push Gönder</button>
       </div>
     </div>
 
     <!-- Terim arama -->
-    <div class="search-row" style="margin-bottom:1.5rem">
-      <input class="search-input" id="sozlukSearch" placeholder="Terim ara veya yaz..." oninput="filterTerimler()">
-      <button class="btn primary" onclick="terimiSor()">+ Sormak İstiyorum</button>
+    <div class="search-row">
+      <input
+        class="search-input"
+        id="sozlukSearch"
+        placeholder="Terim ara veya yaz..."
+        autocomplete="off"
+      >
+      <button class="btn primary" id="btnTerimiSor">+ Sormak İstiyorum</button>
     </div>
 
-    <!-- Popüler terimler -->
-    <div style="margin-bottom:1.5rem">
-      <div style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Sık Kullanılan Terimler</div>
-      <div style="display:flex;flex-wrap:wrap;gap:0.5rem" id="popularTerimler"></div>
+    <!-- Popüler terimler (js tarafından oluşturulur) -->
+    <div class="popular-terimler-wrap">
+      <div class="popular-terimler-baslik">Sık Kullanılan Terimler</div>
+      <div id="popularTerimler"></div>
     </div>
 
     <!-- Terim listesi -->
     <div class="card">
       <div id="sozlukListesi">
-        <div style="text-align:center;padding:3rem;color:var(--muted)">
-          <div style="font-size:2rem;margin-bottom:1rem">📖</div>
-          <div style="color:var(--text);margin-bottom:0.5rem">Sözlüğün henüz boş</div>
-          <div style="font-size:0.8rem">Yukarıdan terim ara veya dashboard'daki sinyallerde terimlere tıkla</div>
+        <div class="empty-state">
+          <div class="empty-icon">📖</div>
+          <div class="empty-title">Sözlüğün henüz boş</div>
+          <div class="empty-sub">Yukarıdan terim ara veya dashboard'daki sinyallerde terimlere tıkla</div>
         </div>
       </div>
     </div>
 
     <!-- Admin: istatistikler -->
-    <div id="adminSozlukStats" style="display:none;margin-top:1.5rem">
+    <div id="adminSozlukStats">
       <div class="section-title" style="margin-bottom:1rem">📊 Kullanıcı İstatistikleri</div>
       <div class="card">
         <div id="terimIstatistik"></div>
       </div>
     </div>
-  </div>
 
-  <!-- ADMIN -->
-  <div class="panel" id="panel-admin">
+  </main>
+
+
+  <!-- ════════════════════════════════════════
+       PANEL: ADMIN
+  ════════════════════════════════════════ -->
+  <main class="panel" id="panel-admin">
+
     <div class="admin-bar">
       <span class="admin-bar-icon">⚙</span>
       <span>Admin Paneli — Sadece sen görüyorsun bu ekranı</span>
     </div>
-    <div class="grid-2" style="margin-bottom:1.5rem">
+
+    <div class="grid-2">
+
+      <!-- Kullanıcı yönetimi -->
       <div class="card">
         <div class="section-header" style="margin-bottom:1rem">
           <div class="section-title">Kullanıcılar</div>
-          <button class="btn primary" onclick="showAddUser()">+ Kullanıcı Ekle</button>
+          <button class="btn primary" id="btnKullaniciEkle">+ Kullanıcı Ekle</button>
         </div>
-        <div id="kullaniciListesi"><div style="color:var(--muted);font-size:0.8rem">Yükleniyor...</div></div>
+        <div id="kullaniciListesi">
+          <div class="muted" style="font-size:0.8rem">Yükleniyor...</div>
+        </div>
       </div>
+
+      <!-- Sistem durumu ve ayarlar -->
       <div class="card">
         <div class="section-title" style="margin-bottom:1rem">Sistem Durumu</div>
-        <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.82rem">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Firebase</span><span style="color:var(--accent)">✓ Bağlı</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Anthropic API</span><span id="apiStatus" style="color:var(--muted)">Kontrol ediliyor...</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Yahoo Finance</span><span style="color:var(--accent)">✓ Aktif (15dk gecikme)</span></div>
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Toplam Kullanıcı</span><span id="adminTotalUser" class="mono">—</span></div>
+
+        <div class="sistem-durum">
+          <div class="sistem-satir">
+            <span class="muted">Firebase</span>
+            <span style="color:var(--accent)">✓ Bağlı</span>
+          </div>
+          <div class="sistem-satir">
+            <span class="muted">Anthropic API</span>
+            <span id="apiStatus" class="muted">Kontrol ediliyor...</span>
+          </div>
+          <div class="sistem-satir">
+            <span class="muted">Yahoo Finance</span>
+            <span style="color:var(--accent)">✓ Aktif (15dk gecikme)</span>
+          </div>
+          <div class="sistem-satir">
+            <span class="muted">Toplam Kullanıcı</span>
+            <span id="adminTotalUser" class="mono">—</span>
+          </div>
         </div>
+
+        <!-- Veri temizliği -->
         <div style="margin-top:1.25rem">
           <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">Veri Temizliği</div>
-          <button class="btn danger" style="width:100%;margin-bottom:0.75rem" onclick="mukerrerTemizle()">🧹 Mükerrer Sinyalleri Temizle</button>
+          <button class="btn danger" id="btnMukerrerTemizle" style="width:100%;margin-bottom:0.75rem">
+            🧹 Mükerrer Sinyalleri Temizle
+          </button>
         </div>
+
+        <!-- Havuz API anahtarı -->
         <div style="margin-top:1.25rem">
           <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">🔑 Havuz API Anahtarı</div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem">Kullanıcılar bu anahtarı göremez. Tüm AI işlemleri buradan yapılır.</div>
+          <p class="muted" style="font-size:0.72rem;margin-bottom:0.5rem">
+            Kullanıcılar bu anahtarı göremez. Tüm AI işlemleri buradan yapılır.
+          </p>
           <div class="form-group">
             <input class="form-input" id="adminApiKey" type="password" placeholder="sk-ant-api03-...">
           </div>
-          <button class="btn primary" style="width:100%" onclick="saveApiKey()">Kaydet</button>
+          <button class="btn primary" id="btnSaveApiKey" style="width:100%">Kaydet</button>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- MODALS -->
+    </div>
+
+    <!-- Token istatistikleri -->
+    <div class="card" style="margin-top:1.5rem">
+      <div class="section-header" style="margin-bottom:1rem">
+        <div>
+          <div class="section-title">Token Kullanımı</div>
+          <div class="section-sub" id="tokenAySec"></div>
+        </div>
+        <button class="btn" id="btnTokenYenile">⟳ Yenile</button>
+      </div>
+      <div id="tokenIstatistik">
+        <div class="muted" style="font-size:0.8rem">Yükleniyor...</div>
+      </div>
+    </div>
+
+    <!-- Haber analizleri -->
+    <div class="card" style="margin-top:1.5rem">
+      <div class="section-header" style="margin-bottom:1rem">
+        <div>
+          <div class="section-title">Haber Analizleri</div>
+          <div class="section-sub">Kullanıcıların yaptığı AI haber analizleri</div>
+        </div>
+        <button class="btn primary" id="btnGunSonuOzet">📊 Gün Sonu Özeti</button>
+      </div>
+      <div id="haberAnalizListesi">
+        <div class="muted" style="font-size:0.8rem">Yükleniyor...</div>
+      </div>
+    </div>
+
+  </main>
+
+</div><!-- /appShell -->
+
+
+<!-- ══════════════════════════════════════════
+     MODALLER
+══════════════════════════════════════════ -->
+
+<!-- Portföy Modal -->
 <div class="modal-overlay" id="portfoyModal">
   <div class="modal">
     <div class="modal-title" id="portfoyModalTitle">Portföye Ekle</div>
     <div class="modal-sub" id="portfoyModalSub"></div>
-    <div class="form-group"><label class="form-label">Adet</label><input class="form-input" id="pAdet" type="number" placeholder="100"></div>
-    <div class="form-group"><label class="form-label">Alış Fiyatı (₺)</label><input class="form-input" id="pFiyat" type="number" step="0.01" placeholder="45.20"></div>
-    <div class="form-group"><label class="form-label">Alış Tarihi</label><input class="form-input" id="pTarih" type="date"></div>
+
+    <div class="form-group">
+      <label class="form-label" for="pAdet">Adet</label>
+      <input class="form-input" id="pAdet" type="number" placeholder="100" min="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="pFiyat">Alış Fiyatı (₺)</label>
+      <input class="form-input" id="pFiyat" type="number" step="0.01" placeholder="45.20" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="pTarih">Alış Tarihi</label>
+      <input class="form-input" id="pTarih" type="date">
+    </div>
+
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal('portfoyModal')">İptal</button>
-      <button class="btn primary" onclick="portfoyKaydet()">Kaydet</button>
+      <button class="btn" data-modal-close="portfoyModal">İptal</button>
+      <button class="btn primary" id="btnPortfoyKaydet">Kaydet</button>
     </div>
   </div>
 </div>
 
+<!-- Kullanıcı Ekle Modal -->
 <div class="modal-overlay" id="addUserModal">
   <div class="modal">
     <div class="modal-title">Kullanıcı Ekle</div>
     <div class="modal-sub">Bu e-posta sisteme erişim izni alacak.</div>
-    <div class="form-group"><label class="form-label">Ad Soyad</label><input class="form-input" id="newUserName" placeholder="Ahmet Yılmaz"></div>
-    <div class="form-group"><label class="form-label">Gmail Adresi</label><input class="form-input" id="newUserEmail" type="email" placeholder="kullanici@gmail.com"></div>
-    <div class="form-group"><label class="form-label">Anthropic API Anahtarı</label><input class="form-input" id="newUserApiKey" type="password" placeholder="sk-ant-api03-..."></div>
+
     <div class="form-group">
-      <label class="form-label">Plan</label>
+      <label class="form-label" for="newUserName">Ad Soyad</label>
+      <input class="form-input" id="newUserName" placeholder="Ahmet Yılmaz">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="newUserEmail">Gmail Adresi</label>
+      <input class="form-input" id="newUserEmail" type="email" placeholder="kullanici@gmail.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="newUserApiKey">Anthropic API Anahtarı</label>
+      <input class="form-input" id="newUserApiKey" type="password" placeholder="sk-ant-api03-...">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="newUserPlan">Plan</label>
       <select class="form-input" id="newUserPlan">
         <option value="web">Web (Aylık)</option>
         <option value="mobil">Mobil (Aylık)</option>
         <option value="full">Web + Mobil (Aylık)</option>
       </select>
     </div>
+
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal('addUserModal')">İptal</button>
-      <button class="btn primary" onclick="kullaniciEkle()">Ekle</button>
+      <button class="btn" data-modal-close="addUserModal">İptal</button>
+      <button class="btn primary" id="btnKullaniciEkleOnayla">Ekle</button>
     </div>
   </div>
 </div>
 
-<!-- HİSSE DETAY ANALİZ MODALI -->
-<div class="modal-overlay" id="hisseDetayModal" style="align-items:flex-start;padding:1rem;overflow-y:auto;pointer-events:auto">
-  <div class="modal" style="max-width:640px;width:100%;margin:auto;overflow-y:auto;max-height:90vh">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+<!-- Hisse Detay Analiz Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="hisseDetayModal">
+  <div class="modal modal--wide">
+
+    <!-- Başlık -->
+    <div class="modal-header">
       <div>
         <div class="modal-title" id="detayHisseAdi">—</div>
-        <div class="modal-sub" id="detayHisseSirket"></div>
+        <div class="modal-sub"  id="detayHisseSirket"></div>
       </div>
-      <button onclick="closeModal('hisseDetayModal')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <button class="modal-close" data-modal-close="hisseDetayModal" aria-label="Kapat">✕</button>
     </div>
 
-    <!-- Özet kartlar -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1.25rem" id="detayOzetKartlar"></div>
+    <!-- Özet kartlar (3 sütun, js doldurur) -->
+    <div class="detay-ozet-grid" id="detayOzetKartlar"></div>
 
     <!-- Teknik göstergeler -->
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
-      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Teknik Göstergeler</div>
-      <div id="detayTeknik" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.78rem"></div>
-    </div>
+    <section class="detay-bolum">
+      <div class="detay-bolum-baslik">Teknik Göstergeler</div>
+      <div class="detay-teknik-grid" id="detayTeknik"></div>
+    </section>
 
     <!-- Piyasa bağlamı -->
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
-      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Piyasa Bağlamı</div>
-      <div id="detayPiyasa" style="font-size:0.78rem"></div>
-    </div>
+    <section class="detay-bolum">
+      <div class="detay-bolum-baslik">Piyasa Bağlamı</div>
+      <div id="detayPiyasa"></div>
+    </section>
 
     <!-- İlgili haberler -->
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem" id="detayHaberlerBlok">
-      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">İlgili Haberler</div>
-      <div id="detayHaberler" style="font-size:0.78rem"></div>
-    </div>
+    <section class="detay-bolum" id="detayHaberlerBlok">
+      <div class="detay-bolum-baslik">İlgili Haberler</div>
+      <div id="detayHaberler"></div>
+    </section>
 
     <!-- Portföy durumu -->
-    <div id="detayPortfoyBlok" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
-      <div style="font-size:0.7rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">Portföyündeki Durumu</div>
-      <div id="detayPortfoy" style="font-size:0.78rem"></div>
-    </div>
+    <section class="detay-bolum" id="detayPortfoyBlok">
+      <div class="detay-bolum-baslik">Portföyündeki Durumu</div>
+      <div id="detayPortfoy"></div>
+    </section>
 
     <!-- AI Karar Analizi -->
-    <div id="detayAiBlok" style="background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.15);border-radius:10px;padding:1rem;margin-bottom:1.25rem">
-      <div style="font-size:0.7rem;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;font-family:var(--mono)">⬡ AI Karar Analizi</div>
-      <div id="detayAiIcerik" style="font-size:0.82rem;color:var(--muted)">
+    <section class="detay-ai-bolum">
+      <div class="detay-ai-baslik">⬡ AI Karar Analizi</div>
+      <div id="detayAiIcerik" class="detay-ai-icerik">
         Analiz için aşağıdaki butona bas...
       </div>
+    </section>
+
+    <!-- Aksiyon butonları -->
+    <div class="detay-aksiyonlar">
+      <button class="btn primary" id="detayAiBtn" style="flex:1">⬡ AI ile Analiz Et</button>
+      <button class="btn" id="detayPortfoyEkleBtn">+ Portföye Ekle</button>
+      <button class="btn" id="detayTakipBtn">☆ Takibe Al</button>
     </div>
 
-    <!-- Butonlar -->
-    <div style="display:flex;gap:0.75rem">
-      <button class="btn primary" style="flex:1;font-size:0.85rem" onclick="hisseAiAnalizEt()" id="detayAiBtn">
-        ⬡ AI ile Analiz Et
-      </button>
-      <button class="btn" onclick="portfoyModal(window._detayKod, window._detayAd)" style="font-size:0.85rem">
-        + Portföye Ekle
-      </button>
-      <button class="btn" onclick="detayTakipToggle()" id="detayTakipBtn" style="font-size:0.85rem">
-        ★ Takibe Al
-      </button>
-    </div>
   </div>
 </div>
 
+<!-- Push Mesajı Modal -->
 <div class="modal-overlay" id="pushModal">
   <div class="modal">
     <div class="modal-title">📢 Push Mesajı Gönder</div>
     <div class="modal-sub">Tüm aktif kullanıcılara anlık bildirim gönder</div>
+
     <div class="form-group">
-      <label class="form-label">Başlık</label>
+      <label class="form-label" for="pushBaslik">Başlık</label>
       <input class="form-input" id="pushBaslik" placeholder="📚 Bugünün Terimi: RSI">
     </div>
     <div class="form-group">
-      <label class="form-label">Mesaj</label>
+      <label class="form-label" for="pushMesaj">Mesaj</label>
       <textarea class="form-input" id="pushMesaj" rows="4" placeholder="RSI, hissenin aşırı alınıp alınmadığını gösteren bir göstergedir..." style="resize:vertical"></textarea>
     </div>
+
     <div class="push-preview" id="pushPreview">
-      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem">ÖNİZLEME</div>
-      <div style="font-weight:600;font-size:0.85rem">📚 Bugünün Terimi</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem">Mesaj burada görünecek...</div>
+      <div class="push-preview-label">ÖNİZLEME</div>
+      <div class="push-preview-baslik">📚 Bugünün Terimi</div>
+      <div class="push-preview-mesaj">Mesaj burada görünecek...</div>
     </div>
+
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal('pushModal')">İptal</button>
-      <button class="btn primary" onclick="pushGonderOnay()">📢 Gönder</button>
+      <button class="btn" data-modal-close="pushModal">İptal</button>
+      <button class="btn primary" id="btnPushGonderOnayla">📢 Gönder</button>
     </div>
   </div>
 </div>
 
-<div id="globalLoading"><div class="spinner"></div><div class="loading-msg" id="loadingMsg">İşleniyor...</div></div>
-<div class="toast" id="toast"></div>
 
-<script type="module">
-// ══════════════════════════════════════════════
-// FİREBASE CONFIG — kendi bilgilerinle değiştir
-// ══════════════════════════════════════════════
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection,
-  getDocs, addDoc, query, where, orderBy, limit, serverTimestamp, Timestamp }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- ══════════════════════════════════════════
+     GLOBAL UI ELEMANLAR
+══════════════════════════════════════════ -->
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAuKxk5ftUNjlbFtrKMwFmT_AAvrleOdPE",
-  authDomain: "hissematik-d6691.firebaseapp.com",
-  projectId: "hissematik-d6691",
-  storageBucket: "hissematik-d6691.firebasestorage.app",
-  messagingSenderId: "674361520711",
-  appId: "1:674361520711:web:5ddd6db6a7d8b1a314f762"
-};
+<!-- Global loading overlay -->
+<div id="globalLoading">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loadingMsg">İşleniyor...</div>
+</div>
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+<!-- Toast bildirimi -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-// ══════════════════════════════════════════════
-// GLOBAL STATE
-// ══════════════════════════════════════════════
-let currentUser = null;
-let isAdmin = false;
-let userDoc = null;
-let takipEdilen = new Set();
-let portfoy = {};
-let veriler = {};
-let sinyalGecmisi = [];
-let piyasaVerisi = {}; // XU100, USDTRY, XBANK vb.
-let aktifFilter = 'tum';
-let portfoyKod = null;
-let anthropicKey = ''; // Admin havuz key - kullanıcı görmez
-let havuzKey = ''; // Firestore'dan yüklenen admin key
 
-// Admin e-posta listesi — buraya kendi e-postanı yaz
-const ADMIN_EMAILS = ['ugurserkan@gmail.com'];
+<!-- ══════════════════════════════════════════
+     UYGULAMA GİRİŞ NOKTASI
+     Tüm import zinciri buradan başlar:
+     app.js → firebase.js, state.js, api.js,
+              indicators.js, ui.js
+══════════════════════════════════════════ -->
+<script type="module" src="assets/js/app.js"></script>
 
-// ══════════════════════════════════════════════
-// BIST HİSSELERİ
-// ══════════════════════════════════════════════
-const BIST30 = new Set(["AKBNK","ARCLK","ASELS","BIMAS","EREGL","FROTO","GARAN","GUBRF","HALKB","ISCTR","KCHOL","KRDMD","KOZAL","ODAS","PETKM","PGSUS","SAHOL","SASA","SISE","SKBNK","SOKM","TAVHL","TCELL","THYAO","TKFEN","TOASO","TTKOM","TUPRS","VAKBN","YKBNK"]);
-
-const BIST100 = new Set(["ACSEL","ADEL","AEFES","AGESA","AKBNK","AKCNS","AKGRT","AKSA","AKSEN","ALARK","ALBRK","ANSGR","ARCLK","ARENA","ASELS","ASTOR","ASUZU","AYDEM","BAGFS","BANVT","BIMAS","BIZIM","BJKAS","BRSAN","BSOKE","BTCIM","BUCIM","CCOLA","CIMSA","CLEBI","CRFSA","DEVA","DOAS","DOHOL","ECILC","EKGYO","ENJSA","ENKAI","EREGL","FENER","FROTO","GARAN","GSRAY","GUBRF","HALKB","HEKTS","INDES","INVEO","ISCTR","ISGYO","IZMDC","IZOCM","KAREL","KARSN","KARTN","KATMR","KCAER","KCHOL","KLKIM","KONTR","KONYO","KORDS","KOZAA","KOZAL","KRDMA","KRDMD","KRONT","LIDER","LOGO","MAVI","MERKO","MIGROS","MPARK","NUHCM","ODAS","OTKAR","OYAKC","PARSN","PETKM","PGSUS","PTOFS","RAYSG","RYSAS","SAHOL","SARKY","SASA","SDTTR","SELEC","SISE","SKBNK","SMART","SNGYO","SOKM","TATGD","TAVHL","TCELL","THYAO","TKFEN","TOASO","TRGYO","TSKB","TTKOM","TTRAK","TUPRS","ULKER","VAKBN","VESBE","VESTL","YKBNK","ZOREN"]);
-
-const BIST = [
-  ["ACSEL","Açıselsan"],["ADEL","Adel Kalemcilik"],["AEFES","Anadolu Efes"],
-  ["AGESA","AgeS Emeklilik"],["AGHOL","AG Anadolu Grubu"],["AKBNK","Akbank"],
-  ["AKCNS","Akçansa"],["AKENR","Ak Enerji"],["AKGRT","Aksigorta"],
-  ["AKSA","Aksa Akrilik"],["AKSEN","Aksa Enerji"],["ALARK","Alarko Holding"],
-  ["ALBRK","Albaraka Türk"],["ALCAR","Alarko Carrier"],["ALKIM","Alkim Kağıt"],
-  ["ANELE","Anel Elektrik"],["ANHYT","Anadolu Hayat"],["ANSGR","Anadolu Sigorta"],
-  ["ARCLK","Arçelik"],["ARENA","Arena Bilgisayar"],["ARSAN","Arsan Tekstil"],
-  ["ASELS","Aselsan"],["ASTOR","Astor Enerji"],["ASUZU","Anadolu Isuzu"],
-  ["AYDEM","Aydem Enerji"],["AYEN","Ayen Enerji"],["BAGFS","Bagfas Gübre"],
-  ["BANVT","Banvit"],["BIMAS","BIM Birleşik Mağazalar"],["BIZIM","Bizim Toptan"],
-  ["BJKAS","Beşiktaş JK"],["BOSSA","Bossa Ticaret"],["BRSAN","Borusan Mannesmann"],
-  ["BRYAT","Borusan Yatırım"],["BSOKE","Batısöke Çimento"],["BTCIM","Batı Çimento"],
-  ["BUCIM","Bursa Çimento"],["CCOLA","Coca Cola İçecek"],["CELHA","Çelik Halat"],
-  ["CIMSA","Çimsa"],["CLEBI","Çelebi Hava"],["CRFSA","Carrefoursa"],
-  ["DARDL","Dardanel"],["DESA","Desa Deri"],["DESPC","Despec Bilgisayar"],
-  ["DEVA","Deva Holding"],["DITAS","Ditaş"],["DOAS","Doğuş Otomotiv"],
-  ["DOHOL","Doğan Holding"],["ECILC","Eczacıbaşı İlaç"],["ECZYT","Eczacıbaşı Yatırım"],
-  ["EGEEN","Ege Endüstri"],["EGGUB","Ege Gübre"],["EGSER","Ege Seramik"],
-  ["EKGYO","Emlak Konut GYO"],["ENJSA","Enerjisa Enerji"],["ENKAI","Enka İnşaat"],
-  ["EPLAS","Egeplast"],["ERBOS","Erbosan"],["EREGL","Ereğli Demir Çelik"],
-  ["FENER","Fenerbahçe"],["FROTO","Ford Otosan"],["GARAN","Garanti BBVA"],
-  ["GARFA","Garanti Faktoring"],["GEDIK","Gedik Yatırım"],["GENTS","Gentaş"],
-  ["GEREL","Gersan Elektrik"],["GLYHO","Global Yatırım"],["GMTAS","Gümüştaş"],
-  ["GOLTS","Göltaş Çimento"],["GOODY","Goodyear"],["GSRAY","Galatasaray"],
-  ["GUBRF","Gübre Fabrikaları"],["GUSGR","Güneş Sigorta"],["HALKB","Halkbank"],
-  ["HATEK","Hateks"],["HEKTS","Hektaş"],["HTTBT","Hattat Holding"],
-  ["HURGZ","Hürriyet Gazetecilik"],["ICBCT","ICBC Turkey"],["IHLAS","İhlas Holding"],
-  ["INDES","İndeks Bilgisayar"],["INFO","İnfo Yatırım"],["INTEM","İntema"],
-  ["INVEO","Inveo Yatırım"],["IPEKE","İpek Doğal Enerji"],["ISCTR","İş Bankası C"],
-  ["ISGYO","İş GYO"],["ISKUR","İş Kuleleri"],["ITTFH","İttifak Holding"],
-  ["IZMDC","İzmir Demir Çelik"],["IZOCM","İzocam"],["JANTS","Jantsa Jant"],
-  ["KAREL","Karel Elektronik"],["KARSN","Karsan"],["KARTN","Kartonsan"],
-  ["KATMR","Katmerciler"],["KAYSE","Kayseri Şeker"],["KCAER","Kocaer Çelik"],
-  ["KCHOL","Koç Holding"],["KENT","Kent Gıda"],["KLKIM","Kalekim"],
-  ["KLSER","Kale Seramik"],["KONTR","Kontrolmatik"],["KONYO","Konya Çimento"],
-  ["KORDS","Kordsa"],["KOTON","Koton"],["KOZAA","Koza Altın"],
-  ["KOZAL","Koza Altın İşletmeleri"],["KRDMA","Kardemir A"],["KRDMB","Kardemir B"],
-  ["KRDMD","Kardemir D"],["KRONT","Kron Telekom"],["KUTPO","Kütahya Porselen"],
-  ["LIDER","Lider Faktoring"],["LOGO","Logo Yazılım"],["MAKIM","Makina Takım"],
-  ["MANAS","Manas Enerji"],["MARTI","Martı Otel"],["MAVI","Mavi Giyim"],
-  ["MEPET","Mepet Petrol"],["MERKO","Merko Gıda"],["METRO","Metro Ticaret"],
-  ["MIGROS","Migros Ticaret"],["MPARK","Medical Park"],["MRSHL","Marshall Boya"],
-  ["MTRKS","Matriks Bilgi"],["NETAS","Netaş"],["NTHOL","Net Holding"],
-  ["NUHCM","Nuh Çimento"],["ODAS","Odaş Elektrik"],["ORGE","Orge Enerji"],
-  ["OTKAR","Otokar"],["OYAKC","Oyak Çimento"],["OYLUM","Oylum Sınai"],
-  ["PAMEL","Pamel"],["PARSN","Parsan"],["PENGD","Penguen Gıda"],
-  ["PENTA","Penta Teknoloji"],["PETKM","Petkim"],["PETUN","Pınar Et"],
-  ["PGSUS","Pegasus Hava"],["PINSU","Pınar Su"],["POLHO","Polisan Holding"],
-  ["PRDGS","Paradox GYO"],["PRKAB","Pınar Kablo"],["PTOFS","Petrol Ofisi"],
-  ["RAYSG","Ray Sigorta"],["RYSAS","Rönesans Holding"],["SAHOL","Sabancı Holding"],
-  ["SANKO","Sanko"],["SARKY","Sarkuysan"],["SASA","Sasa Polyester"],
-  ["SDTTR","SDT Uzay"],["SELEC","Selçuk Ecza"],["SELGD","Selçuk Gıda"],
-  ["SISE","Şişe Cam"],["SKBNK","Şekerbank"],["SMART","Smart Güneş"],
-  ["SNGYO","Sinpaş GYO"],["SOKM","Şok Marketler"],["SONME","Sönmez Filament"],
-  ["SUWEN","Suwen İç Giyim"],["TATGD","Tat Gıda"],["TAVHL","TAV Havalimanları"],
-  ["TBORG","Türk Tuborg"],["TCELL","Turkcell"],["THYAO","Türk Hava Yolları"],
-  ["TKFEN","Tekfen Holding"],["TKNSA","Teknosa"],["TOASO","Tofaş Otomobil"],
-  ["TRCAS","Türkiye Reasürans"],["TRGYO","Torunlar GYO"],["TSKB","TSKB"],
-  ["TSPOR","Trabzonspor"],["TTKOM","Türk Telekom"],["TTRAK","Türk Traktör"],
-  ["TUPRS","Tüpraş"],["TURSG","Türk Sigorta"],["ULKER","Ülker Bisküvi"],
-  ["ULUSE","Ulusoy Elektrik"],["UNLU","Ünlü Tekstil"],["USAK","Uşak Seramik"],
-  ["VAKBN","Vakıfbank"],["VAKGM","Vakıf GYO"],["VESBE","Vestel Beyaz Eşya"],
-  ["VESTL","Vestel Elektronik"],["WINTA","Wintax"],["YATAS","Yataş"],
-  ["YKBNK","Yapı Kredi"],["YONGA","Yonga Mobilya"],["YUNSA","Yünsa"],
-  ["ZOREN","Zorlu Enerji"],["ZRGYO","Ziraat GYO"],
-  // Ek hisseler
-  ["ARMGD","Armada Gıda"],["BHMDR","Bahadır Kimya"],
-  ["AGROT","Agrotür"],["AHSGY","Ahlatcı Sosyal GYO"],
-  ["ATAGY","Ata GYO"],["ALTNY","Altınyunus"],
-  ["ALVES","Alves"],["ALCTL","Alcatel"],
-  ["AKSGY","Aksa GYO"],["AKSUE","Aksu Enerji"],
-  ["ARDYZ","Ardyz"],["ARTMS","Artemas"],["ARZUM","Arzum"],
-  ["ARASE","Arase"],["ASGYO","As GYO"],
-  ["ATEKS","Altınyıldız Tekstil"],["ATLAS","Atlas Menkul"],
-  ["AVGYO","Avrasya GYO"],["AVHOL","Avrasya Holding"],
-  ["AVOD","A.V.O.D."],["AZTEK","Aztek"],
-  ["BAKAB","Bak Ambalaj"],["BASCM","Başkent Çimento"],
-  ["BASGZ","Başer Gaz"],["BEGYO","Beykoz GYO"],
-  ["BERA","Bera Holding"],["BIGCH","Birleşik Çimento"],
-  ["BIGEN","Bigen"],["BIENY","Bienyatırım"],
-  ["BTCIM","Batı Çimento"],["BFREN","Bosch Fren"],
-  ["BARMA","Barma"],["BALSU","Bal Su"],
-  ["BESTE","Beste"],["BEYAZ","Beyaz Filo"],
-  ["ACSEL","Açıselsan"],["ADESE","Adese AVM"],
-  ["ADGYO","Adnan Gıda GYO"],["AFYON","Afyon Çimento"],
-  ["AGESA","AgeS Emeklilik"],["AGHOL","AG Anadolu"],
-  ["AGYO","Atakule GYO"],["AHGAZ","Ahlatcı Doğalgaz"],
-];// ══════════════════════════════════════════════
-// AUTH
-// ══════════════════════════════════════════════
-window.googleLogin = async () => {
-  try {
-    await signInWithPopup(auth, provider);
-  } catch(e) { showToast('Giriş başarısız: ' + e.message, 'error'); }
-};
-
-window.logout = async () => {
-  await signOut(auth);
-  location.reload();
-};
-
-onAuthStateChanged(auth, async (user) => {
-  document.getElementById('loadingScreen').classList.add('hide');
-  if (!user) {
-    document.getElementById('authScreen').style.display = 'flex';
-    document.getElementById('appShell').style.display = 'none';
-    return;
-  }
-
-  // Yetkili mi?
-  const userRef = doc(db, 'users', user.uid);
-  const userSnap = await getDoc(userRef);
-
-  isAdmin = ADMIN_EMAILS.includes(user.email);
-
-  if (!isAdmin && !userSnap.exists()) {
-    showToast('Bu e-posta ile erişim izniniz yok.', 'error');
-    await signOut(auth);
-    document.getElementById('authScreen').style.display = 'flex';
-    return;
-  }
-
-  currentUser = user;
-  userDoc = userSnap.exists() ? userSnap.data() : {};
-
-  // Admin ise kendi kaydını oluştur
-  if (isAdmin && !userSnap.exists()) {
-    await setDoc(userRef, {
-      email: user.email, name: user.displayName || 'Admin',
-      isAdmin: true, plan: 'full', active: true,
-      createdAt: serverTimestamp()
-    });
-  }
-
-  // Kullanıcı verilerini yükle
-  anthropicKey = userDoc.apiKey || '';
-  takipEdilen = new Set(userDoc.takipEdilen || []);
-  portfoy = userDoc.portfoy || {};
-  veriler = userDoc.veriler || {};
-
-  // UI
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appShell').style.display = 'block';
-  document.getElementById('userName').textContent = (user.displayName || user.email).split(' ')[0];
-  document.getElementById('userAvatar').textContent = (user.displayName || user.email)[0].toUpperCase();
-
-  if (isAdmin) {
-    document.getElementById('adminBadge').style.display = 'inline';
-    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-    loadAdminPanel();
-  }
-
-  // Havuz API key yükle (admin key - kullanıcı göremez)
-  try {
-    const configSnap = await getDoc(doc(db, 'config', 'global'));
-    if (configSnap.exists()) {
-      havuzKey = configSnap.data().anthropicKey || '';
-      anthropicKey = havuzKey; // Tüm AI işlemleri havuz key kullanır
-    }
-  } catch(e) { console.error('Config yükleme hatası:', e); }
-
-  // Piyasa genel verisini yükle
-  piyasaVerisiCek();
-  // Push mesajları kontrol et
-  checkPushMesajlar();
-  // Sinyalleri yükle
-  await loadSinyalGecmisi();
-  renderHisseler();
-  renderDashboard();
-  renderPortfoy();
-  updateSummary();
-});
-
-// ══════════════════════════════════════════════
-// VERİ KAYDET
-// ══════════════════════════════════════════════
-async function saveUserData() {
-  if (!currentUser) return;
-  const ref = doc(db, 'users', currentUser.uid);
-  await updateDoc(ref, {
-    takipEdilen: [...takipEdilen],
-    portfoy,
-    veriler,
-  });
-}
-
-// ══════════════════════════════════════════════
-// TAB
-// ══════════════════════════════════════════════
-window.switchTab = (name) => {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('panel-' + name).classList.add('active');
-  if (name === 'sinyaller') renderSinyalGecmisi();
-  if (name === 'portfoy') renderPortfoy();
-  if (name === 'admin') loadAdminPanel();
-  if (name === 'sozluk') loadSozluk();
-  if (name === 'haberler') loadHaberler();
-};
-
-// ══════════════════════════════════════════════
-// HİSSE LİSTESİ
-// ══════════════════════════════════════════════
-// Listede olmayan hisseyi ara
-window.hisseAra = async (kod) => {
-  kod = kod.trim().toUpperCase();
-  if (!kod) return;
-  
-  // Listede var mı?
-  if (BIST.find(b => b[0] === kod)) {
-    filterHisseler();
-    return;
-  }
-
-  // Yoksa Yahoo'dan dene
-  showToast(kod + ' aranıyor...');
-  try {
-    const proxyUrl = 'https://hissematik-proxy.ugurserkan.workers.dev/?semboller=' + kod;
-    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(10000)});
-    if (!res.ok) { showToast(kod + ' bulunamadı', 'error'); return; }
-    const data = await res.json();
-    const v = parseYahooVeri(kod, data[kod]);
-    if (v) {
-      // Geçici olarak listeye ekle
-      if (!BIST.find(b => b[0] === kod)) {
-        BIST.push([kod, kod + ' (Özel)']);
-      }
-      veriler[kod] = v;
-      showToast(kod + ' bulundu ve eklendi ✓');
-      filterHisseler();
-    } else {
-      showToast(kod + ' Yahoo Finance'te bulunamadı', 'error');
-    }
-  } catch(e) {
-    showToast('Arama hatası: ' + e.message, 'error');
-  }
-};
-
-window.filterHisseler = () => {
-  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
-  const grid = document.getElementById('hisseGrid');
-  grid.innerHTML = '';
-  BIST.filter(([k,a]) => {
-    if (aktifFilter === 'takip' && !takipEdilen.has(k)) return false;
-    if (aktifFilter === 'portfoy' && !portfoy[k]) return false;
-    if (aktifFilter === 'bist30' && !BIST30.has(k)) return false;
-    if (aktifFilter === 'bist100' && !BIST100.has(k)) return false;
-    if (q && !k.toLowerCase().includes(q) && !a.toLowerCase().includes(q)) return false;
-    return true;
-  }).filter(([k]) => {
-    // Veri gelmeyen hisseleri gizle (sadece veri varsa veya henüz güncelleme yapılmadıysa göster)
-    if (Object.keys(veriler).length === 0) return true; // Henüz güncelleme yapılmadı, hepsini göster
-    return veriler[k] !== undefined; // Veri gelenleri göster
-  }).forEach(([k, a]) => {
-    const isTakip = takipEdilen.has(k), isPF = !!portfoy[k];
-    const card = document.createElement('div');
-    const v = veriler[k];
-    const degisim = v ? v.degisim : null;
-    const fiyat = v ? v.fiyat : null;
-    const sinyal = v ? v.sinyal : null;
-
-    // Tüm hisseler için renk ve fiyat göster
-    let cardStyle = '';
-    let degisimHTML = '';
-    if (v) {
-      if (degisim > 0) cardStyle = 'border-color:rgba(0,229,160,0.4);background:rgba(0,229,160,0.05)';
-      else if (degisim < 0) cardStyle = 'border-color:rgba(255,69,96,0.4);background:rgba(255,69,96,0.05)';
-      degisimHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem"><span style="font-family:var(--mono);font-size:0.78rem;font-weight:500">' + fiyat + ' ₺</span><span style="font-family:var(--mono);font-size:0.7rem;color:' + (degisim>=0?'var(--accent)':'var(--red)') + '">' + (degisim>=0?'+':'') + degisim + '%</span></div>';
-    }
-
-    card.className = 'hisse-card' + (isTakip?' takip':'') + (isPF?' portfoy':'');
-    if (cardStyle) card.setAttribute('style', cardStyle);
-    
-    const sinyalCls = sinyal?(sinyal.includes('AL')?'al':sinyal.includes('SAT')?'sat':'bekle'):'al';
-    const sinyalCls2 = sinyal?(sinyal.includes('AL')?'guclu-al':sinyal.includes('SAT')?'guclu-sat':'bekle'):'bekle';
-    card.innerHTML = 
-      '<div class="h-check">' + (isTakip?'✓':'') + '</div>' +
-      '<div class="h-kod">' + k + '</div>' +
-      '<div class="h-ad">' + a + '</div>' +
-      degisimHTML +
-      '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:0.3rem">' +
-        (isTakip ? '<span class="pill ' + sinyalCls + '" style="font-size:0.6rem">' + (sinyal||'TAKİP') + '</span>' : '') +
-        (isPF ? '<span class="pill bekle" style="font-size:0.6rem">PORTFÖY</span>' : '') +
-        (v && !isTakip && sinyal ? '<span class="pill ' + sinyalCls2 + '" style="font-size:0.58rem">' + sinyal + '</span>' : '') +
-      '</div>' +
-      '</div>';
-    // Karta tıklama
-    card.onclick = (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-      toggleTakip(k);
-    };
-    card.oncontextmenu = (e) => { e.preventDefault(); portfoyModal(k, a); };
-    grid.appendChild(card);
-
-    // Analiz butonunu DOM'a ekle (innerHTML değil appendChild ile)
-    if (v) {
-      const analizDiv = document.createElement('div');
-      analizDiv.style.cssText = 'margin-top:0.4rem';
-      const analizBtnEl = document.createElement('button');
-      analizBtnEl.textContent = '🔍 Analiz Et';
-      analizBtnEl.style.cssText = 'font-size:0.62rem;padding:2px 8px;background:var(--accent-dim);border:1px solid rgba(0,229,160,0.3);border-radius:4px;color:var(--accent);cursor:pointer;width:100%';
-      analizBtnEl.addEventListener('click', (e) => { e.stopPropagation(); hisseDetayPanelAc(k); });
-      analizDiv.appendChild(analizBtnEl);
-      card.appendChild(analizDiv);
-    }
-  });
-};
-
-window.renderHisseler = window.filterHisseler;
-
-window.setFilter = (f, el) => {
-  aktifFilter = f;
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  filterHisseler();
-};
-
-function toggleTakip(k) {
-  if (takipEdilen.has(k)) {
-    if (!confirm(`${k} takipten çıkarılsın mı?`)) return;
-    takipEdilen.delete(k);
-    // Verilerden de sil
-    delete veriler[k];
-  } else {
-    takipEdilen.add(k);
-  }
-  saveUserData();
-  filterHisseler();
-  updateSummary();
-}
-
-window.takibiKaldir = () => { takipEdilen.clear(); saveUserData(); filterHisseler(); updateSummary(); };
-
-// ══════════════════════════════════════════════
-// PORTFÖY MODAL
-// ══════════════════════════════════════════════
-window.portfoyModal = (k, a) => {
-  portfoyKod = k;
-  document.getElementById('portfoyModalTitle').textContent = k + ' — Portföye Ekle';
-  document.getElementById('portfoyModalSub').textContent = a;
-  document.getElementById('pTarih').value = new Date().toISOString().split('T')[0];
-  document.getElementById('portfoyModal').classList.add('show');
-};
-
-window.portfoyKaydet = async () => {
-  const adet = Number(document.getElementById('pAdet').value);
-  const fiyat = Number(document.getElementById('pFiyat').value);
-  const tarih = document.getElementById('pTarih').value;
-  if (!adet || !fiyat) { showToast('Adet ve fiyat zorunlu!', 'error'); return; }
-  portfoy[portfoyKod] = { adet, alisFiyati: fiyat, alisTarihi: tarih, ad: BIST.find(b=>b[0]===portfoyKod)?.[1] || '' };
-  if (!takipEdilen.has(portfoyKod)) takipEdilen.add(portfoyKod);
-  await saveUserData();
-  closeModal('portfoyModal');
-  filterHisseler();
-  renderPortfoy();
-  showToast(portfoyKod + ' portföye eklendi ✓');
-};
-
-window.closeModal = (id) => document.getElementById(id).classList.remove('show');
-
-// ══════════════════════════════════════════════
-// VERİ ÇEKME
-// ══════════════════════════════════════════════
-window.verileriGuncelle = async () => {
-  showLoading('Veriler çekiliyor...');
-  setStatus('loading', 'Güncelleniyor...');
-
-  // 0. Piyasa genel verisi (XU100, USDTRY)
-  setLoadingMsg('Piyasa genel verisi çekiliyor...');
-  await piyasaVerisiCek();
-
-  // 1. Yahoo - tüm hisseler
-  setLoadingMsg("Hisse verileri çekiliyor...");
-  try {
-    const bpRes = await fetch(
-      'https://hissematik-proxy.ugurserkan.workers.dev/?tumhisseler=1',
-      {signal: AbortSignal.timeout(15000)}
-    );
-    if (bpRes.ok) {
-      const bpData = await bpRes.json();
-      const hisseler = bpData?.data || [];
-      hisseler.forEach(h => {
-        const kod = h.KOD || h.kod || h.SEMBOL;
-        if (!kod) return;
-        const fiyat = parseFloat(h.KAPANIS || h.SON || h.kapanis || 0);
-        const degisim = parseFloat(h.YUZDE || h.yuzde || 0);
-        const hacim = parseFloat(h.HACIM || h.hacim || 0);
-        if (fiyat > 0) {
-          if (!veriler[kod]) veriler[kod] = {};
-          veriler[kod].fiyat = +fiyat.toFixed(2);
-          veriler[kod].degisim = +degisim.toFixed(2);
-          veriler[kod].hacim = hacim;
-          veriler[kod].ts = Date.now();
-          veriler[kod].sinyal = veriler[kod].sinyal || 'BEKLE';
-        }
-      });
-      setLoadingMsg(`${hisseler.length} hisse fiyatı alındı...`);
-    }
-  } catch(e) { console.error('Bigpara hatası:', e); }
-
-  // Anlık fiyatları hemen göster
-  filterHisseler();
-
-  // 2. Yahoo - sadece takip edilenler için geçmiş veri (RSI/MACD)
-  const takipKodlar = [...takipEdilen];
-  if (takipKodlar.length > 0) {
-    setLoadingMsg('Teknik analiz için geçmiş veri çekiliyor...');
-    const grupBoyutu = 100;
-    for (let i = 0; i < takipKodlar.length; i += grupBoyutu) {
-      const grup = takipKodlar.slice(i, i + grupBoyutu);
-      try {
-        const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?semboller=${grup.join(',')}`;
-        const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(30000)});
-        if (res.ok) {
-          const topluVeri = await res.json();
-          for (const [sembol, json] of Object.entries(topluVeri)) {
-            const v = parseYahooVeri(sembol, json);
-            if (v) {
-              veriler[sembol] = {
-                ...veriler[sembol],
-                rsi: v.rsi, macd: v.macd, macdSignal: v.macdSignal,
-                macdHist: v.macdHist, ma20: v.ma20, ma50: v.ma50,
-                kapanis: v.kapanis, sinyal: v.sinyal,
-                hacimFark: v.hacimFark,
-              };
-            }
-          }
-        }
-      } catch(e) { console.error('Yahoo grup hatası:', e); }
-    }
-  }
-
-  filterHisseler();
-
-  // 3. AI analiz
-  let aiYorum = '';
-  if (aiGerekliMi()) {
-    setLoadingMsg('AI analiz yapılıyor...');
-    try {
-      aiYorum = await Promise.race([
-        aiAnalizYap(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
-      ]).catch(() => '');
-    } catch(e) { aiYorum = ''; }
-  }
-
-  if (aiYorum) aiCalistiKaydet();
-  await sinyalKaydet(aiYorum);
-  await saveUserData();
-  hideLoading();
-  setStatus('live', 'Canlı');
-  renderDashboard();
-  renderPortfoy();
-  filterHisseler();
-  updateSummary();
-  haberlerSifirla(); // Haberler bir sonraki açılışta yenilensin
-  showToast(`${Object.keys(veriler).filter(k => veriler[k].fiyat).length} hisse güncellendi ✓`);
-};
-
-
-function parseYahooVeri(sembol, json) {
-  try {
-    const result = json?.chart?.result?.[0];
-    if (!result) return null;
-    const meta = result.meta;
-    const q = result.indicators?.quote?.[0] || {};
-    const kapanis = (q.close||[]).filter(x=>x>0);
-    const hacimler = (q.volume||[]).filter(x=>x>0);
-    if (kapanis.length < 5) return null;
-
-    const fiyat = meta.regularMarketPrice || kapanis.at(-1);
-    const onceki = meta.chartPreviousClose || kapanis.at(-2);
-    const degisim = onceki > 0 ? +((fiyat-onceki)/onceki*100).toFixed(2) : 0;
-    const hacimOrt = avg(hacimler.slice(-20));
-    const hacimSon = hacimler.at(-1)||0;
-    const hacimFark = hacimOrt>0 ? +((hacimSon/hacimOrt-1)*100).toFixed(0) : 0;
-
-    // Temel
-    const rsi = calcRSI(kapanis, 14);
-    const macd = calcMACD(kapanis);
-    const ma20 = +avg(kapanis.slice(-20)).toFixed(2);
-    const ma50 = +(kapanis.length>=50?avg(kapanis.slice(-50)):avg(kapanis)).toFixed(2);
-    const ma200 = +(kapanis.length>=200?avg(kapanis.slice(-200)):avg(kapanis)).toFixed(2);
-    const ma9 = +avg(kapanis.slice(-9)).toFixed(2);
-
-    // Gelişmiş
-    const bollinger = calcBollinger(kapanis);
-    const stochRsi = calcStochRSI(kapanis);
-    const williamsR = calcWilliamsR(kapanis);
-    const mfi = calcMFI(kapanis, hacimler);
-    const obv = calcOBV(kapanis, hacimler);
-    const pivot = calcPivot(kapanis);
-    const fib = calcFibonacci(kapanis);
-
-    // 52 hafta yüksek/düşük
-    const son52h = kapanis.slice(-252);
-    const hafta52H = +Math.max(...son52h).toFixed(2);
-    const hafta52L = +Math.min(...son52h).toFixed(2);
-    const hafta52Yuzde = hafta52H>hafta52L ? +((fiyat-hafta52L)/(hafta52H-hafta52L)*100).toFixed(1) : 50;
-
-    // Ağırlıklı sinyal skoru
-    const v_tmp = {rsi,stochRsi,macd:macd.macd,macdSignal:macd.sinyal,macdHist:macd.histogram,
-      bollinger,ma20,ma50,hacimFark,williamsR,mfi};
-    const skorSonuc = gelismisSkor(v_tmp);
-    const ham_sinyal = sinyalPiyasaAyarla(skorSonuc.sinyal, degisim);
-
-    return {
-      fiyat: +fiyat.toFixed(2), degisim,
-      rsi: +rsi.toFixed(1),
-      stochRsi,
-      macd: +macd.macd.toFixed(4),
-      macdSignal: +macd.sinyal.toFixed(4),
-      macdHist: +macd.histogram.toFixed(4),
-      ma9, ma20, ma50, ma200,
-      bollinger, williamsR, mfi, obv,
-      pivot, fib,
-      hafta52H, hafta52L, hafta52Yuzde,
-      hacim: hacimSon, hacimFark,
-      guvenSkoru: skorSonuc.guven,
-      alYuzde: skorSonuc.alYuzde,
-      satYuzde: skorSonuc.satYuzde,
-      sinyal: ham_sinyal,
-      kapanis: kapanis.slice(-60),
-      ts: Date.now()
-    };
-  } catch(e) { console.error(sembol,e); return null; }
-}
-
-async function fetchYahoo(sembol) {
-  try {
-    // Cloudflare Worker proxy - CORS sorunu yok
-    const proxyUrl = `https://hissematik-proxy.ugurserkan.workers.dev/?sembol=${sembol}`;
-    const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
-    if (!res.ok) return null;
-    const json = await res.json();
-    const result = json?.chart?.result?.[0];
-    if (!result) return null;
-
-    const meta = result.meta;
-    const kapanis = (result.indicators?.quote?.[0]?.close || []).filter(x => x > 0);
-    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
-    if (kapanis.length < 20) return null;
-
-    const fiyat = meta.regularMarketPrice || kapanis.at(-1);
-    const onceki = meta.chartPreviousClose || kapanis.at(-2);
-    const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
-    const hacimOrt = avg(hacimler.slice(-20));
-    const hacimSon = hacimler.at(-1) || 0;
-    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
-
-    const rsi = calcRSI(kapanis, 14);
-    const macd = calcMACD(kapanis);
-    const ma20 = avg(kapanis.slice(-20));
-    const ma50 = kapanis.length >= 50 ? avg(kapanis.slice(-50)) : avg(kapanis);
-    const sinyal = genelSinyal(rsi, macd, ma20, ma50, hacimFark);
-
-    return {
-      fiyat: +fiyat.toFixed(2), degisim,
-      rsi: +rsi.toFixed(1),
-      macd: +macd.macd.toFixed(4),
-      macdSignal: +macd.sinyal.toFixed(4),
-      macdHist: +macd.histogram.toFixed(4),
-      ma20: +ma20.toFixed(2), ma50: +ma50.toFixed(2),
-      hacim: hacimSon, hacimFark,
-      sinyal, kapanis: kapanis.slice(-60),
-      ts: Date.now()
-    };
-  } catch(e) { console.error(sembol, e); return null; }
-}
-
-// ══════════════════════════════════════════════
-// TEKNİK HESAPLAMALAR
-// ══════════════════════════════════════════════
-function calcRSI(k, p) {
-  if (k.length < p+1) return 50;
-  const s = k.slice(-p-1);
-  let g=0, l=0;
-  for (let i=1;i<s.length;i++) { const d=s[i]-s[i-1]; if(d>0)g+=d; else l+=Math.abs(d); }
-  const og=g/p, ol=l/p;
-  if (ol===0) return 100;
-  return 100-(100/(1+og/ol));
-}
-
-function ema(k, p) {
-  if (k.length < p) return k.at(-1)||0;
-  const m = 2/(p+1);
-  let e = avg(k.slice(0,p));
-  for (let i=p;i<k.length;i++) e=k[i]*m+e*(1-m);
-  return e;
-}
-
-function calcMACD(k) {
-  const h=ema(k,12), y=ema(k,26), m=h-y;
-  const ser=[];
-  for (let i=25;i<k.length;i++) { const h2=ema(k.slice(0,i+1),12); const y2=ema(k.slice(0,i+1),26); ser.push(h2-y2); }
-  const s=ema(ser,9);
-  return {macd:m, sinyal:s, histogram:m-s};
-}
-
-function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
-
-// ── GELİŞMİŞ TEKNİK HESAPLAMALAR ──
-
-function calcBollinger(k, p=20) {
-  if(!k||k.length<p) return {ust:0,orta:0,alt:0,bw:0,yuzde:50};
-  const s=k.slice(-p), o=avg(s);
-  const std=Math.sqrt(s.reduce((x,y)=>x+(y-o)**2,0)/p);
-  const ust=o+2*std, alt=o-2*std, f=k.at(-1);
-  return {ust:+ust.toFixed(2),orta:+o.toFixed(2),alt:+alt.toFixed(2),
-    bw:+((ust-alt)/o*100).toFixed(2),
-    yuzde:ust===alt?50:+((f-alt)/(ust-alt)*100).toFixed(1)};
-}
-
-function calcStochRSI(k, p=14) {
-  if(!k||k.length<p*2) return {k:50,d:50};
-  const rsiArr=[];
-  for(let i=p;i<=k.length;i++) {
-    const sl=k.slice(i-p,i);
-    let g=0,l=0;
-    for(let j=1;j<sl.length;j++){const d=sl[j]-sl[j-1];if(d>0)g+=d;else l+=Math.abs(d);}
-    const ag=g/p,al=l/p;
-    rsiArr.push(al===0?100:+(100-(100/(1+ag/al))).toFixed(2));
-  }
-  const son=rsiArr.slice(-p);
-  const mn=Math.min(...son),mx=Math.max(...son);
-  const stk=mx===mn?50:+((rsiArr.at(-1)-mn)/(mx-mn)*100).toFixed(2);
-  return {k:stk,d:+avg(rsiArr.slice(-3)).toFixed(2)};
-}
-
-function calcWilliamsR(k, p=14) {
-  if(!k||k.length<p) return -50;
-  const son=k.slice(-p);
-  const hh=Math.max(...son),ll=Math.min(...son);
-  if(hh===ll) return -50;
-  return +((hh-k.at(-1))/(hh-ll)*-100).toFixed(2);
-}
-
-function calcMFI(kapanis, hacim, p=14) {
-  if(!kapanis||kapanis.length<p+1) return 50;
-  let poz=0,neg=0;
-  for(let i=Math.max(1,kapanis.length-p);i<kapanis.length;i++){
-    const mf=kapanis[i]*(hacim[i]||0);
-    if(kapanis[i]>kapanis[i-1]) poz+=mf; else neg+=mf;
-  }
-  if(neg===0) return 100;
-  return +(100-(100/(1+poz/neg))).toFixed(2);
-}
-
-function calcOBV(kapanis, hacim) {
-  if(!kapanis||kapanis.length<2) return 0;
-  let obv=0;
-  for(let i=1;i<kapanis.length;i++){
-    if(kapanis[i]>kapanis[i-1]) obv+=hacim[i]||0;
-    else if(kapanis[i]<kapanis[i-1]) obv-=hacim[i]||0;
-  }
-  return obv;
-}
-
-function calcPivot(k) {
-  if(!k||k.length<2) return {};
-  const h=Math.max(...k.slice(-5)),l=Math.min(...k.slice(-5)),c=k.at(-1);
-  const p=(h+l+c)/3;
-  return {pivot:+p.toFixed(2),r1:+(2*p-l).toFixed(2),r2:+(p+h-l).toFixed(2),
-    s1:+(2*p-h).toFixed(2),s2:+(p-h+l).toFixed(2)};
-}
-
-function calcFibonacci(k) {
-  if(!k||k.length<20) return {};
-  const son=k.slice(-Math.min(52,k.length));
-  const h=Math.max(...son),l=Math.min(...son),f=h-l;
-  return {h:+h.toFixed(2),l:+l.toFixed(2),
-    f236:+(h-f*0.236).toFixed(2),f382:+(h-f*0.382).toFixed(2),
-    f500:+(h-f*0.500).toFixed(2),f618:+(h-f*0.618).toFixed(2)};
-}
-
-function gelismisSkor(v) {
-  let al=0, sat=0, toplam=0;
-  
-  const ekle=(a,s,t)=>{al+=a;sat+=s;toplam+=t;};
-  
-  // RSI (15 puan)
-  if(v.rsi<25)ekle(15,0,15); else if(v.rsi<35)ekle(10,0,15); else if(v.rsi<45)ekle(5,0,15);
-  else if(v.rsi>75)ekle(0,15,15); else if(v.rsi>65)ekle(0,10,15); else if(v.rsi>55)ekle(0,5,15);
-  else ekle(0,0,15);
-
-  // Stoch RSI (10 puan)
-  if(v.stochRsi){
-    const {k,d}=v.stochRsi;
-    if(k<20&&k>d)ekle(10,0,10); else if(k<20)ekle(5,0,10);
-    else if(k>80&&k<d)ekle(0,10,10); else if(k>80)ekle(0,5,10);
-    else ekle(0,0,10);
-  }
-
-  // MACD (15 puan)
-  if(v.macdHist>0&&v.macd>v.macdSignal)ekle(15,0,15);
-  else if(v.macdHist>0)ekle(8,0,15);
-  else if(v.macdHist<0&&v.macd<v.macdSignal)ekle(0,15,15);
-  else ekle(0,8,15);
-
-  // Bollinger (10 puan)
-  if(v.bollinger){
-    const {yuzde}=v.bollinger;
-    if(yuzde<10)ekle(10,0,10); else if(yuzde<25)ekle(5,0,10);
-    else if(yuzde>90)ekle(0,10,10); else if(yuzde>75)ekle(0,5,10);
-    else ekle(0,0,10);
-  }
-
-  // MA (15 puan)
-  if(v.ma20>v.ma50)ekle(10,0,15); else ekle(0,10,15);
-
-  // Hacim+OBV (10 puan)
-  if(v.hacimFark>50&&v.macdHist>0)ekle(10,0,10);
-  else if(v.hacimFark>50&&v.macdHist<0)ekle(0,8,10);
-  else ekle(0,0,10);
-
-  // Williams %R (8 puan)
-  if(v.williamsR!==undefined){
-    if(v.williamsR<-80)ekle(8,0,8); else if(v.williamsR<-60)ekle(4,0,8);
-    else if(v.williamsR>-20)ekle(0,8,8); else if(v.williamsR>-40)ekle(0,4,8);
-    else ekle(0,0,8);
-  }
-
-  // MFI (8 puan)
-  if(v.mfi!==undefined){
-    if(v.mfi<20)ekle(8,0,8); else if(v.mfi<35)ekle(4,0,8);
-    else if(v.mfi>80)ekle(0,8,8); else if(v.mfi>65)ekle(0,4,8);
-    else ekle(0,0,8);
-  }
-
-  const alY=toplam>0?Math.round(al/toplam*100):50;
-  const satY=toplam>0?Math.round(sat/toplam*100):50;
-  const guven=Math.max(alY,satY);
-  
-  let sinyal;
-  if(alY>=65)sinyal='GÜÇLÜ AL';
-  else if(alY>=45&&alY>satY)sinyal='AL';
-  else if(satY>=65)sinyal='GÜÇLÜ SAT';
-  else if(satY>=45&&satY>alY)sinyal='SAT';
-  else sinyal='BEKLE';
-
-  return {sinyal,guven,alYuzde:alY,satYuzde:satY};
-}
-
-function genelSinyal(rsi, macd, ma20, ma50, hacimFark) {
-  let al=0, sat=0;
-  if (rsi<25) al+=3; else if (rsi<35) al+=2; else if (rsi<45) al+=1;
-  else if (rsi>80) sat+=3; else if (rsi>70) sat+=2; else if (rsi>60) sat+=1;
-  if (macd.histogram>0 && macd.macd>macd.sinyal) al+=2; else if (macd.histogram<0) sat+=2;
-  if (ma20>ma50) al+=1; else sat+=1;
-  if (hacimFark>50) al+=1; // hacim spike AL lehine
-  if (hacimFark>100 && rsi>65) sat+=1; // yüksek hacim + aşırı alım = dikkat
-  if (al>=5) return 'GÜÇLÜ AL';
-  if (al>=3 && al>sat) return 'AL';
-  if (sat>=5) return 'GÜÇLÜ SAT';
-  if (sat>=3 && sat>al) return 'SAT';
-  return 'BEKLE';
-}
-
-// ══════════════════════════════════════════════
-// SİNYAL KAYDET & DOĞRULA
-// ══════════════════════════════════════════════
-async function sinyalKaydet(aiYorum) {
-  if (!currentUser) return;
-  const ts = Date.now();
-  const batch = [];
-
-  for (const [k, v] of Object.entries(veriler)) {
-    if (!takipEdilen.has(k)) continue;
-    batch.push({
-      uid: currentUser.uid,
-      sembol: k,
-      tarih: ts,
-      fiyat: v.fiyat,
-      rsi: v.rsi,
-      macd: v.macdHist,
-      hacimFark: v.hacimFark,
-      ma20: v.ma20,
-      ma50: v.ma50,
-      sinyal: v.sinyal,
-      aiYorum: aiYorum || '',
-      sonuc: null, // 7 gün sonra doldurulacak
-      sonucFiyat: null,
-      sonucYuzde: null,
-      dogrulandi: null,
-    });
-  }
-
-  // Firestore'a yaz - aynı gün aynı hisse varsa üzerine yaz
-  const bugun = new Date().toISOString().split('T')[0]; // 2026-04-27
-  for (const item of batch) {
-    try {
-      // Aynı kullanıcı + aynı sembol + aynı gün varsa güncelle
-      const mevcutQ = query(
-        collection(db, 'sinyaller'),
-        where('uid', '==', item.uid),
-        where('sembol', '==', item.sembol),
-        where('gun', '==', bugun)
-      );
-      const mevcutSnap = await getDocs(mevcutQ);
-      if (!mevcutSnap.empty) {
-        // Mevcut kaydı güncelle
-        await updateDoc(doc(db, 'sinyaller', mevcutSnap.docs[0].id), {
-          fiyat: item.fiyat, rsi: item.rsi, macd: item.macd,
-          hacimFark: item.hacimFark, ma20: item.ma20, ma50: item.ma50,
-          sinyal: item.sinyal, tarih: item.tarih
-        });
-      } else {
-        // Yeni kayıt oluştur
-        await addDoc(collection(db, 'sinyaller'), {...item, gun: bugun});
-      }
-    } catch(e) { console.error('Sinyal kayıt hatası:', e); }
-  }
-}
-
-async function loadSinyalGecmisi() {
-  if (!currentUser) return;
-  try {
-    const q = query(
-      collection(db, 'sinyaller'),
-      where('uid', '==', currentUser.uid),
-      orderBy('tarih', 'desc'),
-      limit(100)
-    );
-    const snap = await getDocs(q);
-    sinyalGecmisi = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    await sinyalleriDogrula();
-  } catch(e) { console.error('Sinyal yükleme hatası:', e); }
-}
-
-let DOGRULAMA_GUN = 7; // Varsayılan 7 gün
-
-window.dogrulamaSuresiDegis = () => {
-  DOGRULAMA_GUN = parseInt(document.getElementById('dogrulamaSuresi').value);
-  renderSinyalGecmisi();
-  showToast(`Doğrulama süresi ${DOGRULAMA_GUN} gün olarak ayarlandı`);
-};
-
-window.sinyalleriGuncelle = async () => {
-  showLoading('Sinyal sonuçları kontrol ediliyor...');
-  await sinyalleriDogrula();
-  hideLoading();
-  renderSinyalGecmisi();
-  updateSummary();
-  showToast('Sinyal sonuçları güncellendi ✓');
-};
-
-async function sinyalleriDogrula() {
-  // 7 günden eski sinyaller için sonuçları kontrol et
-  const gunOnce = Date.now() - DOGRULAMA_GUN * 24 * 60 * 60 * 1000;
-  const bekleyenler = sinyalGecmisi.filter(s => s.sonuc === null && s.tarih < gunOnce);
-
-  for (const sinyal of bekleyenler) {
-    const v = await fetchYahoo(sinyal.sembol);
-    if (!v) continue;
-    const sonucYuzde = +((v.fiyat - sinyal.fiyat) / sinyal.fiyat * 100).toFixed(2);
-    let dogrulandi = null;
-    if (['AL','GÜÇLÜ AL'].includes(sinyal.sinyal)) dogrulandi = sonucYuzde > 0;
-    else if (['SAT','GÜÇLÜ SAT'].includes(sinyal.sinyal)) dogrulandi = sonucYuzde < 0;
-    else dogrulandi = Math.abs(sonucYuzde) < 3; // BEKLE için +-3% tolerans
-
-    // Güncelle
-    try {
-      await updateDoc(doc(db, 'sinyaller', sinyal.id), {
-        sonuc: 'tamamlandi', sonucFiyat: v.fiyat,
-        sonucYuzde, dogrulandi
-      });
-      sinyal.sonuc = 'tamamlandi';
-      sinyal.sonucFiyat = v.fiyat;
-      sinyal.sonucYuzde = sonucYuzde;
-      sinyal.dogrulandi = dogrulandi;
-    } catch(e) { console.error(e); }
-    await sleep(300);
-  }
-}
-
-// ══════════════════════════════════════════════
-// AI ANALİZ
-// ══════════════════════════════════════════════
-// Token kullanımını kaydet
-async function tokenKaydet(kullanim, model = 'claude-sonnet-4-6') {
-  if (!currentUser) return;
-  try {
-    const ay = new Date().toISOString().slice(0, 7); // 2026-04
-    const ref = doc(db, 'tokenKullanim', `${currentUser.uid}_${ay}`);
-    const snap = await getDoc(ref);
-    const mevcut = snap.exists() ? snap.data() : {
-      uid: currentUser.uid,
-      email: currentUser.email,
-      ad: currentUser.displayName || '',
-      ay,
-      toplamToken: 0,
-      istekSayisi: 0,
-      maliyet: 0
-    };
-    const yeniToken = mevcut.toplamToken + kullanim;
-    const maliyet = yeniToken * 0.000003; // ~$3 per 1M token
-    await setDoc(ref, {
-      ...mevcut,
-      toplamToken: yeniToken,
-      istekSayisi: mevcut.istekSayisi + 1,
-      maliyet: +maliyet.toFixed(4),
-      sonGuncelleme: Date.now()
-    });
-  } catch(e) { console.error('Token kayıt hatası:', e); }
-}
-
-async function aiAnalizYap() {
-  const key = havuzKey || anthropicKey;
-  if (!key) return '';
-
-  // Geçmiş sinyal istatistikleri
-  const dogrulanmis = sinyalGecmisi.filter(s => s.dogrulandi === true).length;
-  const yanlis = sinyalGecmisi.filter(s => s.dogrulandi === false).length;
-  const toplam = dogrulanmis + yanlis;
-  const isabet = toplam > 0 ? Math.round(dogrulanmis/toplam*100) : null;
-
-  // Geçmiş pattern analizi
-  const basariliPatternler = sinyalGecmisi
-    .filter(s => s.dogrulandi === true)
-    .map(s => `RSI=${s.rsi?.toFixed(0)},MACD=${s.macd?.toFixed(3)},Hacim=${s.hacimFark}%,Sinyal=${s.sinyal}`)
-    .slice(0, 10).join('\n');
-
-  const basarisizPatternler = sinyalGecmisi
-    .filter(s => s.dogrulandi === false)
-    .map(s => `RSI=${s.rsi?.toFixed(0)},MACD=${s.macd?.toFixed(3)},Hacim=${s.hacimFark}%,Sinyal=${s.sinyal},Sonuç=${s.sonucYuzde?.toFixed(1)}%`)
-    .slice(0, 10).join('\n');
-
-  const guncelVeri = Object.entries(veriler)
-    .filter(([k]) => takipEdilen.has(k))
-    .map(([k,v]) => `${k}: Fiyat=${v.fiyat}₺, RSI=${v.rsi}, MACD_hist=${v.macdHist?.toFixed(3)}, Hacim=${v.hacimFark>0?'+':''}${v.hacimFark}%, MA20=${v.ma20}, MA50=${v.ma50}, Sinyal=${v.sinyal}`)
-    .join('\n');
-
-  // Piyasa bağlamı
-  const piyasaBaglam = piyasaVerisi.xu100 ? 
-    `BIST100: ${piyasaVerisi.xu100.fiyat?.toLocaleString()} (${piyasaVerisi.xu100.degisim >= 0 ? '+' : ''}${piyasaVerisi.xu100.degisim}%), USD/TRY: ${piyasaVerisi.usdtry?.fiyat?.toFixed(2)}` : '';
-
-  const piyasaBaglamStr = piyasaBaglam ? ('GENEL PİYASA DURUMU:\n' + piyasaBaglam + '\n') : '';
-  const gecmisStr = toplam > 0 
-    ? ('GEÇMIŞ SİNYAL PERFORMANSI:\nToplam: ' + toplam + ' sinyal | İsabet: %' + isabet + '\nBaşarılı: ' + (basariliPatternler||'Henüz yok') + '\nBaşarısız: ' + (basarisizPatternler||'Henüz yok'))
-    : 'İlk analiz — geçmiş veri henüz yok.';
-  const prompt = 'Sen tecrübeli bir BIST teknik analiz uzmanısın. Geçmiş sinyal performansına, piyasa koşullarına ve mevcut hisse verilerine dayanarak analiz yap.\n\n' + piyasaBaglamStr + gecmisStr + '\n\nGÜNCEL VERİLER:\n' + guncelVeri + '\n\nLütfen:\n1. Öne çıkan fırsatları ve riskleri belirt\n2. Geçmiş başarısız sinyal örüntüleriyle örtüşen durumlar varsa uyar\n3. Hacim-fiyat ilişkisini yorumla\n4. Her hisse için 1 cümle, sonunda genel piyasa yorumu yap\nKısa, net, Türkçe.';
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await res.json();
-    const yorum = data?.content?.[0]?.text || '';
-    // Token kullanımını kaydet
-    const kullanilanToken = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
-    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
-    return yorum;
-  } catch(e) { console.error('AI hatası:', e); return ''; }
-}
-
-// ══════════════════════════════════════════════
-// DASHBOARD RENDER
-// ══════════════════════════════════════════════
-window.renderDashboard = () => {
-  const tbody = document.getElementById('dashTableBody');
-  const rows = Object.entries(veriler).filter(([k]) => takipEdilen.has(k));
-
-  if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--muted)">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle\'ye bas.</td></tr>';
-    return;
-  }
-
-  // AI yorumunu göster
-  const lastSinyal = sinyalGecmisi[0];
-  if (lastSinyal?.aiYorum) {
-    document.getElementById('aiBoxContainer').innerHTML = '<div class="ai-box"><div class="ai-box-header"><div class="ai-icon">⬡</div><div class="ai-box-title">Claude AI Analizi</div><div class="ai-box-time">' + new Date(lastSinyal.tarih).toLocaleString('tr-TR') + '</div></div><div class="ai-content">' + lastSinyal.aiYorum + '</div></div>';
-  }
-
-  tbody.innerHTML = rows.map(([k, v]) => {
-    const rsiPct = Math.min(100,Math.max(0,v.rsi));
-    const rsiColor = v.rsi<30?'var(--accent)':v.rsi>70?'var(--red)':'var(--yellow)';
-    const cls = sinyalClass(v.sinyal);
-    const degCls = v.degisim>=0?'pos':'neg';
-    const hacimTxt = v.hacimFark > 0 ? '<span class="pos">+' + v.hacimFark + '%</span>' : v.hacimFark < 0 ? '<span class="neg">' + v.hacimFark + '%</span>' : '—';
-    return `<tr>
-      <td>
-        <span class="mono" style="font-weight:500;cursor:pointer;color:var(--accent)" 
-          onclick="hisseDetayPanelAc('${k}')">${k}</span>
-      </td>
-      <td class="mono">${v.fiyat} ₺</td>
-      <td class="mono ${degCls}">${v.degisim>=0?'+':''}${v.degisim}%</td>
-      <td>
-        <div class="rsi-wrap">
-          <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
-          <span class="mono" style="font-size:0.75rem;color:${rsiColor}">${v.rsi}</span>
-        </div>
-      </td>
-      <td class="mono" style="font-size:0.72rem;color:${v.stochRsi?.k<20?'var(--accent)':v.stochRsi?.k>80?'var(--red)':'var(--muted)'}">${v.stochRsi?v.stochRsi.k:'—'}</td>
-      <td class="mono" style="font-size:0.72rem;color:${v.macdHist>0?'var(--accent)':'var(--red)'}">${v.macdHist?.toFixed(3)}</td>
-      <td class="mono" style="font-size:0.72rem;color:${v.bollinger?.yuzde<25?'var(--accent)':v.bollinger?.yuzde>75?'var(--red)':'var(--muted)'}">${v.bollinger?v.bollinger.yuzde+'%':'—'}</td>
-      <td>
-        <div style="font-size:0.72rem;font-family:var(--mono);color:${(v.guvenSkoru||0)>=70?'var(--accent)':(v.guvenSkoru||0)>=50?'var(--yellow)':'var(--muted)'}">
-          ${v.guvenSkoru||'—'}%
-        </div>
-      </td>
-      <td><span class="pill ${cls}">${v.sinyal}</span></td>
-    </tr>`;
-  }).join('');
-};
-
-function sinyalClass(s) {
-  return {'GÜÇLÜ AL':'guclu-al','AL':'al','SAT':'sat','GÜÇLÜ SAT':'guclu-sat','BEKLE':'bekle'}[s]||'bekle';
-}
-
-// ══════════════════════════════════════════════
-// SİNYAL GEÇMİŞİ RENDER
-// ══════════════════════════════════════════════
-window.renderSinyalGecmisi = () => {
-  const el = document.getElementById('sinyalListesi');
-  if (sinyalGecmisi.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok.</div>';
-    return;
-  }
-  el.innerHTML = sinyalGecmisi.slice(0, 50).map(s => {
-    const tarih = new Date(s.tarih).toLocaleDateString('tr-TR');
-    const saat = new Date(s.tarih).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
-    const sonucPill = s.dogrulandi === null
-      ? `<span class="pill bekliyor">⏳ ${DOGRULAMA_GUN} gün bekleniyor</span>`
-      : s.dogrulandi
-        ? `<span class="pill dogrulandi">✓ Doğrulandı</span>`
-        : `<span class="pill yanlis">✗ Yanlışlandı</span>`;
-    const sonucYuzde = s.sonucYuzde !== null
-      ? `<span class="${s.sonucYuzde>=0?'pos':'neg'} mono">${s.sonucYuzde>=0?'+':''}${s.sonucYuzde}%</span>`
-      : '<span class="muted">—</span>';
-    return `<div class="sinyal-item">
-      <div class="sinyal-item-top">
-        <span class="mono" style="font-weight:500">${s.sembol}</span>
-        <span class="pill ${sinyalClass(s.sinyal)}">${s.sinyal}</span>
-        ${sonucPill}
-        ${sonucYuzde}
-      </div>
-      <div class="sinyal-item-meta">
-        <span>📅 ${tarih} ${saat}</span>
-        <span>Fiyat: <span class="mono">${s.fiyat}₺</span></span>
-        <span>RSI: <span class="mono">${s.rsi?.toFixed(0)}</span></span>
-        <span>Hacim: <span class="mono ${s.hacimFark>0?'pos':'muted'}">${s.hacimFark>0?'+':''}${s.hacimFark}%</span></span>
-        ${s.sonucFiyat ? `<span>Sonuç Fiyat: <span class="mono">${s.sonucFiyat}₺</span></span>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-};
-
-// ══════════════════════════════════════════════
-// PORTFÖY
-// ══════════════════════════════════════════════
-window.renderPortfoy = () => {
-  const el = document.getElementById('portfoyContent');
-  const items = Object.entries(portfoy);
-  if (items.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:5rem;color:var(--muted)">
-      <div style="font-size:2rem;margin-bottom:1rem">💼</div>
-      <div style="margin-bottom:0.5rem;color:var(--text)">Portföyünüz boş</div>
-      <div style="font-size:0.8rem">Hisse listesinde sağ tıklayarak portföye ekle</div>
-    </div>`;
-    return;
-  }
-  let totMaliyet=0, totDeger=0;
-  const rows = items.map(([k,p]) => {
-    const v = veriler[k];
-    const gf = v?.fiyat || 0;
-    const mal = p.adet * p.alisFiyati;
-    const deg = gf ? p.adet * gf : 0;
-    const kz = deg - mal;
-    const kzp = mal > 0 ? (kz/mal*100) : 0;
-    totMaliyet += mal; totDeger += deg || mal;
-    const sin = v ? `<span class="pill ${sinyalClass(v.sinyal)}">${v.sinyal}</span>` : '—';
-    return `<tr>
-      <td><span class="mono" style="font-weight:500">${k}</span><br><span class="muted" style="font-size:0.68rem">${p.ad||''}</span></td>
-      <td class="mono">${p.adet}</td>
-      <td class="mono">${p.alisFiyati.toFixed(2)} ₺</td>
-      <td class="mono">${gf ? gf.toFixed(2)+' ₺' : '—'}</td>
-      <td class="mono">${mal.toFixed(0)} ₺</td>
-      <td class="mono">${deg ? deg.toFixed(0)+' ₺' : '—'}</td>
-      <td class="mono ${kz>=0?'pos':'neg'}">${kz>=0?'+':''}${kz.toFixed(0)} ₺<br><span style="font-size:0.72rem">${kzp>=0?'+':''}${kzp.toFixed(1)}%</span></td>
-      <td>${sin}</td>
-      <td><button class="btn danger" onclick="portfoyCikar('${k}')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>
-    </tr>`;
-  }).join('');
-
-  const topKZ = totDeger - totMaliyet;
-  const topKZP = totMaliyet > 0 ? (topKZ/totMaliyet*100) : 0;
-
-  el.innerHTML = `
-    <div class="portfoy-summary">
-      <div class="grid-4" style="margin-bottom:0">
-        <div><div class="card-title">Toplam Maliyet</div><div class="card-value" style="font-size:1.2rem">${totMaliyet.toFixed(0)} ₺</div></div>
-        <div><div class="card-title">Güncel Değer</div><div class="card-value" style="font-size:1.2rem">${totDeger.toFixed(0)} ₺</div></div>
-        <div><div class="card-title">Toplam K/Z</div><div class="card-value ${topKZ>=0?'green':'red'}" style="font-size:1.2rem">${topKZ>=0?'+':''}${topKZ.toFixed(0)} ₺</div></div>
-        <div><div class="card-title">Getiri</div><div class="card-value ${topKZP>=0?'green':'red'}" style="font-size:1.2rem">${topKZP>=0?'+':''}${topKZP.toFixed(1)}%</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Hisse</th><th>Adet</th><th>Alış</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th>Sinyal</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>`;
-};
-
-window.portfoyCikar = async (k) => {
-  if (!confirm(k + ' portföyden çıkarılsın mı?')) return;
-  delete portfoy[k];
-  await saveUserData();
-  renderPortfoy();
-  showToast(k + ' portföyden çıkarıldı');
-};
-
-// ══════════════════════════════════════════════
-// ÖZET
-// ══════════════════════════════════════════════
-function updateSummary() {
-  document.getElementById('sumTakip').textContent = takipEdilen.size;
-  const vs = Object.values(veriler);
-  document.getElementById('sumAl').textContent = vs.filter(v=>v.sinyal==='GÜÇLÜ AL').length || '—';
-  document.getElementById('sumSat').textContent = vs.filter(v=>v.sinyal==='GÜÇLÜ SAT').length || '—';
-
-  const dog = sinyalGecmisi.filter(s=>s.dogrulandi===true).length;
-  const yan = sinyalGecmisi.filter(s=>s.dogrulandi===false).length;
-  const top = dog + yan;
-  document.getElementById('sumIsabet').textContent = top > 0 ? `%${Math.round(dog/top*100)}` : '—';
-
-  // Sinyal tab özet
-  document.getElementById('sinTopToplam').textContent = sinyalGecmisi.length;
-  document.getElementById('sinTopDogru').textContent = dog;
-  document.getElementById('sinTopYanlis').textContent = yan;
-  document.getElementById('sinTopIsabet').textContent = top > 0 ? `%${Math.round(dog/top*100)}` : '—';
-}
-
-// ══════════════════════════════════════════════
-// ADMIN
-// ══════════════════════════════════════════════
-async function loadAdminPanel() {
-  if (!isAdmin) return;
-  loadTokenIstatistik();
-  loadHaberAnalizleri();
-  try {
-    const snap = await getDocs(collection(db, 'users'));
-    const users = snap.docs.map(d => ({id:d.id,...d.data()}));
-    document.getElementById('adminTotalUser').textContent = users.length;
-
-    const config = await getDoc(doc(db, 'config', 'global'));
-    if (config.exists()) {
-      document.getElementById('adminApiKey').value = config.data().anthropicKey || '';
-    }
-
-    document.getElementById('kullaniciListesi').innerHTML = users.map(u => `
-      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--accent);flex-shrink:0">${(u.name||u.email)[0].toUpperCase()}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:0.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis">${u.name||'—'}</div>
-          <div style="font-size:0.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis">${u.email}</div>
-        </div>
-        <span class="pill ${u.active?'al':'bekle'}">${u.active?'Aktif':'Pasif'}</span>
-        <span class="pill bekle" style="font-size:0.6rem">${u.plan||'web'}</span>
-        ${!u.isAdmin ? `<button class="btn danger" onclick="kullanicisil('${u.id}')" style="font-size:0.7rem;padding:2px 6px">Sil</button>` : ''}
-      </div>`).join('');
-  } catch(e) { console.error('Admin yükleme hatası:', e); }
-}
-
-window.showAddUser = () => document.getElementById('addUserModal').classList.add('show');
-
-window.kullaniciEkle = async () => {
-  const name = document.getElementById('newUserName').value.trim();
-  const email = document.getElementById('newUserEmail').value.trim();
-  const apiKey = document.getElementById('newUserApiKey').value.trim();
-  const plan = document.getElementById('newUserPlan').value;
-  if (!email) { showToast('E-posta zorunlu!', 'error'); return; }
-
-  // uid email hash olarak kullanacağız (gerçek uid Google login sonrası oluşur)
-  const uid = btoa(email).replace(/=/g,'');
-  try {
-    await setDoc(doc(db, 'users', uid), {
-      email, name, apiKey, plan, active: true,
-      isAdmin: false, createdAt: serverTimestamp(),
-      takipEdilen: [], portfoy: {}, veriler: {}
-    });
-    closeModal('addUserModal');
-    showToast(email + ' eklendi ✓');
-    loadAdminPanel();
-  } catch(e) { showToast('Hata: '+e.message,'error'); }
-};
-
-window.kullanicisil = async (uid) => {
-  if (!confirm('Kullanıcı silinsin mi?')) return;
-  try {
-    const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    await deleteDoc(doc(db, 'users', uid));
-    showToast('Kullanıcı silindi');
-    loadAdminPanel();
-  } catch(e) { showToast('Hata: '+e.message,'error'); }
-};
-
-// ══════════════════════════════════════════════
-// PİYASA GENEL VERİSİ
-// ══════════════════════════════════════════════
-
-async function piyasaVerisiCek() {
-  try {
-    const res = await fetch(
-      'https://hissematik-proxy.ugurserkan.workers.dev/?piyasa=1',
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) return;
-    const data = await res.json();
-
-    // XU100
-    const xu100 = data['^XU100']?.chart?.result?.[0];
-    if (xu100) {
-      const meta = xu100.meta;
-      const fiyat = meta.regularMarketPrice || 0;
-      const onceki = meta.chartPreviousClose || 0;
-      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
-      piyasaVerisi.xu100 = { fiyat, degisim };
-
-      document.getElementById('xu100Deger').textContent = fiyat.toLocaleString('tr-TR', {maximumFractionDigits: 0});
-      const xu100DegEl = document.getElementById('xu100Degisim');
-      xu100DegEl.textContent = `${degisim >= 0 ? '+' : ''}${degisim}%`;
-      xu100DegEl.style.color = degisim >= 0 ? 'var(--accent)' : 'var(--red)';
-    }
-
-    // USDTRY
-    const usdtry = data['USDTRY=X']?.chart?.result?.[0];
-    if (usdtry) {
-      const meta = usdtry.meta;
-      const fiyat = meta.regularMarketPrice || 0;
-      const onceki = meta.chartPreviousClose || 0;
-      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
-      piyasaVerisi.usdtry = { fiyat, degisim };
-
-      document.getElementById('usdtryDeger').textContent = fiyat.toFixed(2) + ' ₺';
-      const usdDegEl = document.getElementById('usdtryDegisim');
-      usdDegEl.textContent = `${degisim >= 0 ? '+' : ''}${degisim}%`;
-      usdDegEl.style.color = degisim >= 0 ? 'var(--red)' : 'var(--accent)'; // TL için ters
-    }
-
-    // EURTRY
-    const eurtry = data['EURTRY=X']?.chart?.result?.[0];
-    if (eurtry) {
-      const meta = eurtry.meta;
-      const fiyat = meta.regularMarketPrice || 0;
-      const onceki = meta.chartPreviousClose || 0;
-      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
-      piyasaVerisi.eurtry = { fiyat, degisim };
-
-      document.getElementById('eurtryDeger').textContent = fiyat.toFixed(2) + ' ₺';
-      const eurDegEl = document.getElementById('eurtryDegisim');
-      eurDegEl.textContent = `${degisim >= 0 ? '+' : ''}${degisim}%`;
-      eurDegEl.style.color = degisim >= 0 ? 'var(--red)' : 'var(--accent)';
-    }
-
-    // Piyasa yönü hesapla
-    hesaplaPiyasaYonu();
-
-  } catch(e) { console.error('Piyasa verisi hatası:', e); }
-}
-
-function hesaplaPiyasaYonu() {
-  const xu100 = piyasaVerisi.xu100;
-  if (!xu100) return;
-
-  let yon = '', aciklama = '', renk = 'var(--muted)';
-
-  if (xu100.degisim >= 1.5) {
-    yon = '🟢 Güçlü Yükseliş';
-    aciklama = 'AL sinyalleri güçlü';
-    renk = 'var(--accent)';
-  } else if (xu100.degisim >= 0) {
-    yon = '🟡 Yatay/Hafif +';
-    aciklama = 'Seçici alım yapılabilir';
-    renk = 'var(--yellow)';
-  } else if (xu100.degisim >= -1.5) {
-    yon = '🟠 Hafif Düşüş';
-    aciklama = 'AL sinyallerine dikkat';
-    renk = 'var(--yellow)';
-  } else {
-    yon = '🔴 Güçlü Düşüş';
-    aciklama = 'SAT baskısı var';
-    renk = 'var(--red)';
-  }
-
-  piyasaVerisi.yon = xu100.degisim;
-  document.getElementById('piyasaYonu').textContent = yon;
-  document.getElementById('piyasaYonu').style.fontSize = '0.9rem';
-  document.getElementById('piyasaYonuAciklama').textContent = aciklama;
-}
-
-// Piyasa yönüne göre sinyali ayarla
-function sinyalPiyasaAyarla(sinyal, hisseDegisim) {
-  const piyasaYon = piyasaVerisi.yon;
-  if (piyasaYon === undefined) return sinyal;
-
-  // Piyasa güçlü düşüyorken AL sinyali → BEKLE'ye çevir
-  if (piyasaYon < -2 && sinyal === 'AL') return 'BEKLE';
-  if (piyasaYon < -3 && sinyal === 'GÜÇLÜ AL') return 'AL';
-
-  // Piyasa güçlü yükseliyorken SAT sinyali → BEKLE'ye çevir
-  if (piyasaYon > 2 && sinyal === 'SAT') return 'BEKLE';
-  if (piyasaYon > 3 && sinyal === 'GÜÇLÜ SAT') return 'SAT';
-
-  return sinyal;
-}
-
-// Token istatistiklerini yükle
-// Haber analizlerini yükle (admin)
-async function loadHaberAnalizleri() {
-  const el = document.getElementById('haberAnalizListesi');
-  if (!el || !isAdmin) return;
-  try {
-    const bugun = new Date();
-    bugun.setHours(0,0,0,0);
-    const snap = await getDocs(
-      query(collection(db, 'haberAnalizleri'), orderBy('tarih', 'desc'), limit(50))
-    );
-    const analizler = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    
-    if (analizler.length === 0) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:1rem">Henüz analiz yok</div>';
-      return;
-    }
-
-    el.innerHTML = analizler.map(a => `
-      <div style="padding:0.75rem;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.4rem">
-          <div style="font-size:0.82rem;font-weight:500;flex:1">${a.haberBaslik||'—'}</div>
-          <span style="font-size:0.68rem;color:var(--muted);font-family:var(--mono);white-space:nowrap">${new Date(a.tarih).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
-          <span style="font-size:0.72rem;color:var(--accent)">👤 ${a.kullaniciAd||'—'}</span>
-          ${a.hisseler?.slice(0,5).map(x=>`
-            <span style="font-size:0.68rem;padding:1px 6px;border-radius:4px;
-              background:${x.etki==='olumlu'?'rgba(0,229,160,0.12)':x.etki==='olumsuz'?'rgba(255,69,96,0.12)':'rgba(255,209,102,0.12)'};
-              color:${x.etki==='olumlu'?'var(--accent)':x.etki==='olumsuz'?'var(--red)':'var(--yellow)'};
-              font-family:var(--mono)">
-              ${x.etki==='olumlu'?'🟢':x.etki==='olumsuz'?'🔴':'🟡'} ${x.kod}
-            </span>`).join('')||''}
-        </div>
-        ${a.yorum?`<div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;line-height:1.5">${a.yorum}</div>`:''}
-      </div>`).join('');
-  } catch(e) { 
-    if (el) el.innerHTML = `<div style="color:var(--red);font-size:0.8rem">${e.message}</div>`;
-  }
-}
-
-// Gün sonu özeti oluştur
-window.gunSonuOzetOlustur = async () => {
-  const key = havuzKey || anthropicKey;
-  if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
-  
-  showLoading('Gün sonu özeti hazırlanıyor...');
-  
-  try {
-    // Bugünkü tüm analizleri çek
-    const snap = await getDocs(
-      query(collection(db, 'haberAnalizleri'), orderBy('tarih', 'desc'), limit(100))
-    );
-    const analizler = snap.docs.map(d => d.data());
-    const bugun = new Date().toLocaleDateString('tr-TR');
-    const bugunAnalizler = analizler.filter(a => 
-      new Date(a.tarih).toLocaleDateString('tr-TR') === bugun
-    );
-
-    if (bugunAnalizler.length === 0) {
-      hideLoading();
-      showToast('Bugün henüz analiz yapılmamış!', 'error');
-      return;
-    }
-
-    // Özet prompt
-    const analizOzeti = bugunAnalizler.map(a => `Haber: ${a.haberBaslik} | Etkilenen: ${a.hisseler?.map(x=>x.kod+'('+x.etki+')').join(', ')} | Yorum: ${a.yorum}`).join('\n---\n');
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 600,
-        messages: [{
-          role: 'user',
-          content: `Bugün BIST'te öne çıkan haberlerin analizleri aşağıda. Yatırımcılara yönelik kısa, net ve anlaşılır bir günlük piyasa özeti yaz. 3-4 paragraf, teknik jargon kullanma, Türkçe.
-
-${analizOzeti}`
-        }]
-      })
-    });
-
-    const data = await res.json();
-    const ozet = data?.content?.[0]?.text || '';
-    const kullanilanToken = (data?.usage?.input_tokens||0)+(data?.usage?.output_tokens||0);
-    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
-
-    hideLoading();
-
-    if (ozet) {
-      // Push mesajı olarak gönder
-      document.getElementById('pushBaslik').value = `📊 ${bugun} Piyasa Özeti`;
-      document.getElementById('pushMesaj').value = ozet;
-      document.getElementById('pushModal').classList.add('show');
-    }
-
-  } catch(e) {
-    hideLoading();
-    showToast('Hata: ' + e.message, 'error');
-  }
-};
-
-window.loadTokenIstatistik = async () => {
-  const el = document.getElementById('tokenIstatistik');
-  if (!el) return;
-  try {
-    const ay = new Date().toISOString().slice(0, 7);
-    document.getElementById('tokenAySec').textContent = ay;
-    const snap = await getDocs(collection(db, 'tokenKullanim'));
-    const buAy = snap.docs
-      .map(d => d.data())
-      .filter(d => d.ay === ay)
-      .sort((a, b) => b.toplamToken - a.toplamToken);
-
-    if (buAy.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Bu ay henüz AI kullanımı yok</div>';
-      return;
-    }
-
-    const toplamToken = buAy.reduce((s, d) => s + d.toplamToken, 0);
-    const toplamMaliyet = buAy.reduce((s, d) => s + d.maliyet, 0);
-    const toplamIstek = buAy.reduce((s, d) => s + d.istekSayisi, 0);
-
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem">
-        <div class="card" style="text-align:center">
-          <div class="card-title">Toplam Token</div>
-          <div class="card-value mono" style="font-size:1.1rem">${toplamToken.toLocaleString()}</div>
-        </div>
-        <div class="card" style="text-align:center">
-          <div class="card-title">Tahmini Maliyet</div>
-          <div class="card-value green mono" style="font-size:1.1rem">$${toplamMaliyet.toFixed(3)}</div>
-        </div>
-        <div class="card" style="text-align:center">
-          <div class="card-title">AI İstek</div>
-          <div class="card-value mono" style="font-size:1.1rem">${toplamIstek}</div>
-        </div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
-        <thead><tr>
-          <th style="text-align:left;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Kullanıcı</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Token</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">İstek</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Maliyet</th>
-          <th style="text-align:right;padding:0.5rem;color:var(--muted);border-bottom:1px solid var(--border)">Ortalama/İstek</th>
-        </tr></thead>
-        <tbody>
-          ${buAy.map(d => `<tr>
-            <td style="padding:0.5rem;border-bottom:1px solid var(--border)">${d.ad || d.email}</td>
-            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${d.toplamToken.toLocaleString()}</td>
-            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${d.istekSayisi}</td>
-            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:var(--accent)">$${d.maliyet.toFixed(4)}</td>
-            <td style="padding:0.5rem;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:var(--muted)">${Math.round(d.toplamToken/d.istekSayisi).toLocaleString()}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    `;
-  } catch(e) { 
-    document.getElementById('tokenIstatistik').innerHTML = '<div style="color:var(--red)">Yükleme hatası: ' + e.message + '</div>';
-  }
-};
-
-// Akıllı AI tetikleme - sadece anlamlı değişikliklerde
-function aiGerekliMi() {
-  // Takip edilen hisse yoksa AI'a gerek yok
-  if (takipEdilen.size === 0) return false;
-  // Havuz key yoksa AI çalışmaz
-  if (!havuzKey && !anthropicKey) return false;
-
-  // Bugün zaten çalıştı mı kontrol et (state'den)
-  const bugun = new Date().toLocaleDateString('tr-TR');
-  if (window._sonAiTarih === bugun) return false;
-
-  // Kritik durum var mı?
-  let kritikVar = false;
-  for (const k of takipEdilen) {
-    const v = veriler[k];
-    if (!v) continue;
-    if (v.rsi < 25 || v.rsi > 75) { kritikVar = true; break; }
-    if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') { kritikVar = true; break; }
-    if (Math.abs(v.degisim) >= 5) { kritikVar = true; break; }
-  }
-
-  // Sabah ilk güncelleme (09:30-10:30)
-  const saat = new Date().getHours();
-  if (saat >= 9 && saat <= 10) kritikVar = true;
-
-  return kritikVar;
-}
-
-function aiCalistiKaydet() {
-  const bugun = new Date().toLocaleDateString('tr-TR');
-  window._sonAiTarih = bugun;
-}
-
-window.mukerrerTemizle = async () => {
-  if (!confirm('Mükerrer sinyal kayıtları temizlensin mi?')) return;
-  showLoading('Mükerrer kayıtlar temizleniyor...');
-  try {
-    const snap = await getDocs(collection(db, 'sinyaller'));
-    const tumKayitlar = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    
-    // uid + sembol + gun bazında grupla
-    const gruplar = {};
-    tumKayitlar.forEach(k => {
-      const gun = k.gun || new Date(k.tarih).toISOString().split('T')[0];
-      const anahtar = `${k.uid}_${k.sembol}_${gun}`;
-      if (!gruplar[anahtar]) gruplar[anahtar] = [];
-      gruplar[anahtar].push(k);
-    });
-
-    // Her gruptan en yenisi hariç diğerlerini sil
-    let silinenSayisi = 0;
-    for (const grup of Object.values(gruplar)) {
-      if (grup.length <= 1) continue;
-      // En yeni kaydı tut
-      grup.sort((a, b) => b.tarih - a.tarih);
-      for (let i = 1; i < grup.length; i++) {
-        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-        await deleteDoc(doc(db, 'sinyaller', grup[i].id));
-        silinenSayisi++;
-      }
-    }
-
-    hideLoading();
-    showToast(`${silinenSayisi} mükerrer kayıt silindi ✓`);
-    await loadSinyalGecmisi();
-    renderSinyalGecmisi();
-  } catch(e) {
-    hideLoading();
-    showToast('Hata: ' + e.message, 'error');
-  }
-};
-
-window.saveApiKey = async () => {
-  const key = document.getElementById('adminApiKey').value.trim();
-  anthropicKey = key;
-  havuzKey = key; // Havuz key güncelle
-  // Hem kullanıcı doc'una hem config/global'e kaydet
-  await updateDoc(doc(db, 'users', currentUser.uid), { apiKey: key });
-  try {
-    await setDoc(doc(db, 'config', 'global'), { anthropicKey: key }, { merge: true });
-  } catch(e) { console.error('Config kayıt hatası:', e); }
-  showToast('API anahtarı kaydedildi ✓');
-  document.getElementById('apiStatus').textContent = key ? '✓ Tanımlı' : 'Tanımlı değil';
-  document.getElementById('apiStatus').style.color = key ? 'var(--accent)' : 'var(--muted)';
-};
-
-// ══════════════════════════════════════════════
-// UI HELPERS
-// ══════════════════════════════════════════════
-function setStatus(type, text) {
-  document.getElementById('statusDot').className = 'status-dot ' + type;
-  document.getElementById('statusText').textContent = text;
-}
-
-function showLoading(msg) {
-  document.getElementById('globalLoading').classList.add('show');
-  document.getElementById('loadingMsg').textContent = msg;
-}
-function setLoadingMsg(t) { document.getElementById('loadingMsg').textContent = t; }
-function hideLoading() { document.getElementById('globalLoading').classList.remove('show'); }
-
-let toastTimer;
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = (type==='success'?'✓ ':type==='error'?'✗ ':'') + msg;
-  t.className = 'toast show ' + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// ══════════════════════════════════════════════
-// HİSSE DETAY ANALİZ PANELİ
-// ══════════════════════════════════════════════
-
-window.hisseDetayPanelAc = async (kod) => {
-  const v = veriler[kod];
-  const ad = BIST.find(b => b[0] === kod)?.[1] || '';
-  window._detayKod = kod;
-  window._detayAd = ad;
-
-  // Başlık
-  document.getElementById('detayHisseAdi').textContent = kod;
-  document.getElementById('detayHisseSirket').textContent = ad;
-
-  // Takip butonu
-  const takipBtn = document.getElementById('detayTakipBtn');
-  if (takipEdilen.has(kod)) {
-    takipBtn.textContent = '★ Takipte';
-    takipBtn.style.color = 'var(--accent)';
-  } else {
-    takipBtn.textContent = '☆ Takibe Al';
-    takipBtn.style.color = '';
-  }
-
-  // Özet kartlar
-  const ozetEl = document.getElementById('detayOzetKartlar');
-  if (v) {
-    const degCls = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
-    const sinyalRenk = v.sinyal?.includes('AL') ? 'var(--accent)' : v.sinyal?.includes('SAT') ? 'var(--red)' : 'var(--yellow)';
-    ozetEl.innerHTML = `
-      <div class="card" style="text-align:center">
-        <div class="card-title">Fiyat</div>
-        <div class="card-value" style="font-size:1.1rem">${v.fiyat} ₺</div>
-        <div style="font-size:0.72rem;color:${degCls};font-family:var(--mono)">${v.degisim>=0?'+':''}${v.degisim}%</div>
-      </div>
-      <div class="card" style="text-align:center">
-        <div class="card-title">RSI</div>
-        <div class="card-value" style="font-size:1.1rem;color:${v.rsi<30?'var(--accent)':v.rsi>70?'var(--red)':'var(--yellow)'}">${v.rsi}</div>
-        <div style="font-size:0.7rem;color:var(--muted)">${v.rsi<30?'Aşırı Satım':v.rsi>70?'Aşırı Alım':'Nötr'}</div>
-      </div>
-      <div class="card" style="text-align:center">
-        <div class="card-title">Sinyal</div>
-        <div style="font-size:0.9rem;font-weight:600;color:${sinyalRenk};margin-top:0.3rem">${v.sinyal||'—'}</div>
-      </div>`;
-  } else {
-    ozetEl.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>';
-  }
-
-  // Teknik göstergeler
-  const teknikEl = document.getElementById('detayTeknik');
-  if (v) {
-    const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
-    const maRenk = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
-    teknikEl.innerHTML = `
-      <div><span style="color:var(--muted)">MACD Hist:</span> <span style="color:${macdRenk};font-family:var(--mono)">${v.macdHist?.toFixed(3)}</span></div>
-      <div><span style="color:var(--muted)">Stoch RSI K:</span> <span style="font-family:var(--mono);color:${v.stochRsi?.k<20?'var(--accent)':v.stochRsi?.k>80?'var(--red)':'inherit'}">${v.stochRsi?v.stochRsi.k:'—'}</span></div>
-      <div><span style="color:var(--muted)">Bollinger %:</span> <span style="font-family:var(--mono);color:${v.bollinger?.yuzde<25?'var(--accent)':v.bollinger?.yuzde>75?'var(--red)':'inherit'}">${v.bollinger?v.bollinger.yuzde+'%':'—'}</span></div>
-      <div><span style="color:var(--muted)">Williams %R:</span> <span style="font-family:var(--mono);color:${v.williamsR<-80?'var(--accent)':v.williamsR>-20?'var(--red)':'inherit'}">${v.williamsR||'—'}</span></div>
-      <div><span style="color:var(--muted)">MFI:</span> <span style="font-family:var(--mono);color:${v.mfi<30?'var(--accent)':v.mfi>70?'var(--red)':'inherit'}">${v.mfi||'—'}</span></div>
-      <div><span style="color:var(--muted)">Güven Skoru:</span> <span style="font-family:var(--mono);color:${(v.guvenSkoru||0)>=70?'var(--accent)':(v.guvenSkoru||0)>=50?'var(--yellow)':'var(--red)'}">${v.guvenSkoru||'—'}%</span></div>
-      <div><span style="color:var(--muted)">Hacim:</span> <span style="font-family:var(--mono);color:${v.hacimFark>0?'var(--accent)'  : 'var(--red)'}">${v.hacimFark>0?'+':''}${v.hacimFark}%</span></div>
-      <div><span style="color:var(--muted)">MA20:</span> <span style="font-family:var(--mono)">${v.ma20?.toFixed(2)} ₺</span></div>
-      <div><span style="color:var(--muted)">MA50:</span> <span style="font-family:var(--mono)">${v.ma50?.toFixed(2)} ₺</span></div>
-      <div><span style="color:var(--muted)">MA Trend:</span> <span style="color:${maRenk}">${v.ma20>v.ma50?'📈 Yükseliş':'📉 Düşüş'}</span></div>
-      <div><span style="color:var(--muted)">Hacim/Ort:</span> <span style="font-family:var(--mono)">${v.hacimFark>50?'⚡ Spike':'Normal'}</span></div>`;
-  } else {
-    teknikEl.innerHTML = '<div style="color:var(--muted)">Veri yok</div>';
-  }
-
-  // Piyasa bağlamı
-  const piyasaEl = document.getElementById('detayPiyasa');
-  const xu = piyasaVerisi.xu100;
-  const usd = piyasaVerisi.usdtry;
-  piyasaEl.innerHTML = `
-    <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
-      <div><span style="color:var(--muted)">BIST100:</span> <span style="font-family:var(--mono);color:${xu?.degisim>=0?'var(--accent)':'var(--red)'}">${xu?xu.fiyat?.toLocaleString('tr-TR',{maximumFractionDigits:0})+'  '+( xu.degisim>=0?'+':'')+xu.degisim+'%':'—'}</span></div>
-      <div><span style="color:var(--muted)">USD/TRY:</span> <span style="font-family:var(--mono)">${usd?usd.fiyat?.toFixed(2)+' ₺':'—'}</span></div>
-      <div><span style="color:var(--muted)">Piyasa:</span> <span style="color:${xu?.degisim>0?'var(--accent)':xu?.degisim<-1?'var(--red)':'var(--yellow)'}">${xu?.degisim>1?'🟢 Yükseliş':xu?.degisim<-1?'🔴 Düşüş':'🟡 Yatay'}</span></div>
-    </div>`;
-
-  // İlgili haberler
-  const haberEl = document.getElementById('detayHaberler');
-  const ilgiliHaberler = haberlerData.filter(h =>
-    h.baslik?.includes(kod) || h.baslik?.includes(ad.split(' ')[0])
-  ).slice(0, 3);
-  if (ilgiliHaberler.length > 0) {
-    haberEl.innerHTML = ilgiliHaberler.map(h =>
-      `<div style="padding:0.4rem 0;border-bottom:1px solid var(--border);line-height:1.4">${h.baslik}</div>`
-    ).join('');
-    document.getElementById('detayHaberlerBlok').style.display = 'block';
-  } else {
-    document.getElementById('detayHaberlerBlok').style.display = 'none';
-  }
-
-  // Portföy durumu
-  const pf = portfoy[kod];
-  if (pf && v) {
-    const kz = (v.fiyat - pf.alisFiyati) * pf.adet;
-    const kzp = ((v.fiyat - pf.alisFiyati) / pf.alisFiyati * 100).toFixed(1);
-    document.getElementById('detayPortfoyBlok').style.display = 'block';
-    document.getElementById('detayPortfoy').innerHTML = `
-      <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
-        <div><span style="color:var(--muted)">Adet:</span> <span class="mono">${pf.adet}</span></div>
-        <div><span style="color:var(--muted)">Alış:</span> <span class="mono">${pf.alisFiyati} ₺</span></div>
-        <div><span style="color:var(--muted)">K/Z:</span> <span class="mono" style="color:${kz>=0?'var(--accent)':'var(--red)'}">
-          ${kz>=0?'+':''}${kz.toFixed(0)} ₺ (${kzp}%)</span></div>
-      </div>`;
-  } else {
-    document.getElementById('detayPortfoyBlok').style.display = 'none';
-  }
-
-  // AI içeriğini sıfırla
-  document.getElementById('detayAiIcerik').innerHTML = '<span style="color:var(--muted)">Analiz için butona bas...</span>';
-  document.getElementById('detayAiBtn').disabled = false;
-  document.getElementById('detayAiBtn').textContent = '⬡ AI ile Analiz Et';
-
-  // Daha önce analiz yapıldı mı kontrol et
-  if (currentUser) {
-    const analizKey = 'hisseAnaliz_' + currentUser.uid + '_' + kod;
-    getDoc(doc(db, 'hisseAnalizleri', analizKey)).then(snap => {
-      if (snap.exists()) {
-        const d = snap.data();
-        // Bugünkü analiz mi?
-        if (Date.now() - d.tarih < 24 * 60 * 60 * 1000) {
-          hisseAnalizGoster(d);
-          document.getElementById('detayAiBtn').textContent = '⬡ Yeniden Analiz Et';
-        }
-      }
-    }).catch(() => {});
-  }
-
-  document.getElementById('hisseDetayModal').classList.add('show');
-
-  // Eğer gelişmiş indikatörler yoksa Yahoo'dan çek
-  if (!veriler[kod]?.bollinger) {
-    const detayAiEl = document.getElementById('detayAiIcerik');
-    if (detayAiEl) detayAiEl.innerHTML = '<span style="color:var(--muted);font-size:0.78rem">⏳ Teknik veriler yükleniyor...</span>';
-    try {
-      const proxyUrl = 'https://hissematik-proxy.ugurserkan.workers.dev/?semboller=' + kod;
-      const res = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
-      if (res.ok) {
-        const topluVeri = await res.json();
-        const v = parseYahooVeri(kod, topluVeri[kod]);
-        if (v) {
-          veriler[kod] = {...veriler[kod], ...v};
-          // Paneli güncelle
-          hisseDetayPanelGuncelle(kod);
-        }
-      }
-    } catch(e) {}
-    if (detayAiEl) detayAiEl.innerHTML = '<span style="color:var(--muted)">Analiz için butona bas...</span>';
-  }
-};
-
-function hisseDetayPanelGuncelle(kod) {
-  const v = veriler[kod];
-  if (!v) return;
-  const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
-  const maRenk = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
-  const teknikEl = document.getElementById('detayTeknik');
-  if (teknikEl) {
-    teknikEl.innerHTML =
-      '<div><span style="color:var(--muted)">MACD Hist:</span> <span style="color:' + macdRenk + ';font-family:var(--mono)">' + (v.macdHist?.toFixed(3)||'—') + '</span></div>' +
-      '<div><span style="color:var(--muted)">Stoch RSI K:</span> <span style="font-family:var(--mono);color:' + (v.stochRsi?.k<20?'var(--accent)':v.stochRsi?.k>80?'var(--red)':'inherit') + '">' + (v.stochRsi?v.stochRsi.k:'—') + '</span></div>' +
-      '<div><span style="color:var(--muted)">Bollinger %:</span> <span style="font-family:var(--mono);color:' + (v.bollinger?.yuzde<25?'var(--accent)':v.bollinger?.yuzde>75?'var(--red)':'inherit') + '">' + (v.bollinger?v.bollinger.yuzde+'%':'—') + '</span></div>' +
-      '<div><span style="color:var(--muted)">Williams %R:</span> <span style="font-family:var(--mono);color:' + (v.williamsR<-80?'var(--accent)':v.williamsR>-20?'var(--red)':'inherit') + '">' + (v.williamsR||'—') + '</span></div>' +
-      '<div><span style="color:var(--muted)">MFI:</span> <span style="font-family:var(--mono);color:' + (v.mfi<30?'var(--accent)':v.mfi>70?'var(--red)':'inherit') + '">' + (v.mfi||'—') + '</span></div>' +
-      '<div><span style="color:var(--muted)">Güven Skoru:</span> <span style="font-family:var(--mono);color:' + ((v.guvenSkoru||0)>=70?'var(--accent)':(v.guvenSkoru||0)>=50?'var(--yellow)':'var(--red)') + '">' + (v.guvenSkoru||'—') + '%</span></div>' +
-      '<div><span style="color:var(--muted)">MA20:</span> <span style="font-family:var(--mono)">' + (v.ma20||'—') + ' ₺</span></div>' +
-      '<div><span style="color:var(--muted)">MA50:</span> <span style="font-family:var(--mono)">' + (v.ma50||'—') + ' ₺</span></div>' +
-      '<div><span style="color:var(--muted)">MA Trend:</span> <span style="color:' + maRenk + '">' + (v.ma20>v.ma50?'📈 Yükseliş':'📉 Düşüş') + '</span></div>' +
-      '<div><span style="color:var(--muted)">Hacim/Ort:</span> <span>' + (v.hacimFark>50?'⚡ Spike':'Normal') + '</span></div>' +
-      (v.pivot ? '<div style="grid-column:1/-1;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border)"><span style="color:var(--muted)">Pivot:</span> <span class="mono">' + v.pivot.pivot + '</span> <span style="color:var(--muted)">R1:</span> <span class="mono" style="color:var(--red)">' + v.pivot.r1 + '</span> <span style="color:var(--muted)">S1:</span> <span class="mono" style="color:var(--accent)">' + v.pivot.s1 + '</span></div>' : '') +
-      (v.fib ? '<div style="grid-column:1/-1"><span style="color:var(--muted)">Fib 0.382:</span> <span class="mono">' + v.fib.f382 + ' ₺</span> <span style="color:var(--muted)">Fib 0.618:</span> <span class="mono">' + v.fib.f618 + ' ₺</span></div>' : '') +
-      (v.hafta52H ? '<div style="grid-column:1/-1"><span style="color:var(--muted)">52H:</span> <span class="mono" style="color:var(--red)">' + v.hafta52H + ' ₺</span> <span style="color:var(--muted)">52L:</span> <span class="mono" style="color:var(--accent)">' + v.hafta52L + ' ₺</span> <span style="color:var(--muted)">Poz:</span> <span class="mono">' + v.hafta52Yuzde + '%</span></div>' : '');
-  }
-  // Sinyal güncelle
-  const sinyalEl = document.getElementById('detayOzetKartlar');
-  if (sinyalEl && v.sinyal) {
-    const sinyalRenk = v.sinyal?.includes('AL') ? 'var(--accent)' : v.sinyal?.includes('SAT') ? 'var(--red)' : 'var(--yellow)';
-    const guvenEl = sinyalEl.querySelector('.sinyal-guncelle');
-    if (!guvenEl) {
-      const div = document.createElement('div');
-      div.className = 'card sinyal-guncelle';
-      div.style.cssText = 'text-align:center;grid-column:span 3';
-      div.innerHTML = '<div class="card-title">Güven Skoru</div><div style="font-size:1.1rem;font-weight:600;color:' + ((v.guvenSkoru||0)>=70?'var(--accent)':'var(--yellow)') + '">' + (v.guvenSkoru||'—') + '%</div>';
-      sinyalEl.appendChild(div);
-    }
-  }
-}
-
-function hisseAnalizGoster(analiz) {
-  const el = document.getElementById('detayAiIcerik');
-  if (!el || !analiz) return;
-  const kararRenk = analiz.karar==='AL' ? 'var(--accent)' : analiz.karar==='ALMA' ? 'var(--red)' : 'var(--yellow)';
-  el.innerHTML = `
-    <div style="text-align:center;margin-bottom:1rem">
-      <div style="font-size:1.8rem;font-weight:700;color:${kararRenk}">${analiz.karar||'—'}</div>
-      <div style="font-size:0.72rem;color:var(--muted);font-family:var(--mono)">AI Kararı</div>
-    </div>
-    <div style="font-size:0.82rem;line-height:1.8;color:#b0d8c8;margin-bottom:0.75rem">${analiz.gerekce||''}</div>
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:0.75rem">
-      ${analiz.girisFiyati ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Giriş:</span> <span class="mono">${analiz.girisFiyati} ₺</span></div>` : ''}
-      ${analiz.stopLoss ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Stop:</span> <span class="mono" style="color:var(--red)">${analiz.stopLoss} ₺</span></div>` : ''}
-      ${analiz.hedefFiyat ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Hedef:</span> <span class="mono" style="color:var(--accent)">${analiz.hedefFiyat} ₺</span></div>` : ''}
-      ${analiz.risk ? `<div style="background:var(--bg4);padding:4px 10px;border-radius:6px"><span style="color:var(--muted)">Risk:</span> <span>${analiz.risk}</span></div>` : ''}
-    </div>
-    <div style="font-size:0.65rem;color:var(--muted);margin-top:0.75rem;font-family:var(--mono)">
-      ${new Date(analiz.tarih).toLocaleString('tr-TR')}
-    </div>`;
-}
-
-window.detayTakipToggle = () => {
-  const kod = window._detayKod;
-  if (!kod) return;
-  if (takipEdilen.has(kod)) {
-    if (!confirm(kod + ' takipten çıkarılsın mı?')) return;
-    takipEdilen.delete(kod);
-    delete veriler[kod];
-  } else {
-    takipEdilen.add(kod);
-  }
-  saveUserData();
-  filterHisseler();
-  updateSummary();
-  // Butonu güncelle
-  const btn = document.getElementById('detayTakipBtn');
-  if (btn) {
-    if (takipEdilen.has(kod)) {
-      btn.textContent = '★ Takipte';
-      btn.style.color = 'var(--accent)';
-    } else {
-      btn.textContent = '☆ Takibe Al';
-      btn.style.color = '';
-    }
-  }
-  showToast(takipEdilen.has(kod) ? kod + ' takibe alındı ✓' : kod + ' takipten çıkarıldı');
-};
-
-window.hisseAiAnalizEt = async () => {
-  const kod = window._detayKod;
-  const v = veriler[kod];
-  const key = havuzKey || anthropicKey;
-
-  if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
-
-  const btn = document.getElementById('detayAiBtn');
-  const el = document.getElementById('detayAiIcerik');
-  btn.disabled = true;
-  btn.textContent = '⏳ Analiz ediliyor...';
-  el.innerHTML = '<div style="color:var(--muted);font-size:0.8rem">Claude analiz yapıyor...</div>';
-
-  try {
-    const cleanKey = key.replace(/[^a-zA-Z0-9\-_]/g, '').trim();
-    const xu = piyasaVerisi.xu100;
-    const pf = portfoy[kod];
-    
-    // Geçmiş sinyaller bu hisse için
-    const gecmisSinyaller = sinyalGecmisi
-      .filter(s => s.sembol === kod && s.dogrulandi !== null)
-      .slice(0, 5)
-      .map(s => `${s.sinyal}: ${s.dogrulandi ? '✓' : '✗'} (${s.sonucYuzde?.toFixed(1)}%)`)
-      .join(', ');
-
-    // İlgili haberler
-    const haberOzeti = haberlerData
-      .filter(h => h.baslik?.includes(kod) || h.baslik?.includes(BIST.find(b=>b[0]===kod)?.[1]?.split(' ')[0]||''))
-      .slice(0, 3)
-      .map(h => h.baslik)
-      .join(' | ');
-
-    const prompt = 'BIST hisse al/sat analizi. JSON don. Hisse:' + kod + ' Fiyat:' + (v?.fiyat||'?') + 'TL RSI:' + (v?.rsi||'?') + ' Sinyal:' + (v?.sinyal||'?') + ' BIST100:' + (xu?.degisim||0) + '% ' + (gecmisSinyaller?'Gecmis:'+gecmisSinyaller:'') + (haberOzeti?' Haberler:'+haberOzeti.substring(0,200):'') + (pf?' Portfoy:'+pf.adet+'adet':'') + ' Format:{"karar":"AL/ALMA/BEKLE","gerekce":"2-3 cumle","girisFiyati":0.0,"stopLoss":0.0,"hedefFiyat":0.0,"risk":"Dusuk/Orta/Yuksek"}';
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': cleanKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await res.json();
-    const text = data?.content?.[0]?.text || '';
-    const kullanilanToken = (data?.usage?.input_tokens||0) + (data?.usage?.output_tokens||0);
-    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
-
-    let analiz = null;
-    try { const m = text.match(/[{][\s\S]*[}]/); if (m) analiz = JSON.parse(m[0]); } catch(e) {}
-
-    if (analiz) {
-      analiz.tarih = Date.now();
-      analiz.kod = kod;
-      // Firestore'a kaydet
-      try {
-        const analizKey = 'hisseAnaliz_' + currentUser.uid + '_' + kod;
-        await setDoc(doc(db, 'hisseAnalizleri', analizKey), {
-          ...analiz, uid: currentUser.uid, sembol: kod
-        });
-      } catch(e) {}
-      hisseAnalizGoster(analiz);
-      btn.textContent = '⬡ Yeniden Analiz Et';
-    } else {
-      el.innerHTML = '<div style="color:var(--red)">Analiz alınamadı, tekrar dene</div>';
-      btn.textContent = '⬡ AI ile Analiz Et';
-    }
-    btn.disabled = false;
-
-  } catch(e) {
-    el.innerHTML = '<div style="color:var(--red)">Hata: ' + e.message + '</div>';
-    btn.disabled = false;
-    btn.textContent = '⬡ AI ile Analiz Et';
-  }
-};
-
-// ══════════════════════════════════════════════
-// HABERLER SİSTEMİ
-// ══════════════════════════════════════════════
-
-let haberlerYuklendi = false;
-
-async function loadHaberler() {
-  if (haberlerYuklendi) return;
-  const el = document.getElementById('haberListesi');
-  el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)"><div class="spinner" style="margin:0 auto 1rem"></div><div>Haberler yükleniyor...</div></div>';
-  await haberleriYenile();
-}
-
-window.haberleriYenile = async () => {
-  const el = document.getElementById('haberListesi');
-  el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)"><div class="spinner" style="margin:0 auto 1rem"></div><div>Haberler yükleniyor...</div></div>';
-  
-  try {
-    const res = await fetch(
-      'https://hissematik-proxy.ugurserkan.workers.dev/?haberler=1',
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) throw new Error('Bağlantı hatası');
-    const data = await res.json();
-    const haberler = data?.haberler || [];
-
-    if (haberler.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Haber bulunamadı</div>';
-      return;
-    }
-
-    haberler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
-
-    // Haberleri göster - AI analizi isteğe bağlı
-    renderHaberler(haberler);
-    haberlerYuklendi = true;
-    showToast(`${haberler.length} haber yüklendi ✓`);
-
-  } catch(e) {
-    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">
-      <div style="color:var(--red);margin-bottom:0.5rem">Haberler yüklenemedi</div>
-      <div style="font-size:0.78rem">${e.message}</div>
-      <button class="btn primary" onclick="haberleriYenile()" style="margin-top:1rem">Tekrar Dene</button>
-    </div>`;
-  }
-};
-
-// Haberleri render et
-let haberlerData = [];
-async function renderHaberler(haberler) {
-  haberlerData = haberler;
-  const el = document.getElementById('haberListesi');
-  const apiVar = havuzKey || anthropicKey;
-
-  el.innerHTML = haberler.map((h, idx) => {
-    const tarihStr = h.tarih ? new Date(h.tarih).toLocaleString('tr-TR', {
-      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-    }) : '';
-    const kaynakAdi = h.kaynak?.includes('dunya') ? 'Dünya' :
-                      h.kaynak?.includes('bloomberg') ? 'Bloomberg HT' :
-                      h.kaynak?.includes('bbc') ? 'BBC Türkçe' : 'Finans';
-
-    return `<div class="haber-card" id="haber-${idx}">
-      <div class="haber-baslik">
-        ${h.link ? `<a href="${h.link}" target="_blank" rel="noopener">${h.baslik}</a>` : h.baslik}
-      </div>
-      ${h.aciklama ? `<div class="haber-aciklama">${h.aciklama}...</div>` : ''}
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.5rem">
-        <div class="haber-meta">
-          <span>📰 ${kaynakAdi}</span>
-          ${tarihStr ? `<span>🕐 ${tarihStr}</span>` : ''}
-        </div>
-        ${apiVar ? `<button class="btn" onclick="tekHaberAnalizEt(${idx})" id="analiz-btn-${idx}" 
-          style="font-size:0.7rem;padding:0.25rem 0.6rem;color:var(--accent);border-color:rgba(0,229,160,0.3)">
-          ⬡ AI Analiz
-        </button>` : ''}
-      </div>
-      <div id="analiz-${idx}"></div>
-    </div>`;
-  }).join('');
-
-  // Firestore'dan mevcut analizleri yükle
-  if (currentUser) {
-    haberler.forEach(async (h, idx) => {
-      try {
-        const haberHash = btoa(unescape(encodeURIComponent(h.baslik || ''))).substring(0, 40);
-        const analizDocId = currentUser.uid + '_' + haberHash;
-        const snap = await getDoc(doc(db, 'haberAnalizleri', analizDocId));
-        if (snap.exists()) {
-          const analizEl = document.getElementById('analiz-' + idx);
-          const btn = document.getElementById('analiz-btn-' + idx);
-          if (analizEl) haberAnalizGoster(analizEl, snap.data());
-          if (btn) btn.remove();
-        }
-      } catch(e) {}
-    });
-  }
-}
-
-// Tek haber analizi
-window.tekHaberAnalizEt = async (idx) => {
-  const h = haberlerData[idx];
-  if (!h) return;
-  const btn = document.getElementById('analiz-btn-' + idx);
-  const analizEl = document.getElementById('analiz-' + idx);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...'; }
-  const key = havuzKey || anthropicKey;
-  if (!key) { showToast('API anahtarı gerekli!', 'error'); if(btn){btn.disabled=false;btn.textContent='⬡ AI Analiz';} return; }
-  const haberHash = btoa(unescape(encodeURIComponent(h.baslik || ''))).substring(0, 40);
-  const analizDocId = currentUser.uid + '_' + haberHash;
-  try {
-    const mevcutSnap = await getDoc(doc(db, 'haberAnalizleri', analizDocId));
-    if (mevcutSnap.exists()) {
-      haberAnalizGoster(analizEl, mevcutSnap.data());
-      if (btn) btn.remove();
-      return;
-    }
-  } catch(e) {}
-  try {
-    const cleanKey = key.replace(/[^a-zA-Z0-9\-_]/g, '').trim();
-    const haberMetin = (h.baslik || '').substring(0, 300);
-    const takipKodlari = [...takipEdilen].join(', ') || 'Yok';
-    const analizPrompt = 'BIST hisse senedi haberi analiz et. Sadece JSON don. Haber: ' + haberMetin + '. Takip edilen: ' + takipKodlari + '. Format: {"hisseler":[{"kod":"THYAO","etki":"olumlu","tip":"direkt"}],"yorum":"2 cumle turkce","sure":"Kisa/Orta/Uzun vadeli"}';
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': cleanKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 400,
-        messages: [{ role: 'user', content: analizPrompt }]
-      })
-    });
-    const data = await res.json();
-    const text = data?.content?.[0]?.text || '';
-    const kullanilanToken = (data?.usage?.input_tokens||0) + (data?.usage?.output_tokens||0);
-    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
-    let analiz = null;
-    try { const m = text.match(/[{][\s\S]*[}]/); if (m) analiz = JSON.parse(m[0]); } catch(e) {}
-    if (analiz) {
-      const analizData = { ...analiz, haberBaslik: h.baslik, haberLink: h.link||'', uid: currentUser.uid, kullaniciAd: currentUser.displayName||currentUser.email, tarih: Date.now(), takipEdilen: [...takipEdilen] };
-      try { await setDoc(doc(db, 'haberAnalizleri', analizDocId), analizData); } catch(e) {}
-      if (analizEl) haberAnalizGoster(analizEl, analizData);
-      analiz.hisseler?.forEach(x => {
-        if (takipEdilen.has(x.kod)) {
-          if (x.etki==='olumsuz') showToast('⚠️ ' + x.kod + ' olumsuz etkilenebilir!', 'error');
-          else if (x.etki==='olumlu') showToast('💡 ' + x.kod + ' olumlu etkilenebilir!');
-        }
-      });
-    }
-    if (btn) btn.remove();
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = '⬡ AI Analiz'; }
-    showToast('Analiz hatasi: ' + e.message, 'error');
-  }
-};
-
-// AI ile haber analizi
-
-// Güncelleme sonrası haberleri sıfırla
-function haberlerSifirla() { haberlerYuklendi = false; }
-
-// Haber analiz kutusunu göster
-function haberAnalizGoster(el, analiz) {
-  if (!el || !analiz) return;
-  el.innerHTML = `
-    <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.12);border-radius:8px">
-      <div style="font-size:0.68rem;color:var(--accent);font-family:var(--mono);margin-bottom:0.5rem">⬡ AI ETKİ ANALİZİ</div>
-      ${analiz.hisseler?.length > 0 ? `
-        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem">
-          ${analiz.hisseler.map(x => `
-            <div style="display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;
-              background:${x.etki==='olumlu'?'rgba(0,229,160,0.12)':x.etki==='olumsuz'?'rgba(255,69,96,0.12)':'rgba(255,209,102,0.12)'};
-              border:1px solid ${x.etki==='olumlu'?'rgba(0,229,160,0.3)':x.etki==='olumsuz'?'rgba(255,69,96,0.3)':'rgba(255,209,102,0.3)'}">
-              <span>${x.etki==='olumlu'?'🟢':x.etki==='olumsuz'?'🔴':'🟡'}</span>
-              <span style="font-family:var(--mono);font-size:0.72rem;font-weight:500">${x.kod}</span>
-              <span style="font-size:0.65rem;color:var(--muted)">${x.tip==='direkt'?'Doğrudan':'Dolaylı'}</span>
-            </div>`).join('')}
-        </div>` : ''}
-      <div style="font-size:0.78rem;color:#b0d8c8;line-height:1.6">${analiz.yorum||''}</div>
-      ${analiz.sure?`<div style="font-size:0.68rem;color:var(--muted);margin-top:0.4rem;font-family:var(--mono)">⏱ ${analiz.sure}</div>`:''}
-    </div>`;
-}
-
-// ══════════════════════════════════════════════
-// SÖZLÜK SİSTEMİ
-// ══════════════════════════════════════════════
-
-// Temel terimler listesi
-const TEMEL_TERIMLER = [
-  "RSI", "MACD", "Momentum", "Hacim", "Hareketli Ortalama",
-  "Aşırı Alım", "Aşırı Satım", "Destek Seviyesi", "Direnç Seviyesi",
-  "Trend", "Volatilite", "Piyasa Değeri", "Halka Arz", "Temettü",
-  "F/K Oranı", "Teknik Analiz", "Temel Analiz", "Stop Loss",
-  "Take Profit", "Portföy Çeşitlendirmesi", "Beta", "Endeks",
-  "Boğa Piyasası", "Ayı Piyasası", "Konsolidasyon", "Breakout",
-  "Fibonacci", "Bollinger Bandı", "Stochastic", "EMA", "SMA",
-  "Hacim Spike", "Kurumsal Yatırımcı", "Likidite", "Spread"
-];
-
-let sozlukVeriler = []; // Firestore'dan yüklenen terimler
-
-async function loadSozluk() {
-  // Admin butonlarını göster
-  if (isAdmin) {
-    document.getElementById('adminSozlukBtns').style.display = 'flex';
-    document.getElementById('adminSozlukStats').style.display = 'block';
-    loadTerimIstatistik();
-  }
-
-  // Firestore'dan terimleri yükle
-  try {
-    const q = query(
-      collection(db, 'sozluk'),
-      orderBy('sorulma', 'desc'),
-      limit(50)
-    );
-    const snap = await getDocs(q);
-    sozlukVeriler = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    renderSozluk();
-  } catch(e) {
-    console.error('Sözlük yükleme hatası:', e);
-    renderSozluk();
-  }
-
-  // Popüler terimleri göster
-  renderPopularTerimler();
-}
-
-function renderPopularTerimler() {
-  const el = document.getElementById('popularTerimler');
-  TEMEL_TERIMLER.forEach(terim => {
-    const chip = document.createElement('button');
-    chip.className = 'terim-chip';
-    chip.textContent = terim;
-    chip.onclick = () => terimSorAPI(terim);
-    el.appendChild(chip);
-  });
-}
-
-function renderSozluk(filtre = '') {
-  const el = document.getElementById('sozlukListesi');
-  const filtered = filtre
-    ? sozlukVeriler.filter(t => t.terim.toLowerCase().includes(filtre.toLowerCase()))
-    : sozlukVeriler;
-
-  if (filtered.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">
-      <div style="font-size:2rem;margin-bottom:1rem">📖</div>
-      <div style="color:var(--text);margin-bottom:0.5rem">Sözlüğün henüz boş</div>
-      <div style="font-size:0.8rem">Yukarıdaki terimlerden birine tıkla, Claude açıklasın</div>
-    </div>`;
-    return;
-  }
-
-  el.innerHTML = filtered.map(t => `
-    <div class="terim-card ${t.acik ? 'acik' : ''}" onclick="toggleTerim('${t.id}')">
-      <div class="terim-baslik">
-        <span>${t.terim}</span>
-        <span class="pill al" style="font-size:0.6rem">${t.sorulma || 1}x soruldu</span>
-        ${isAdmin ? `<button class="btn primary" onclick="event.stopPropagation();pushTerimGonder('${t.id}')" style="font-size:0.65rem;padding:2px 8px;margin-left:auto">📢 Push</button>` : ''}
-      </div>
-      <div class="terim-aciklama">${t.aciklama || ''}</div>
-      <div class="terim-meta">
-        <span>📅 ${t.tarih ? new Date(t.tarih).toLocaleDateString('tr-TR') : '—'}</span>
-        ${t.ekleyenAd ? `<span>👤 ${t.ekleyenAd}</span>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-function toggleTerim(id) {
-  const t = sozlukVeriler.find(x => x.id === id);
-  if (t) { t.acik = !t.acik; renderSozluk(); }
-}
-
-window.filterTerimler = () => {
-  const q = document.getElementById('sozlukSearch').value;
-  renderSozluk(q);
-};
-
-window.terimiSor = () => {
-  const q = document.getElementById('sozlukSearch').value.trim();
-  if (!q) { showToast('Önce terim yaz!', 'error'); return; }
-  terimSorAPI(q);
-};
-
-async function terimSorAPI(terim) {
-  const kullanilanKey = havuzKey || anthropicKey;
-  if (!kullanilanKey) {
-    showToast('Sistem şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.', 'error');
-    return;
-  }
-
-  // Daha önce sorulmuş mu?
-  const mevcut = sozlukVeriler.find(t => t.terim.toLowerCase() === terim.toLowerCase());
-  if (mevcut) {
-    // Sorulma sayısını artır
-    showToast(`"${terim}" zaten sözlükte var!`);
-    try {
-      await updateDoc(doc(db, 'sozluk', mevcut.id), {
-        sorulma: (mevcut.sorulma || 1) + 1
-      });
-      mevcut.sorulma = (mevcut.sorulma || 1) + 1;
-    } catch(e) {}
-    renderSozluk();
-    return;
-  }
-
-  showLoading(`"${terim}" için Claude açıklama hazırlıyor...`);
-
-  try {
-    // Kullanıcının API key'i ile Claude'a sor
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': kullanilanKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 300,
-        messages: [{
-          role: 'user',
-          content: `Borsa yatırımcısına "${terim}" terimini açıkla. Kısa, sade, anlaşılır Türkçe. 2-3 cümle. Günlük hayattan basit bir örnek ver. Teknik jargon kullanma.`
-        }]
-      })
-    });
-
-    const data = await res.json();
-    const aciklama = data?.content?.[0]?.text || '';
-    const kullanilanToken = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
-    if (kullanilanToken > 0) await tokenKaydet(kullanilanToken);
-
-    if (!aciklama) { hideLoading(); showToast('Açıklama alınamadı', 'error'); return; }
-
-    // Firestore'a kaydet (admin'in sözlüğüne)
-    const yeniTerim = {
-      terim,
-      aciklama,
-      sorulma: 1,
-      tarih: Date.now(),
-      ekleyenUid: currentUser.uid,
-      ekleyenAd: currentUser.displayName || currentUser.email,
-      pushGonderildi: false
-    };
-
-    const docRef = await addDoc(collection(db, 'sozluk'), yeniTerim);
-    sozlukVeriler.unshift({id: docRef.id, ...yeniTerim});
-
-    hideLoading();
-    renderSozluk();
-    showToast(`"${terim}" sözlüğe eklendi ✓`);
-
-  } catch(e) {
-    hideLoading();
-    showToast('Hata: ' + e.message, 'error');
-  }
-}
-
-async function loadTerimIstatistik() {
-  try {
-    const snap = await getDocs(query(collection(db, 'sozluk'), orderBy('sorulma', 'desc'), limit(10)));
-    const terimler = snap.docs.map(d => d.data());
-    document.getElementById('terimIstatistik').innerHTML = terimler.map((t, i) => `
-      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
-        <span class="mono" style="color:var(--muted);font-size:0.8rem">${i+1}.</span>
-        <span style="flex:1;font-size:0.82rem">${t.terim}</span>
-        <span class="pill al">${t.sorulma}x</span>
-        <button class="btn" onclick="pushTerimGonderByData('${t.terim}','${t.aciklama?.substring(0,50)}')" style="font-size:0.7rem;padding:2px 8px">📢 Push</button>
-      </div>`).join('');
-  } catch(e) { console.error(e); }
-}
-
-window.pushGonder = () => {
-  document.getElementById('pushModal').classList.add('show');
-};
-
-window.pushTerimGonder = async (id) => {
-  const t = sozlukVeriler.find(x => x.id === id);
-  if (!t) return;
-  document.getElementById('pushBaslik').value = `📚 Bugünün Terimi: ${t.terim}`;
-  document.getElementById('pushMesaj').value = t.aciklama;
-  document.getElementById('pushModal').classList.add('show');
-};
-
-window.pushTerimGonderByData = (terim, aciklama) => {
-  document.getElementById('pushBaslik').value = `📚 Bugünün Terimi: ${terim}`;
-  document.getElementById('pushMesaj').value = aciklama + '...';
-  document.getElementById('pushModal').classList.add('show');
-};
-
-window.pushGonderOnay = async () => {
-  const baslik = document.getElementById('pushBaslik').value;
-  const mesaj = document.getElementById('pushMesaj').value;
-  if (!baslik || !mesaj) { showToast('Başlık ve mesaj zorunlu!', 'error'); return; }
-
-  // Push mesajını Firestore'a kaydet - kullanıcılar görecek
-  try {
-    await addDoc(collection(db, 'pushMesajlar'), {
-      baslik, mesaj,
-      tarih: Date.now(),
-      gonderen: currentUser.uid,
-      okundu: {}
-    });
-    closeModal('pushModal');
-    showToast('Push mesajı gönderildi! ✓');
-    // Tüm aktif kullanıcılara bildirim göster
-    showPushBildirim(baslik, mesaj);
-  } catch(e) { showToast('Hata: ' + e.message, 'error'); }
-};
-
-function showPushBildirim(baslik, mesaj) {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    position:fixed;top:80px;right:1.5rem;z-index:700;
-    background:var(--bg2);border:1px solid rgba(0,229,160,0.3);
-    border-radius:16px;padding:1.25rem;max-width:320px;
-    box-shadow:0 8px 32px rgba(0,0,0,0.5);
-    animation:modalIn 0.3s ease;
-  `;
-  el.innerHTML = `
-    <div style="display:flex;align-items:flex-start;gap:0.75rem">
-      <div style="font-size:1.5rem">📢</div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem">${baslik}</div>
-        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5">${mesaj}</div>
-      </div>
-      <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">✕</button>
-    </div>
-  `;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 8000);
-}
-
-// Push mesajlarını kontrol et (login sonrası)
-async function checkPushMesajlar() {
-  if (!currentUser) return;
-  try {
-    const snap = await getDocs(
-      query(collection(db, 'pushMesajlar'), orderBy('tarih', 'desc'), limit(5))
-    );
-    snap.docs.forEach(d => {
-      const m = d.data();
-      const okundu = m.okundu?.[currentUser.uid];
-      if (!okundu && Date.now() - m.tarih < 24 * 60 * 60 * 1000) {
-        setTimeout(() => showPushBildirim(m.baslik, m.mesaj), 2000);
-        updateDoc(doc(db, 'pushMesajlar', d.id), {
-          [`okundu.${currentUser.uid}`]: true
-        });
-      }
-    });
-  } catch(e) {}
-}
-
-// Loading ekranını kaldır
-setTimeout(() => document.getElementById('loadingScreen').classList.add('hide'), 2000);
-</script>
 </body>
 </html>
