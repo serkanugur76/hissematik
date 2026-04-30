@@ -514,42 +514,47 @@
       <button class="modal-close" data-modal-close="hisseDetayModal" aria-label="Kapat">✕</button>
     </div>
 
-    <!-- Özet kartlar (3 sütun, js doldurur) -->
-    <div class="detay-micro-grid" id="detayOzetKartlar"></div>
+    <!-- Scroll edilebilir içerik -->
+    <div class="modal-body">
 
-    <!-- Teknik göstergeler -->
-    <section class="detay-bolum">
-      <div class="detay-bolum-baslik">Teknik Göstergeler</div>
-      <div class="micro-grid" id="detayTeknik"></div>
-    </section>
+      <!-- Özet kartlar (js doldurur) -->
+      <div class="detay-micro-grid" id="detayOzetKartlar" style="margin-bottom:0.75rem"></div>
 
-    <!-- Piyasa bağlamı -->
-    <section class="detay-bolum">
-      <div class="detay-bolum-baslik">Piyasa Bağlamı</div>
-      <div id="detayPiyasa"></div>
-    </section>
+      <!-- Teknik göstergeler -->
+      <section class="detay-bolum">
+        <div class="detay-bolum-baslik">Teknik Göstergeler</div>
+        <div class="micro-grid" id="detayTeknik"></div>
+      </section>
 
-    <!-- İlgili haberler -->
-    <section class="detay-bolum" id="detayHaberlerBlok">
-      <div class="detay-bolum-baslik">İlgili Haberler</div>
-      <div id="detayHaberler"></div>
-    </section>
+      <!-- Piyasa bağlamı -->
+      <section class="detay-bolum">
+        <div class="detay-bolum-baslik">Piyasa Bağlamı</div>
+        <div id="detayPiyasa"></div>
+      </section>
 
-    <!-- Portföy durumu -->
-    <section class="detay-bolum" id="detayPortfoyBlok">
-      <div class="detay-bolum-baslik">Portföyündeki Durumu</div>
-      <div id="detayPortfoy"></div>
-    </section>
+      <!-- İlgili haberler -->
+      <section class="detay-bolum" id="detayHaberlerBlok">
+        <div class="detay-bolum-baslik">İlgili Haberler</div>
+        <div id="detayHaberler"></div>
+      </section>
 
-    <!-- AI Karar Analizi -->
-    <section class="detay-ai-glass">
-      <div class="detay-ai-label">⬡ AI Karar Analizi</div>
-      <div id="detayAiIcerik" class="detay-ai-icerik">
-        Analiz için aşağıdaki butona bas...
-      </div>
-    </section>
+      <!-- Portföy durumu -->
+      <section class="detay-bolum" id="detayPortfoyBlok">
+        <div class="detay-bolum-baslik">Portföyündeki Durumu</div>
+        <div id="detayPortfoy"></div>
+      </section>
 
-    <!-- Aksiyon butonları -->
+      <!-- AI Karar Analizi -->
+      <section class="detay-ai-glass" style="margin-bottom:0.5rem">
+        <div class="detay-ai-label">⬡ AI Karar Analizi</div>
+        <div id="detayAiIcerik" class="detay-ai-icerik">
+          Analiz için aşağıdaki butona bas...
+        </div>
+      </section>
+
+    </div><!-- /modal-body -->
+
+    <!-- Sabit footer: aksiyon butonları -->
     <div class="detay-aksiyonlar">
       <button class="btn primary" id="detayAiBtn" style="flex:1">⬡ AI ile Analiz Et</button>
       <button class="btn" id="detayPortfoyEkleBtn">+ Portföye Ekle</button>
