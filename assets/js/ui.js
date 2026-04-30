@@ -176,7 +176,7 @@ export function renderDashboard() {
 
   if (rows.length === 0) {
     if (container) container.innerHTML =
-      '<tr><td colspan="9" class="empty-state" style="padding:3rem">Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle'ye bas.</td></tr>';
+      `<tr><td colspan='9' class='empty-state' style='padding:3rem'>Henüz veri yok — Hisseler sekmesinden hisse seç, ardından Güncelle düğmesine bas.</td></tr>`;
     return;
   }
 
@@ -207,40 +207,41 @@ export function renderDashboard() {
         ? `<span class="pos">+${v.hacimFark}%</span>`
         : v.hacimFark < 0 ? `<span class="neg">${v.hacimFark}%</span>` : '<span class="muted">—</span>';
 
+      const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
+      const bolRenk  = v.bollinger?.yuzde < 25 ? 'var(--accent)'
+                     : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
+      const degIsaret = v.degisim >= 0 ? '+' : '';
+
       return `<tr>
         <td>
-          <span class="mono" style="font-weight:600;cursor:pointer;color:var(--accent)"
-            onclick="hisseDetayAc('${k}')">${k}</span>
+          <span class='mono' style='font-weight:600;cursor:pointer;color:var(--accent)'
+            onclick='hisseDetayAc("${k}")'>${k}</span>
         </td>
-        <td class="mono" style="font-weight:500">${v.fiyat ?? '—'} ₺</td>
-        <td class="mono ${degCls}">${v.degisim >= 0 ? '+' : ''}${v.degisim}%</td>
+        <td class='mono' style='font-weight:500'>${v.fiyat ?? '—'} ₺</td>
+        <td class='mono ${degCls}'>${degIsaret}${v.degisim}%</td>
         <td>
-          <div class="rsi-wrap">
-            <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
-            <span class="mono" style="font-size:0.75rem;color:${rsiColor};min-width:28px">${v.rsi}</span>
+          <div class='rsi-wrap'>
+            <div class='rsi-bar'><div class='rsi-fill' style='width:${rsiPct}%;background:${rsiColor}'></div></div>
+            <span class='mono' style='font-size:0.75rem;color:${rsiColor};min-width:28px'>${v.rsi}</span>
           </div>
         </td>
+        <td><span class='sinyal-badge ${cls}'>${v.sinyal}</span></td>
         <td>
-          <span class="sinyal-badge ${cls}">${v.sinyal}</span>
-        </td>
-        <td>
-          <div class="guven-wrap">
-            <div class="guven-bar"><div class="guven-fill ${guvenCls}" style="width:${guven}%"></div></div>
-            <span class="guven-pct">${guven}%</span>
+          <div class='guven-wrap'>
+            <div class='guven-bar'><div class='guven-fill ${guvenCls}' style='width:${guven}%'></div></div>
+            <span class='guven-pct'>${guven}%</span>
           </div>
         </td>
-        <td class="mono" style="font-size:0.72rem;color:${v.macdHist > 0 ? 'var(--accent)' : 'var(--red)'}">
+        <td class='mono' style='font-size:0.72rem;color:${macdRenk}'>
           ${v.macdHist?.toFixed(3) ?? '—'}
         </td>
         <td>${hacimTxt}</td>
-        <td class="mono" style="font-size:0.72rem;color:${v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)'}">
+        <td class='mono' style='font-size:0.72rem;color:${bolRenk}'>
           ${v.bollinger ? v.bollinger.yuzde + '%' : '—'}
         </td>
       </tr>`;
     }).join('');
   }
-}
-
 }
 
 // ─────────────────────────────────────────────
@@ -327,7 +328,7 @@ export function renderSinyalGecmisi() {
   const listeEl = el('sinyalListesi');
 
   if (sinyalGecmisi.length === 0) {
-    listeEl.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok.</div>';
+    listeEl.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok.</div>`;
     return;
   }
 
@@ -340,7 +341,7 @@ export function renderSinyalGecmisi() {
         ? `<span class="pill dogrulandi">✓ Doğrulandı</span>`
         : `<span class="pill yanlis">✗ Yanlışlandı</span>`;
     const sonucYuzde = s.sonucYuzde !== null
-      ? `<span class="${s.sonucYuzde >= 0 ? 'pos' : 'neg'} mono">${s.sonucYuzde >= 0 ? '+' : ''}${s.sonucYuzde}%</span>`
+      ? `<span class='${s.sonucYuzde >= 0 ? "pos" : "neg"} mono'>${s.sonucYuzde >= 0 ? '+' : ''}${s.sonucYuzde}%</span>`
       : '<span class="muted">—</span>';
 
     return `<div class="sinyal-item">
@@ -396,7 +397,7 @@ export function renderPortfoy() {
       <td class="mono">${gf ? gf.toFixed(2) + ' ₺' : '—'}</td>
       <td class="mono">${mal.toFixed(0)} ₺</td>
       <td class="mono">${deg ? deg.toFixed(0) + ' ₺' : '—'}</td>
-      <td class="mono ${kzSat >= 0 ? 'pos' : 'neg'}">${kzSat >= 0 ? '+' : ''}${kzSat.toFixed(0)} ₺<br>
+      <td class='mono ${kzSat >= 0 ? "pos" : "neg"}'>${kzSat >= 0 ? '+' : ''}${kzSat.toFixed(0)} ₺<br>
         <span style="font-size:0.72rem">${kzpSat >= 0 ? '+' : ''}${kzpSat.toFixed(1)}%</span></td>
       <td>${sin}</td>
       <td><button class="btn danger" onclick="window._uiCallbacks?.portfoyCikar('${k}')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>
@@ -499,7 +500,7 @@ export function renderHisseDetay(kod) {
         <div class="detay-mc-sub">${v.stochRsi?.k < 20 ? 'Aşırı Satım' : v.stochRsi?.k > 80 ? 'Aşırı Alım' : 'Nötr'}</div>
       </div>`;
   } else {
-    ozetEl.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>';
+    ozetEl.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>`;
   }
 
   // Teknik göstergeler
@@ -508,11 +509,21 @@ export function renderHisseDetay(kod) {
   // Piyasa bağlamı
   const xu  = piyasaVerisi.xu100;
   const usd = piyasaVerisi.usdtry;
+  const xuRenk    = (xu?.degisim ?? 0) >= 0 ? 'var(--accent)' : 'var(--red)';
+  const piyasaRenk = (xu?.degisim ?? 0) > 0  ? 'var(--accent)'
+                   : (xu?.degisim ?? 0) < -1  ? 'var(--red)' : 'var(--yellow)';
+  const xuFiyatStr = xu
+    ? xu.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ' + (xu.degisim >= 0 ? '+' : '') + xu.degisim + '%'
+    : '—';
+  const piyasaEtiket = (xu?.degisim ?? 0) > 1  ? '🟢 Yükseliş'
+                     : (xu?.degisim ?? 0) < -1  ? '🔴 Düşüş' : '🟡 Yatay';
+  const usdStr = usd ? usd.fiyat?.toFixed(2) + ' ₺' : '—';
+
   el('detayPiyasa').innerHTML = `
-    <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
-      <div><span style="color:var(--muted)">BIST100:</span> <span style="font-family:var(--mono);color:${xu?.degisim >= 0 ? 'var(--accent)' : 'var(--red)'}">${xu ? xu.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ' + (xu.degisim >= 0 ? '+' : '') + xu.degisim + '%' : '—'}</span></div>
-      <div><span style="color:var(--muted)">USD/TRY:</span> <span style="font-family:var(--mono)">${usd ? usd.fiyat?.toFixed(2) + ' ₺' : '—'}</span></div>
-      <div><span style="color:var(--muted)">Piyasa:</span> <span style="color:${xu?.degisim > 0 ? 'var(--accent)' : xu?.degisim < -1 ? 'var(--red)' : 'var(--yellow)'}">${xu?.degisim > 1 ? '🟢 Yükseliş' : xu?.degisim < -1 ? '🔴 Düşüş' : '🟡 Yatay'}</span></div>
+    <div style='display:flex;gap:1.5rem;flex-wrap:wrap'>
+      <div><span style='color:var(--muted)'>BIST100:</span> <span style='font-family:var(--mono);color:${xuRenk}'>${xuFiyatStr}</span></div>
+      <div><span style='color:var(--muted)'>USD/TRY:</span> <span style='font-family:var(--mono)'>${usdStr}</span></div>
+      <div><span style='color:var(--muted)'>Piyasa:</span> <span style='color:${piyasaRenk}'>${piyasaEtiket}</span></div>
     </div>`;
 
   // İlgili haberler
@@ -538,7 +549,7 @@ export function renderHisseDetay(kod) {
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
         <div><span style="color:var(--muted)">Adet:</span> <span class="mono">${pf.adet}</span></div>
         <div><span style="color:var(--muted)">Alış:</span> <span class="mono">${pf.alisFiyati} ₺</span></div>
-        <div><span style="color:var(--muted)">K/Z:</span> <span class="mono" style="color:${kz >= 0 ? 'var(--accent)' : 'var(--red)'}">
+        <div><span style='color:var(--muted)'>K/Z:</span> <span class='mono' style='color:${kz >= 0 ? "var(--accent)" : "var(--red)"}'>
           ${kz >= 0 ? '+' : ''}${kz.toFixed(0)} ₺ (${kzp}%)</span></div>
       </div>`;
   } else {
@@ -546,7 +557,7 @@ export function renderHisseDetay(kod) {
   }
 
   // AI içeriği sıfırla
-  el('detayAiIcerik').innerHTML = '<span style="color:var(--muted)">Analiz için butona bas...</span>';
+  el('detayAiIcerik').innerHTML = `<span style="color:var(--muted)">Analiz için butona bas...</span>`;
   el('detayAiBtn').disabled     = false;
   el('detayAiBtn').textContent  = '⬡ AI ile Analiz Et';
 
@@ -564,12 +575,15 @@ export function renderDetayTeknik(kod) {
   const wRenk    = v.williamsR < -80 ? 'var(--accent)' : v.williamsR > -20 ? 'var(--red)' : 'var(--muted)';
   const mfiRenk  = v.mfi < 30 ? 'var(--accent)' : v.mfi > 70 ? 'var(--red)' : 'var(--muted)';
 
-  const mc = (label, value, sub = '', color = '') =>
-    `<div class="micro-card">
-      <div class="mc-label">${label}</div>
-      <div class="mc-value" ${color ? `style="color:${color}"` : ''}>${value}</div>
-      ${sub ? `<div class="mc-sub">${sub}</div>` : ''}
+  const mc = (label, value, sub = '', color = '') => {
+    const style = color ? ` style='color:${color}'` : '';
+    const subHtml = sub ? `<div class='mc-sub'>${sub}</div>` : '';
+    return `<div class='micro-card'>
+      <div class='mc-label'>${label}</div>
+      <div class='mc-value'${style}>${value}</div>
+      ${subHtml}
     </div>`;
+  };
 
   teknikEl.className = 'micro-grid';
   teknikEl.innerHTML =
@@ -579,8 +593,16 @@ export function renderDetayTeknik(kod) {
     mc('MA 20', v.ma20 ? v.ma20.toFixed(2) + ' ₺' : '—', '') +
     mc('MA 50', v.ma50 ? v.ma50.toFixed(2) + ' ₺' : '—', '') +
     mc('MA Trend', v.ma20 > v.ma50 ? 'Yükseliş' : 'Düşüş', 'MA20 / MA50', maRenk) +
-    mc('Hacim', v.hacimFark > 0 ? '+' + v.hacimFark + '%' : v.hacimFark + '%', v.hacimFark > 50 ? 'Spike!' : 'Normal', v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)') +
-    mc('Güven', (v.guvenSkoru ?? '—') + '%', 'Ağırlıklı skor', v.guvenSkoru >= 70 ? 'var(--accent)' : v.guvenSkoru >= 50 ? 'var(--yellow)' : 'var(--red)') +
+    (() => {
+      const hRenk = v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)';
+      const hDeg  = v.hacimFark > 0 ? '+' + v.hacimFark + '%' : v.hacimFark + '%';
+      const hSub  = v.hacimFark > 50 ? 'Spike!' : 'Normal';
+      return mc('Hacim', hDeg, hSub, hRenk);
+    })() +
+    (() => {
+      const gRenk = v.guvenSkoru >= 70 ? 'var(--accent)' : v.guvenSkoru >= 50 ? 'var(--yellow)' : 'var(--red)';
+      return mc('Güven', (v.guvenSkoru ?? '—') + '%', 'Ağırlıklı skor', gRenk);
+    })() +
     (v.pivot ? mc('Pivot', v.pivot.pivot + ' ₺', `R1: ${v.pivot.r1} | S1: ${v.pivot.s1}`) : '') +
     (v.fib ? mc('Fib 0.382', v.fib.f382 + ' ₺', 'Fib 0.618: ' + v.fib.f618 + ' ₺') : '') +
     (v.hafta52H ? mc('52H Yüksek', v.hafta52H + ' ₺', 'Pozisyon: ' + v.hafta52Yuzde + '%', 'var(--red)') : '') +
@@ -597,11 +619,14 @@ export function renderHisseAnalizSonucu(analiz) {
   const kararCls  = analiz.karar === 'AL'   ? 'guclu-al' :
                     analiz.karar === 'ALMA'  ? 'guclu-sat' : 'bekle';
 
-  const fiyatChip = (label, val, color = '') =>
-    val ? `<div class="micro-card ${color ? '' : ''}">
-      <div class="mc-label">${label}</div>
-      <div class="mc-value mono" ${color ? `style="color:${color}"` : ''}>${val} ₺</div>
-    </div>` : '';
+  const fiyatChip = (label, val, renk = '') => {
+    if (!val) return '';
+    const style = renk ? ` style='color:${renk}'` : '';
+    return `<div class='micro-card'>
+      <div class='mc-label'>${label}</div>
+      <div class='mc-value mono'${style}>${val} ₺</div>
+    </div>`;
+  };
 
   aiEl.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem">
@@ -629,7 +654,7 @@ export function renderHaberler() {
   const apiVar  = aktifKey();
 
   if (haberlerData.length === 0) {
-    listeEl.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Haber bulunamadı</div>';
+    listeEl.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted)">Haber bulunamadı</div>`;
     return;
   }
 
