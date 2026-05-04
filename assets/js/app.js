@@ -838,9 +838,9 @@ window.kullaniciEkle = async () => {
   const apiKey = el('newUserApiKey').value.trim();
   const plan   = el('newUserPlan').value;
   if (!email) { showToast('E-posta zorunlu!', 'error'); return; }
-  const uid = btoa(email).replace(/=/g, '');
+  const docId = email.toLowerCase().trim();
   try {
-    await setDoc(doc(db, 'users', uid), {
+    await setDoc(doc(db, 'users', docId), {
       email, name, apiKey, plan, active: true,
       isAdmin: false, createdAt: serverTimestamp(),
       takipEdilen: [], portfoy: {}, veriler: {},
