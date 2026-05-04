@@ -291,7 +291,7 @@ export async function aiPortfoyAnalizYap({
 // CLAUDE AI — HİSSE ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [] }) {
+export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piyasaVerisi = {}, portfoy = {}, haberlerData = [], bistListesi = [] }) {
   if (!key || !veri) return null;
 
   const gecmis = sinyalGecmisi
@@ -300,8 +300,24 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [] }) {
     .map(s => 'Tarih:' + new Date(s.tarih).toLocaleDateString('tr-TR') + ' Sinyal:' + s.sinyal + ' Sonuç:' + (s.dogrulandi === true ? '✓' : s.dogrulandi === false ? '✗' : '?') + (s.sonucYuzde ? ' %' + s.sonucYuzde : ''))
     .join('\n');
 
+  const piyasaBaglam = piyasaVerisi.xu100
+    ? 'Piyasa: BIST100 ' + (piyasaVerisi.xu100.degisim >= 0 ? '+' : '') + piyasaVerisi.xu100.degisim + '%, USD/TRY: ' + (piyasaVerisi.usdtry?.fiyat?.toFixed(2) || '—') + '\n'
+    : '';
+
+  const pfBilgi = portfoy[kod]
+    ? 'Portföyde: ' + portfoy[kod].adet + ' adet, alış fiyatı: ' + portfoy[kod].alisFiyati + '₺\n'
+    : '';
+
+  const ilgiliHaberler = haberlerData
+    .filter(h => h.baslik && h.baslik.includes(kod))
+    .slice(0, 2)
+    .map(h => '- ' + h.baslik)
+    .join('\n');
+  const haberBaglam = ilgiliHaberler ? 'İlgili haberler:\n' + ilgiliHaberler + '\n' : '';
+
   const prompt =
     'BIST hisse analizi — ' + kod + '\n\n' +
+    piyasaBaglam + pfBilgi + haberBaglam +
     'Fiyat: ' + veri.fiyat + '₺ | Değişim: ' + veri.degisim + '%\n' +
     'RSI: ' + veri.rsi + ' | MACD Hist: ' + veri.macdHist?.toFixed(3) + '\n' +
     'MA20: ' + veri.ma20 + ' | MA50: ' + veri.ma50 + '\n' +

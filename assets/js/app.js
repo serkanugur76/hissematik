@@ -261,7 +261,7 @@ async function _switchTab(name, btn) {
 
   if (name === 'haberler') await _loadHaberler();
   if (name === 'sozluk')   await _loadSozluk();
-  if (name === 'sinyal')   renderSinyalGecmisi();
+  if (name === 'sinyaller')   renderSinyalGecmisi();
   if (name === 'portfoy')  renderPortfoy();
 }
 
@@ -562,6 +562,7 @@ async function hisseDetayAc(kod) {
 }
 
 window.hisseAiAnalizEt = async () => {
+  if (!state.currentUser) { showToast('Oturum bulunamadı!', 'error'); return; }
   const kod = state.detayKod;
   const key = aktifKey();
   if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
@@ -574,6 +575,10 @@ window.hisseAiAnalizEt = async () => {
       key, kod,
       veri:          state.veriler[kod],
       sinyalGecmisi: state.sinyalGecmisi,
+      piyasaVerisi:  state.piyasaVerisi,
+      portfoy:       state.portfoy,
+      haberlerData:  state.haberlerData,
+      bistListesi:   BIST,
     });
     if (analiz) {
       await hisseAnalizKaydet({ db, currentUser: state.currentUser, kod, analiz });
@@ -644,6 +649,7 @@ async function _haberleriYenile() {
 }
 
 async function tekHaberAnalizEt(idx) {
+  if (!state.currentUser) { showToast('Oturum bulunamadı!', 'error'); return; }
   const h   = state.haberlerData[idx];
   if (!h) return;
   const key = aktifKey();
@@ -697,6 +703,7 @@ async function _loadSozluk() {
 }
 
 async function terimSorAPI(terim) {
+  if (!state.currentUser) { showToast('Oturum bulunamadı!', 'error'); return; }
   if (!terim) return;
   const key = aktifKey();
   if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
@@ -861,12 +868,14 @@ async function loadAdminPanel() {
   try {
     const snap  = await getDocs(collection(db, 'users'));
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    el('adminTotalUser').textContent = users.length;
+    el('adminTotalUser') && (el('adminTotalUser').textContent = users.length);
 
     const config = await getDoc(doc(db, 'config', 'global'));
-    if (config.exists()) el('adminApiKey').value = config.data().anthropicKey || '';
+    const apiKeyEl = el('adminApiKey');
+    if (config.exists() && apiKeyEl) apiKeyEl.value = config.data().anthropicKey || '';
 
-    el('kullaniciListesi').innerHTML = users.map(u =>
+    const kulListEl = el('kullaniciListesi');
+    if (kulListEl) kulListEl.innerHTML = users.map(u =>
       '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">' +
         '<div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--accent);flex-shrink:0">' + (u.name || u.email)[0].toUpperCase() + '</div>' +
         '<div style="flex:1;min-width:0">' +

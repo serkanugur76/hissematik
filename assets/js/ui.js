@@ -201,7 +201,8 @@ export function renderDashboard() {
       const rsiColor = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--yellow)';
       const cls      = sinyalClass(v.sinyal);
       const degCls   = v.degisim >= 0 ? 'pos' : 'neg';
-      const guven    = v.guvenSkoru || 0;
+      const guvenStr = v.guvenSkoru != null ? v.guvenSkoru + '%' : 'veri bekleniyor';
+      const guven    = v.guvenSkoru ?? 0;
       const guvenCls = guven >= 70 ? 'high' : guven >= 50 ? 'medium' : 'low';
       const hacimTxt = v.hacimFark > 0
         ? `<span class="pos">+${v.hacimFark}%</span>`
@@ -229,7 +230,7 @@ export function renderDashboard() {
         <td>
           <div class='guven-wrap'>
             <div class='guven-bar'><div class='guven-fill ${guvenCls}' style='width:${guven}%'></div></div>
-            <span class='guven-pct'>${guven}%</span>
+            <span class='guven-pct'>${guvenStr}</span>
           </div>
         </td>
         <td class='mono' style='font-size:0.72rem;color:${macdRenk}'>
