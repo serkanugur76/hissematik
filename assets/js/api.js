@@ -17,9 +17,8 @@ import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
 // ─────────────────────────────────────────────
 
 const PROXY      = 'https://hissematik-proxy.ugurserkan.workers.dev';
-const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_VER = '2023-06-01';
-const MODEL      = 'claude-sonnet-4-6';
+// Claude çağrıları artık doğrudan Anthropic'e gitmiyor.
+// Worker proxy üzerinden geçiyor — anahtar sunucuda kalıyor.
 
 const TOKEN_MALIYET = 0.000003;
 
@@ -34,26 +33,17 @@ export function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-function temizleKey(key) {
-  return (key || '').replace(/[^a-zA-Z0-9\-_]/g, '').trim();
-}
-
-async function claudeIste(key, mesajlar, maxToken = 1000) {
-  const res = await fetch(CLAUDE_URL, {
+// Anahtar artık Worker'da — api.js'de key parametresi artık kullanılmıyor
+async function claudeIste(_key, mesajlar, maxToken = 1000) {
+  const res = await fetch(`${PROXY}/?ai=1`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': temizleKey(key),
-      'anthropic-version': CLAUDE_VER,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: maxToken,
-      messages: mesajlar,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: mesajlar, maxTokens: maxToken }),
+    signal: AbortSignal.timeout(35000),
   });
+  if (!res.ok) throw new Error(`Claude proxy hatası: ${res.status}`);
   const data = await res.json();
+  if (data.error) throw new Error(data.error);
   return {
     text:   data?.content?.[0]?.text || '',
     tokens: (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0),
