@@ -1,15 +1,6 @@
 // ══════════════════════════════════════════════
 // HisseMatik — API & Network Katmanı
 // assets/js/api.js
-//
-// Tek sorumluluk: dış dünyayla konuşmak.
-//   • Yahoo Finance proxy (fiyat, geçmiş, piyasa, haberler)
-//   • Claude AI (portföy analizi, hisse analizi, haber analizi, sözlük)
-//   • Firestore CRUD (sinyal, token, kullanıcı, push)
-//
-// Bağımlılıklar:
-//   ← firebase.js   (db, auth helpers)
-//   ← indicators.js (parseYahooVeri, genelSinyal)
 // ══════════════════════════════════════════════
 
 import {
@@ -30,8 +21,10 @@ const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_VER = '2023-06-01';
 const MODEL      = 'claude-sonnet-4-6';
 
-/** Token başına yaklaşık maliyet (USD) */
 const TOKEN_MALIYET = 0.000003;
+
+// Worker'daki slice(0, 20) ile eşleşmeli
+const GRUP_BOYUTU = 20;
 
 // ─────────────────────────────────────────────
 // YARDIMCI
@@ -41,12 +34,10 @@ export function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-/** API anahtarını temizle (sadece izin verilen karakterler) */
 function temizleKey(key) {
   return (key || '').replace(/[^a-zA-Z0-9\-_]/g, '').trim();
 }
 
-/** Claude'a istek at — ham metin döner */
 async function claudeIste(key, mesajlar, maxToken = 1000) {
   const res = await fetch(CLAUDE_URL, {
     method: 'POST',
@@ -71,35 +62,22 @@ async function claudeIste(key, mesajlar, maxToken = 1000) {
 
 // ─────────────────────────────────────────────
 // YAHOO PROXY — TEK HİSSE
-// Detay paneli veya tekil güncelleme için
 // ─────────────────────────────────────────────
 
 export async function fetchYahoo(sembol, piyasaYon = undefined) {
   try {
+    // Tekil hisse de "semboller" parametresiyle çekilir (Worker API'siyle tutarlı)
     const res = await fetch(
-      `${PROXY}/?sembol=${sembol}`,
+      `${PROXY}/?semboller=${encodeURIComponent(sembol)}`,
       { signal: AbortSignal.timeout(15000) }
     );
     if (!res.ok) return null;
-    const json = await res.json();
+    const topluVeri = await res.json();
 
-    // Tam parseYahooVeri yoksa hafif hesap yap
-    const result = json?.chart?.result?.[0];
-    if (!result) return null;
+    // Worker toplu format döner: { "THYAO": { chart: ... } }
+    const json = topluVeri[sembol];
+    if (!json) return null;
 
-    const meta     = result.meta;
-    const kapanis  = (result.indicators?.quote?.[0]?.close  || []).filter(x => x > 0);
-    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
-    if (kapanis.length < 20) return null;
-
-    const fiyat     = meta.regularMarketPrice || kapanis.at(-1);
-    const onceki    = meta.chartPreviousClose  || kapanis.at(-2);
-    const degisim   = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
-    const hacimOrt  = avg(hacimler.slice(-20));
-    const hacimSon  = hacimler.at(-1) || 0;
-    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
-
-    // indicators.js'den parseYahooVeri — tüm göstergeler dahil
     return parseYahooVeri(sembol, json, piyasaYon);
   } catch (e) {
     console.error('fetchYahoo hatası:', sembol, e);
@@ -109,18 +87,17 @@ export async function fetchYahoo(sembol, piyasaYon = undefined) {
 
 // ─────────────────────────────────────────────
 // YAHOO PROXY — TOPLU HİSSE
-// Takip edilen hisselerin geçmiş verisi (RSI/MACD için)
+// GRUP_BOYUTU = 20 (Worker limiti ile eşleşik)
 // ─────────────────────────────────────────────
 
 export async function fetchTopluYahoo(semboller, piyasaYon = undefined) {
   const sonuclar = {};
-  const grupBoyutu = 100;
 
-  for (let i = 0; i < semboller.length; i += grupBoyutu) {
-    const grup = semboller.slice(i, i + grupBoyutu);
+  for (let i = 0; i < semboller.length; i += GRUP_BOYUTU) {
+    const grup = semboller.slice(i, i + GRUP_BOYUTU);
     try {
       const res = await fetch(
-        `${PROXY}/?semboller=${grup.join(',')}`,
+        `${PROXY}/?semboller=${encodeURIComponent(grup.join(','))}`,
         { signal: AbortSignal.timeout(30000) }
       );
       if (!res.ok) continue;
@@ -133,6 +110,9 @@ export async function fetchTopluYahoo(semboller, piyasaYon = undefined) {
     } catch (e) {
       console.error('fetchTopluYahoo grup hatası:', e);
     }
+
+    // Gruplar arası kısa bekleme — Worker rate limit koruması
+    if (i + GRUP_BOYUTU < semboller.length) await sleep(300);
   }
 
   return sonuclar;
@@ -140,7 +120,6 @@ export async function fetchTopluYahoo(semboller, piyasaYon = undefined) {
 
 // ─────────────────────────────────────────────
 // YAHOO PROXY — TÜM HİSSELER ANLİK FİYATLAR
-// Bigpara endpoint'inden toplu kapanış fiyatı
 // ─────────────────────────────────────────────
 
 export async function fetchTumHisseFiyatlari() {
@@ -160,7 +139,6 @@ export async function fetchTumHisseFiyatlari() {
 
 // ─────────────────────────────────────────────
 // YAHOO PROXY — PİYASA GENEL VERİSİ
-// XU100, USDTRY, EURTRY
 // ─────────────────────────────────────────────
 
 export async function fetchPiyasaVerisi() {
@@ -193,7 +171,6 @@ export async function fetchHaberler() {
 
 // ─────────────────────────────────────────────
 // CLAUDE AI — PORTFÖY ANALİZİ
-// Takip edilen tüm hisseler için genel AI yorumu
 // ─────────────────────────────────────────────
 
 export async function aiPortfoyAnalizYap({
@@ -257,7 +234,6 @@ export async function aiPortfoyAnalizYap({
 
 // ─────────────────────────────────────────────
 // CLAUDE AI — TEK HİSSE ANALİZİ
-// Detay paneli için yapılandırılmış JSON karar
 // ─────────────────────────────────────────────
 
 export async function aiHisseAnalizEt({
@@ -302,11 +278,10 @@ export async function aiHisseAnalizEt({
 
 // ─────────────────────────────────────────────
 // CLAUDE AI — HABER ANALİZİ
-// Tek haberin BIST hisselerine etkisi
 // ─────────────────────────────────────────────
 
 export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
-  const haberMetin = (haber.baslik || '').substring(0, 300);
+  const haberMetin  = (haber.baslik || '').substring(0, 300);
   const takipKodlari = [...takipEdilen].join(', ') || 'Yok';
 
   const prompt =
@@ -342,7 +317,6 @@ export async function aiTerimAcikla({ key, terim }) {
 
 // ─────────────────────────────────────────────
 // CLAUDE AI — GÜN SONU ÖZETİ
-// Admin paneli için tüm haber analizlerinin özeti
 // ─────────────────────────────────────────────
 
 export async function aiGunSonuOzeti({ key, analizler }) {
@@ -355,8 +329,8 @@ export async function aiGunSonuOzeti({ key, analizler }) {
 
   const bugun = new Date().toLocaleDateString('tr-TR');
   const prompt =
-    `Bugün BIST'te öne çıkan haberlerin analizleri aşağıda. ` +
-    `Yatırımcılara yönelik kısa, net ve anlaşılır bir günlük piyasa özeti yaz. ` +
+    'Bugün BIST\'te öne çıkan haberlerin analizleri aşağıda. ' +
+    'Yatırımcılara yönelik kısa, net ve anlaşılır bir günlük piyasa özeti yaz. ' +
     `3-4 paragraf, teknik jargon kullanma, Türkçe.\n\n${analizOzeti}`;
 
   const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
@@ -398,8 +372,6 @@ export async function tokenKaydet({ db, currentUser, tokens }) {
 
 // ─────────────────────────────────────────────
 // FİRESTORE — SİNYAL KAYDET
-// Takip edilen hisselerin günlük sinyallerini yaz,
-// aynı gün aynı hisse varsa güncelle
 // ─────────────────────────────────────────────
 
 export async function sinyalKaydet({ db, currentUser, veriler, takipEdilen, aiYorum = '' }) {
@@ -469,8 +441,6 @@ export async function loadSinyalGecmisi({ db, currentUser }) {
 
 // ─────────────────────────────────────────────
 // FİRESTORE — SİNYAL DOĞRULAMA
-// DOGRULAMA_GUN gün geçmiş, sonucu henüz bilinmeyen
-// sinyalleri kontrol et ve güncelle
 // ─────────────────────────────────────────────
 
 export async function sinyalleriDogrula({ db, sinyalGecmisi, dogrulamaGun, piyasaYon }) {
@@ -484,9 +454,9 @@ export async function sinyalleriDogrula({ db, sinyalGecmisi, dogrulamaGun, piyas
     const sonucYuzde = +((v.fiyat - sinyal.fiyat) / sinyal.fiyat * 100).toFixed(2);
     let dogrulandi   = null;
 
-    if      (['AL', 'GÜÇLÜ AL'].includes(sinyal.sinyal))  dogrulandi = sonucYuzde > 0;
+    if      (['AL', 'GÜÇLÜ AL'].includes(sinyal.sinyal))   dogrulandi = sonucYuzde > 0;
     else if (['SAT', 'GÜÇLÜ SAT'].includes(sinyal.sinyal)) dogrulandi = sonucYuzde < 0;
-    else    dogrulandi = Math.abs(sonucYuzde) < 3;  // BEKLE: ±3% tolerans
+    else    dogrulandi = Math.abs(sonucYuzde) < 3;
 
     try {
       await updateDoc(doc(db, 'sinyaller', sinyal.id), {
@@ -510,7 +480,7 @@ export async function sinyalleriDogrula({ db, sinyalGecmisi, dogrulamaGun, piyas
 // ─────────────────────────────────────────────
 
 export async function mukerrerSinyalleriTemizle({ db }) {
-  const snap       = await getDocs(collection(db, 'sinyaller'));
+  const snap        = await getDocs(collection(db, 'sinyaller'));
   const tumKayitlar = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   const gruplar = {};
@@ -614,10 +584,10 @@ export async function loadSozluk({ db }) {
 export async function sozlukTerimKaydet({ db, terim, aciklama, currentUser }) {
   const yeni = {
     terim, aciklama,
-    sorulma:       1,
-    tarih:         Date.now(),
-    ekleyenUid:    currentUser.uid,
-    ekleyenAd:     currentUser.displayName || currentUser.email,
+    sorulma:        1,
+    tarih:          Date.now(),
+    ekleyenUid:     currentUser.uid,
+    ekleyenAd:      currentUser.displayName || currentUser.email,
     pushGonderildi: false,
   };
   const ref = await addDoc(collection(db, 'sozluk'), yeni);
@@ -637,7 +607,6 @@ export async function hisseAnalizCache({ db, currentUser, kod }) {
   const snap      = await getDoc(doc(db, 'hisseAnalizleri', analizKey));
   if (!snap.exists()) return null;
   const d = snap.data();
-  // Bugünkü analiz mi?
   return Date.now() - d.tarih < 24 * 60 * 60 * 1000 ? d : null;
 }
 
@@ -666,8 +635,8 @@ export async function haberAnalizKaydet({ db, currentUser, haberHash, analiz, ha
   const docId = `${currentUser.uid}_${haberHash}`;
   const kayit = {
     ...analiz,
-    haberBaslik: haber.baslik,
-    haberLink:   haber.link || '',
+    haberBaslik:  haber.baslik,
+    haberLink:    haber.link || '',
     uid:          currentUser.uid,
     kullaniciAd:  currentUser.displayName || currentUser.email,
     tarih:        Date.now(),

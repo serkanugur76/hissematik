@@ -58,11 +58,10 @@ export function calcRSI(kapanis, periyot = 14) {
 // ─────────────────────────────────────────────
 
 export function calcMACD(kapanis) {
-  const hizli  = ema(kapanis, 12);
-  const yavas  = ema(kapanis, 26);
+  const hizli     = ema(kapanis, 12);
+  const yavas     = ema(kapanis, 26);
   const macdDeger = hizli - yavas;
 
-  // Sinyal serisi: her adımda MACD hesapla
   const seri = [];
   for (let i = 25; i < kapanis.length; i++) {
     const h = ema(kapanis.slice(0, i + 1), 12);
@@ -85,27 +84,26 @@ export function calcBollinger(kapanis, periyot = 20) {
   if (!kapanis || kapanis.length < periyot) {
     return { ust: 0, orta: 0, alt: 0, bw: 0, yuzde: 50 };
   }
-  const dilim  = kapanis.slice(-periyot);
-  const orta   = avg(dilim);
+  const dilim   = kapanis.slice(-periyot);
+  const orta    = avg(dilim);
   const varyans = dilim.reduce((x, y) => x + (y - orta) ** 2, 0) / periyot;
-  const std    = Math.sqrt(varyans);
-  const ust    = orta + 2 * std;
-  const alt    = orta - 2 * std;
+  const std     = Math.sqrt(varyans);
+  const ust     = orta + 2 * std;
+  const alt     = orta - 2 * std;
   const sonFiyat = kapanis.at(-1);
 
   return {
-    ust:    +ust.toFixed(2),
-    orta:   +orta.toFixed(2),
-    alt:    +alt.toFixed(2),
-    bw:     +((ust - alt) / orta * 100).toFixed(2),
-    yuzde:  ust === alt ? 50 : +((sonFiyat - alt) / (ust - alt) * 100).toFixed(1),
+    ust:   +ust.toFixed(2),
+    orta:  +orta.toFixed(2),
+    alt:   +alt.toFixed(2),
+    bw:    +((ust - alt) / orta * 100).toFixed(2),
+    yuzde: ust === alt ? 50 : +((sonFiyat - alt) / (ust - alt) * 100).toFixed(1),
   };
 }
 
 
 // ─────────────────────────────────────────────
 // STOCHASTIC RSI
-// RSI serisi üzerinden Stochastik hesabı
 // ─────────────────────────────────────────────
 
 export function calcStochRSI(kapanis, periyot = 14) {
@@ -125,11 +123,11 @@ export function calcStochRSI(kapanis, periyot = 14) {
     rsiDizisi.push(ortL === 0 ? 100 : +(100 - (100 / (1 + ortK / ortL))).toFixed(2));
   }
 
-  const son   = rsiDizisi.slice(-periyot);
-  const min   = Math.min(...son);
-  const maks  = Math.max(...son);
-  const stK   = maks === min ? 50 : +((rsiDizisi.at(-1) - min) / (maks - min) * 100).toFixed(2);
-  const stD   = +avg(rsiDizisi.slice(-3)).toFixed(2);
+  const son  = rsiDizisi.slice(-periyot);
+  const min  = Math.min(...son);
+  const maks = Math.max(...son);
+  const stK  = maks === min ? 50 : +((rsiDizisi.at(-1) - min) / (maks - min) * 100).toFixed(2);
+  const stD  = +avg(rsiDizisi.slice(-3)).toFixed(2);
 
   return { k: stK, d: stD };
 }
@@ -137,14 +135,13 @@ export function calcStochRSI(kapanis, periyot = 14) {
 
 // ─────────────────────────────────────────────
 // WILLIAMS %R
-// Aşırı alım/satım göstergesi (-100 .. 0)
 // ─────────────────────────────────────────────
 
 export function calcWilliamsR(kapanis, periyot = 14) {
   if (!kapanis || kapanis.length < periyot) return -50;
-  const son   = kapanis.slice(-periyot);
-  const yuksek = Math.max(...son);
-  const dusuk  = Math.min(...son);
+  const son     = kapanis.slice(-periyot);
+  const yuksek  = Math.max(...son);
+  const dusuk   = Math.min(...son);
   if (yuksek === dusuk) return -50;
   return +((yuksek - kapanis.at(-1)) / (yuksek - dusuk) * -100).toFixed(2);
 }
@@ -152,7 +149,6 @@ export function calcWilliamsR(kapanis, periyot = 14) {
 
 // ─────────────────────────────────────────────
 // MFI — Para Akışı Endeksi
-// Hacim ağırlıklı RSI benzeri gösterge
 // ─────────────────────────────────────────────
 
 export function calcMFI(kapanis, hacim, periyot = 14) {
@@ -169,8 +165,7 @@ export function calcMFI(kapanis, hacim, periyot = 14) {
 
 
 // ─────────────────────────────────────────────
-// OBV — Denge Hacmi (On-Balance Volume)
-// Hacim akümülasyon/dağıtım göstergesi
+// OBV — Denge Hacmi
 // ─────────────────────────────────────────────
 
 export function calcOBV(kapanis, hacim) {
@@ -186,15 +181,14 @@ export function calcOBV(kapanis, hacim) {
 
 // ─────────────────────────────────────────────
 // PIVOT NOKTALARI (Klasik)
-// Son 5 mum üzerinden Destek / Direnç seviyeleri
 // ─────────────────────────────────────────────
 
 export function calcPivot(kapanis) {
   if (!kapanis || kapanis.length < 2) return {};
-  const yuksek = Math.max(...kapanis.slice(-5));
-  const dusuk  = Math.min(...kapanis.slice(-5));
-  const kapanis_son = kapanis.at(-1);
-  const pivot  = (yuksek + dusuk + kapanis_son) / 3;
+  const yuksek    = Math.max(...kapanis.slice(-5));
+  const dusuk     = Math.min(...kapanis.slice(-5));
+  const kap_son   = kapanis.at(-1);
+  const pivot     = (yuksek + dusuk + kap_son) / 3;
 
   return {
     pivot: +pivot.toFixed(2),
@@ -208,7 +202,6 @@ export function calcPivot(kapanis) {
 
 // ─────────────────────────────────────────────
 // FİBONACCI GERİ ÇEKİLME SEVİYELERİ
-// Son 52 haftanın en yüksek/düşüğü üzerinden
 // ─────────────────────────────────────────────
 
 export function calcFibonacci(kapanis) {
@@ -231,19 +224,8 @@ export function calcFibonacci(kapanis) {
 
 // ─────────────────────────────────────────────
 // GELİŞMİŞ AĞIRLIKLI SKOR
-//
-// 8 gösterge üzerinden AL/SAT/BEKLE kararı.
-// Toplam 91 puan üzerinden ağırlıklı yüzde.
-//
-// Ağırlıklar:
-//   RSI          → 15 pt
-//   Stoch RSI    → 10 pt
-//   MACD         → 15 pt
-//   Bollinger    → 10 pt
-//   MA20/MA50    → 15 pt
-//   Hacim + MACD → 10 pt
-//   Williams %R  →  8 pt
-//   MFI          →  8 pt
+// 8 gösterge üzerinden AL/SAT/BEKLE kararı
+// Döner: { sinyal, guven, alYuzde, satYuzde }
 // ─────────────────────────────────────────────
 
 export function gelismisSkor(v) {
@@ -312,24 +294,28 @@ export function gelismisSkor(v) {
     else                 ekle(0, 0, 8);
   }
 
-  const alYuzde  = toplam > 0 ? Math.round(al  / toplam * 100) : 50;
-  const satYuzde = toplam > 0 ? Math.round(sat / toplam * 100) : 50;
+  // toplam sıfırsa güvenli varsayılan döndür
+  if (toplam === 0) {
+    return { sinyal: 'BEKLE', guven: 50, alYuzde: 50, satYuzde: 50 };
+  }
+
+  const alYuzde  = Math.round(al  / toplam * 100);
+  const satYuzde = Math.round(sat / toplam * 100);
   const guven    = Math.max(alYuzde, satYuzde);
 
   let sinyal;
-  if      (alYuzde  >= 65)                   sinyal = 'GÜÇLÜ AL';
-  else if (alYuzde  >= 45 && alYuzde > satYuzde) sinyal = 'AL';
-  else if (satYuzde >= 65)                   sinyal = 'GÜÇLÜ SAT';
-  else if (satYuzde >= 45 && satYuzde > alYuzde) sinyal = 'SAT';
-  else                                       sinyal = 'BEKLE';
+  if      (alYuzde  >= 65)                        sinyal = 'GÜÇLÜ AL';
+  else if (alYuzde  >= 45 && alYuzde > satYuzde)  sinyal = 'AL';
+  else if (satYuzde >= 65)                        sinyal = 'GÜÇLÜ SAT';
+  else if (satYuzde >= 45 && satYuzde > alYuzde)  sinyal = 'SAT';
+  else                                            sinyal = 'BEKLE';
 
   return { sinyal, guven, alYuzde, satYuzde };
 }
 
 
 // ─────────────────────────────────────────────
-// GENEL SİNYAL (Hafif versiyon — fetchYahoo için)
-// Tam geçmiş verisi olmayan hızlı sinyaller
+// GENEL SİNYAL (Hafif versiyon)
 // ─────────────────────────────────────────────
 
 export function genelSinyal(rsi, macd, ma20, ma50, hacimFark) {
@@ -348,8 +334,8 @@ export function genelSinyal(rsi, macd, ma20, ma50, hacimFark) {
   if (ma20 > ma50) al  += 1;
   else             sat += 1;
 
-  if (hacimFark > 50)                al  += 1; // hacim spike → AL lehine
-  if (hacimFark > 100 && rsi > 65)   sat += 1; // yüksek hacim + aşırı alım → dikkat
+  if (hacimFark > 50)                al  += 1;
+  if (hacimFark > 100 && rsi > 65)   sat += 1;
 
   if (al  >= 5)              return 'GÜÇLÜ AL';
   if (al  >= 3 && al > sat)  return 'AL';
@@ -377,16 +363,6 @@ export function sinyalClass(sinyal) {
 
 // ─────────────────────────────────────────────
 // YAHOO VERİSİNİ PARSE ET
-//
-// Yahoo Finance / proxy'den gelen ham JSON'u alır,
-// tüm teknik göstergeleri hesaplayıp normalize
-// edilmiş bir hisse nesnesi döner.
-//
-// Parametreler:
-//   sembol  — hisse kodu (ör. "THYAO.IS")
-//   json    — Yahoo chart API yanıtı
-//   piyasaYon — (opsiyonel) BIST100 günlük değişim %
-//               sinyali piyasa yönüne göre ayarlamak için
 // ─────────────────────────────────────────────
 
 export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
@@ -396,13 +372,17 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
 
     const meta     = result.meta;
     const quote    = result.indicators?.quote?.[0] || {};
-    const kapanis  = (quote.close  || []).filter(x => x > 0);
-    const hacimler = (quote.volume || []).filter(x => x > 0);
+
+    // null değerleri filtrele — Yahoo zaman zaman null dizi elemanı gönderir
+    const kapanis  = (quote.close  || []).filter(x => x != null && x > 0);
+    const hacimler = (quote.volume || []).filter(x => x != null && x >= 0);
+
+    // Yetersiz veri — en az 5 kapanış gerekli
     if (kapanis.length < 5) return null;
 
     // Fiyat & değişim
-    const fiyat   = meta.regularMarketPrice  || kapanis.at(-1);
-    const onceki  = meta.chartPreviousClose  || kapanis.at(-2);
+    const fiyat   = meta.regularMarketPrice || kapanis.at(-1);
+    const onceki  = meta.chartPreviousClose  || kapanis.at(-2) || fiyat;
     const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
 
     // Hacim
@@ -428,14 +408,14 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
     const fib       = calcFibonacci(kapanis);
 
     // 52 haftalık yüksek / düşük
-    const son52h      = kapanis.slice(-252);
-    const hafta52H    = +Math.max(...son52h).toFixed(2);
-    const hafta52L    = +Math.min(...son52h).toFixed(2);
+    const son52h       = kapanis.slice(-252);
+    const hafta52H     = +Math.max(...son52h).toFixed(2);
+    const hafta52L     = +Math.min(...son52h).toFixed(2);
     const hafta52Yuzde = hafta52H > hafta52L
       ? +((fiyat - hafta52L) / (hafta52H - hafta52L) * 100).toFixed(1)
       : 50;
 
-    // Ağırlıklı sinyal skoru
+    // Ağırlıklı skor — ASCII değişken adı, Türkçe karakter yok
     const skorGirdisi = {
       rsi:        rsiVal,
       stochRsi,
@@ -448,10 +428,13 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
       williamsR,
       mfi,
     };
-    const skörSonuç = gelismisSkor(skorGirdisi);
+    const skorSonuc = gelismisSkor(skorGirdisi); // Türkçe ö kaldırıldı
 
     // Piyasa yönüne göre sinyal filtresi
-    const hamSinyal = sinyalPiyasaFiltrele(skörSonuç.sinyal, degisim, piyasaYon);
+    const hamSinyal = sinyalPiyasaFiltrele(skorSonuc.sinyal, degisim, piyasaYon);
+
+    // guven alanını Number ile zorunlu çevir — NaN'ı yakala
+    const guvenSkoru = Number.isFinite(skorSonuc.guven) ? skorSonuc.guven : 50;
 
     return {
       fiyat:       +fiyat.toFixed(2),
@@ -467,9 +450,9 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
       hafta52H, hafta52L, hafta52Yuzde,
       hacim:       hacimSon,
       hacimFark,
-      guvenSkoru:   skörSonuç?.guven ?? 0,
-      alYuzde:     skörSonuç.alYuzde,
-      satYuzde:    skörSonuç.satYuzde,
+      guvenSkoru,                    // her zaman sayı, asla NaN veya undefined
+      alYuzde:     skorSonuc.alYuzde,
+      satYuzde:    skorSonuc.satYuzde,
       sinyal:      hamSinyal,
       kapanis:     kapanis.slice(-60),
       ts:          Date.now(),
@@ -483,19 +466,15 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
 
 // ─────────────────────────────────────────────
 // PİYASA YÖN FİLTRESİ
-//
-// BIST100 güçlü düşüyorken AL → BEKLE'ye çevir,
-// güçlü yükseliyorken SAT → BEKLE'ye çevir.
-// piyasaYon: BIST100 günlük değişim (%)
 // ─────────────────────────────────────────────
 
 export function sinyalPiyasaFiltrele(sinyal, _hisseDegisim, piyasaYon) {
   if (piyasaYon === undefined || piyasaYon === null) return sinyal;
 
-  if (piyasaYon < -2 && sinyal === 'AL')         return 'BEKLE';
-  if (piyasaYon < -3 && sinyal === 'GÜÇLÜ AL')   return 'AL';
-  if (piyasaYon >  2 && sinyal === 'SAT')         return 'BEKLE';
-  if (piyasaYon >  3 && sinyal === 'GÜÇLÜ SAT')  return 'SAT';
+  if (piyasaYon < -2 && sinyal === 'AL')        return 'BEKLE';
+  if (piyasaYon < -3 && sinyal === 'GÜÇLÜ AL')  return 'AL';
+  if (piyasaYon >  2 && sinyal === 'SAT')        return 'BEKLE';
+  if (piyasaYon >  3 && sinyal === 'GÜÇLÜ SAT') return 'SAT';
 
   return sinyal;
 }
