@@ -542,7 +542,6 @@ export async function saveUserData({ db, currentUser, takipEdilen, portfoy, veri
   await updateDoc(doc(db, 'users', currentUser.uid), {
     takipEdilen: [...takipEdilen],
     portfoy,
-    veriler,
   });
 }
 
