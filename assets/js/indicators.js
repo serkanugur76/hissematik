@@ -467,7 +467,7 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
       hafta52H, hafta52L, hafta52Yuzde,
       hacim:       hacimSon,
       hacimFark,
-      guvenSkoru:  skörSonuç.guven,
+      guvenSkoru:   skörSonuç?.guven ?? 0,
       alYuzde:     skörSonuç.alYuzde,
       satYuzde:    skörSonuç.satYuzde,
       sinyal:      hamSinyal,
