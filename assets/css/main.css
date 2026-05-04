@@ -911,3 +911,141 @@ tr:last-child td { border-bottom:none; }
   padding: 0.3rem 0.6rem;
   font-size: 0.75rem;
 }
+/* ══════════════════════════════════════════════
+   HisseMatik — CSS PATCH (#7)
+   Detay modal scroll + mobil viewport düzeltmeleri
+   
+   Bu dosyadaki kurallar main.css'in SONUNA eklenmeli.
+   Mevcut tanımların üzerine yazar (specificity veya sıra).
+   ══════════════════════════════════════════════ */
+
+/* ── #7a: Modal overlay — scroll düzeltmesi ──
+   Mobil'de modal body içeriği viewport'a sığmayabilir.
+   Overlay'in kendisi scroll etmemeli; modal--wide içi scroll etmeli.
+   ─────────────────────────────────────────────── */
+   .modal-overlay {
+    /* align-items: flex-start ile modal üstten başlar, overlay scroll eder */
+    align-items: flex-start;
+    overflow-y: auto;
+    /* padding: viewport kenarlarından nefes */
+    padding: 1rem;
+  }
+  
+  /* Geniş modal — tam yüksekliğe izin ver ama viewport sınırına dayan */
+  .modal--wide {
+    max-width: 600px;
+    width: 100%;
+    /* İçerik kısa olunca büzülsün, uzun olunca scroll etsin */
+    max-height: calc(100dvh - 2rem); /* dvh: mobil adres çubuğunu hesaba katar */
+    margin: auto;                    /* overlay flex-start ile dikeyde ortala */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;                /* taşma modal kesiyor */
+  }
+  
+  /* Modal body — tek scroll bölgesi */
+  .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.75rem 1.25rem;
+    /* iOS momentum scroll */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+    /* Min height: içerik çok kısaysa body küçülsün, modal taşmasın */
+    min-height: 0;
+  }
+  .modal-body::-webkit-scrollbar       { width: 4px; }
+  .modal-body::-webkit-scrollbar-track { background: transparent; }
+  .modal-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  
+  /* Modal header — sabit, scroll dışında */
+  .modal--wide .modal-header {
+    padding: 1rem 1.25rem 0.875rem;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg2);
+    z-index: 1;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  
+  /* Detay aksiyon footer — sabit, scroll dışında */
+  .modal--wide .detay-aksiyonlar {
+    padding: 0.875rem 1.25rem;
+    margin-top: 0;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    position: sticky;
+    bottom: 0;
+  }
+  
+  /* ── #7b: Grafik + indikatör tablosu yan yana sorun ──
+     Mobil'de .detay-teknik-grid-v2 sütunları taşıyor;
+     min-width sınırı ekleyip 2 sütuna düşüyoruz.
+     ─────────────────────────────────────────────── */
+  @media (max-width: 520px) {
+    .detay-teknik-grid-v2 {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.35rem;
+    }
+    .detay-micro-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    /* Detay micro kartlar daha kompakt */
+    .detay-micro-card {
+      padding: 0.45rem 0.55rem;
+    }
+    .detay-mc-value {
+      font-size: 0.78rem;
+    }
+    /* Modal--wide padding daralt */
+    .modal--wide .modal-header,
+    .modal-body,
+    .modal--wide .detay-aksiyonlar {
+      padding-left: 0.875rem;
+      padding-right: 0.875rem;
+    }
+  }
+  
+  /* ── #7c: Normal modal (portföy, admin) ──
+     Modal--wide olmayan modaller de taşabilir.
+     ─────────────────────────────────────────────── */
+  .modal:not(.modal--wide) {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* ── #7d: Haber kartı — uzun başlıklar taşmasın ── */
+  .haber-baslik {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* ── #7e: Tablo yatay scroll (mobil) ──
+     Hisse tablosu dar ekranlarda yatay scroll ile görüntülenir.
+     ─────────────────────────────────────────────── */
+  .tablo-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Scroll varsa görsel ipucu */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+  .tablo-wrap::-webkit-scrollbar       { height: 3px; }
+  .tablo-wrap::-webkit-scrollbar-track { background: transparent; }
+  .tablo-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  
+  /* ── #7f: Sekme içerikleri — gizli sekme overflow sorunu ──
+     .panel[data-panel] display:none iken flex/grid layout
+     hesaplanmaz. Gösterilince layout kayması önlenir.
+     ─────────────────────────────────────────────── */
+  .panel[data-panel] {
+    min-width: 0;  /* flex child taşmasını önler */
+  }
