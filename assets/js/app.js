@@ -843,7 +843,7 @@ window.kullaniciEkle = async () => {
     await setDoc(doc(db, 'users', docId), {
       email, name, apiKey, plan, active: true,
       isAdmin: false, createdAt: serverTimestamp(),
-      takipEdilen: [], portfoy: {}, veriler: {},
+      takipEdilen: [], portfoy: {},
     });
     closeModal('addUserModal');
     showToast(email + ' eklendi ✓');
