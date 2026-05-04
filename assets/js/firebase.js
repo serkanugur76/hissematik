@@ -31,10 +31,12 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  // #5 — Offline destek için ağ kontrol fonksiyonları
+  enableNetwork,
+  disableNetwork,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ────────────────────────────────────
-// Kendi Firebase projenin bilgileriyle değiştir.
 const firebaseConfig = {
   apiKey:            'AIzaSyAuKxk5ftUNjlbFtrKMwFmT_AAvrleOdPE',
   authDomain:        'hissematik-d6691.firebaseapp.com',
@@ -78,4 +80,7 @@ export {
   orderBy,
   limit,
   serverTimestamp,
+  // #5 — Offline banner için dışarıya aç
+  enableNetwork,
+  disableNetwork,
 };
