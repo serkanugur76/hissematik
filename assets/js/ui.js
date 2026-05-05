@@ -115,6 +115,7 @@ export function renderPiyasaKartlari() {
     : '';
   container.innerHTML =
     xu100Html +
+    xu030Html +
     _item('USD / TRY', usdtry ? usdtry.fiyat?.toFixed(2) + ' ₺' : null, usdtry?.degisim, true) +
     _item('EUR / TRY', eurtry ? eurtry.fiyat?.toFixed(2) + ' ₺' : null, eurtry?.degisim, true);
 }
