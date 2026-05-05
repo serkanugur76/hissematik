@@ -450,7 +450,6 @@ function toggleTakip(k) {
   if (state.takipEdilen.has(k)) {
     if (!confirm(k + ' takipten çıkarılsın mı?')) return;
     state.takipEdilen.delete(k);
-    delete state.veriler[k];
   } else {
     state.takipEdilen.add(k);
   }
