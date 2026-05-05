@@ -96,8 +96,6 @@ window._uiCallbacks = {
 
 // ─────────────────────────────────────────────
 // #5 — OFFLINE / ONLINE BANNER
-// window online/offline event'leri ile
-// kullanıcıya bağlantı durumunu göster.
 // ─────────────────────────────────────────────
 
 function _offlineBannerGoster() {
@@ -123,16 +121,12 @@ function _offlineBannerGoster() {
     document.body.prepend(banner);
   }
   banner.style.display = 'block';
-
-  // Firestore'u da offline moduna al — gereksiz retry'ları önler
   disableNetwork(db).catch(() => {});
 }
 
 function _offlineBannerGizle() {
   const banner = el('offlineBanner');
   if (banner) banner.style.display = 'none';
-
-  // Firestore'u yeniden bağla
   enableNetwork(db).catch(() => {});
 }
 
@@ -140,11 +134,9 @@ window.addEventListener('offline', _offlineBannerGoster);
 window.addEventListener('online',  () => {
   _offlineBannerGizle();
   showToast('Bağlantı yeniden sağlandı ✓', 'success');
-  // Veriler eskimişse otomatik güncelle
   if (state.currentUser) window.verileriGuncelle();
 });
 
-// Sayfa yüklendiğinde mevcut durumu kontrol et
 if (!navigator.onLine) _offlineBannerGoster();
 
 // ─────────────────────────────────────────────
@@ -174,13 +166,11 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Erişim kontrolü
   let userSnap;
   try {
     const userRef = doc(db, 'users', user.uid);
     userSnap      = await getDoc(userRef);
   } catch (e) {
-    // #5 — Firebase okuma hatası (offline veya izin sorunu)
     showToast('Firebase bağlantı hatası: ' + (e?.message || 'Bilinmeyen hata'), 'error');
     el('loadingScreen').classList.add('hide');
     el('authScreen').style.display = 'flex';
@@ -199,7 +189,6 @@ onAuthStateChanged(auth, async (user) => {
 
   const userDoc = userSnap.exists() ? userSnap.data() : {};
 
-  // Admin kaydı yoksa oluştur
   if (isAdmin && !userSnap.exists()) {
     try {
       await setDoc(userRef, {
@@ -212,7 +201,6 @@ onAuthStateChanged(auth, async (user) => {
     }
   }
 
-  // State'i doldur
   setState({
     currentUser:   user,
     userDoc,
@@ -223,39 +211,37 @@ onAuthStateChanged(auth, async (user) => {
     veriler:       userDoc.veriler  || {},
   });
 
-  // Havuz key
   const havuzKey = await loadHavuzKey({ db });
   setState({ havuzKey, anthropicKey: havuzKey || state.anthropicKey });
 
-  // UI
   el('authScreen').style.display = 'none';
   el('appShell').style.display   = 'block';
   renderTopbar();
 
   if (isAdmin) loadAdminPanel();
 
-  // İlk yüklemeler
   await _piyasaVerisiCek();
   await checkPushMesajlar({ db, currentUser: user, onMesaj: showPushBildirim });
 
-  // #5 — Sinyal geçmişi yükleme hatası yakalanıyor
   try {
     state.sinyalGecmisi = await loadSinyalGecmisi({ db, currentUser: user });
     await _sinyalleriDogrula();
   } catch (e) {
     showToast('Sinyal geçmişi yüklenemedi — Firebase bağlantısını kontrol edin.', 'error');
   }
-// Tam BIST listesini proxy'den çek
-try {
-  const bistRes = await fetch('https://hissematik-proxy.ugurserkan.workers.dev/?bistliste=1');
-  const bistData = await bistRes.json();
-  if (bistData?.hisseler?.length > 0) {
-    const mevcutKodlar = new Set(BIST.map(([k]) => k));
-    bistData.hisseler.forEach(({ kod, ad }) => {
-      if (!mevcutKodlar.has(kod)) BIST.push([kod, ad]);
-    });
-  }
-} catch (_) {}
+
+  // Tam BIST listesini proxy'den çek
+  try {
+    const bistRes = await fetch('https://hissematik-proxy.ugurserkan.workers.dev/?bistliste=1');
+    const bistData = await bistRes.json();
+    if (bistData?.hisseler?.length > 0) {
+      const mevcutKodlar = new Set(BIST.map(([k]) => k));
+      bistData.hisseler.forEach(({ kod, ad }) => {
+        if (!mevcutKodlar.has(kod)) BIST.push([kod, ad]);
+      });
+    }
+  } catch (_) {}
+
   renderHisseler();
   renderDashboard();
   renderPortfoy();
@@ -288,11 +274,9 @@ window.verileriGuncelle = async () => {
   showLoading('Veriler çekiliyor...');
   setStatus('loading', 'Güncelleniyor...');
 
-  // 0. Piyasa genel verisi
   setLoadingMsg('Piyasa genel verisi çekiliyor...');
   await _piyasaVerisiCek();
 
-  // 1. Tüm hisseler — anlık fiyatlar
   setLoadingMsg('Hisse verileri çekiliyor...');
   try {
     const hisseler = await fetchTumHisseFiyatlari();
@@ -319,7 +303,6 @@ window.verileriGuncelle = async () => {
 
   renderHisseler();
 
-  // 2. Takip edilenler — geçmiş veri (RSI/MACD)
   const takipKodlar = [...state.takipEdilen];
   if (takipKodlar.length > 0) {
     setLoadingMsg('Teknik analiz için geçmiş veri çekiliyor...');
@@ -336,7 +319,6 @@ window.verileriGuncelle = async () => {
 
   renderHisseler();
 
-  // 3. AI portföy analizi
   let aiYorum = '';
   if (aiGerekliMi()) {
     setLoadingMsg('AI analiz yapılıyor...');
@@ -374,9 +356,7 @@ window.verileriGuncelle = async () => {
       portfoy:     state.portfoy,
       veriler:     state.veriler,
     });
-  } catch (e) {
-    // saveUserData kendi içinde _notify çağırıyor, tekrar gösterme
-  }
+  } catch (e) {}
 
   hideLoading();
   setStatus('live', 'Canlı');
@@ -422,12 +402,14 @@ async function _piyasaVerisiCek() {
       const o = eurtry.meta.chartPreviousClose  || 0;
       pv.eurtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
+
     const xu030 = data['XU030.IS']?.chart?.result?.[0];
     if (xu030) {
       const f = xu030.meta.regularMarketPrice || 0;
       const o = xu030.meta.chartPreviousClose  || 0;
       pv.xu030 = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
+
     setState({ piyasaVerisi: pv });
     renderPiyasaKartlari();
   } catch (e) {
@@ -595,8 +577,10 @@ window.hisseAiAnalizEt = async () => {
       bistListesi:   BIST,
     });
     if (analiz) {
-      await hisseAnalizKaydet({ db, currentUser: state.currentUser, kod, analiz });
-      renderHisseAnalizSonucu(analiz);
+      // ── DEĞİŞİKLİK: metin → gerekce dönüşümü ──
+      const analizKayit = { ...analiz, gerekce: analiz.metin, karar: 'BEKLE', tarih: analiz.tarih };
+      await hisseAnalizKaydet({ db, currentUser: state.currentUser, kod, analiz: analizKayit });
+      renderHisseAnalizSonucu(analizKayit);
       if (btn) btn.textContent = '⬡ Yeniden Analiz Et';
     }
   } catch (e) {
@@ -629,11 +613,9 @@ window.haberleriYenile = () => _haberleriYenile();
 async function _haberleriYenile() {
   el('haberListesi').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)"><div class="spinner" style="margin:0 auto 1rem"></div><div>Haberler yükleniyor...</div></div>';
 
-  // #8 — fetchHaberler artık try/catch içinde; [] döner, exception fırlatmaz
   const haberler = await fetchHaberler();
 
   if (haberler.length === 0) {
-    // fetchHaberler içinde toast zaten gösterildi, ek UI göster
     el('haberListesi').innerHTML =
       '<div style="text-align:center;padding:3rem;color:var(--muted)">' +
       '<div style="color:var(--red);margin-bottom:0.5rem">Haberler yüklenemedi</div>' +
@@ -647,7 +629,6 @@ async function _haberleriYenile() {
   renderHaberler();
   showToast(haberler.length + ' haber yüklendi ✓');
 
-  // Mevcut analizleri Firestore'dan yükle
   if (state.currentUser) {
     haberler.forEach(async (h, idx) => {
       try {
@@ -722,7 +703,6 @@ async function terimSorAPI(terim) {
   const key = aktifKey();
   if (!key) { showToast('API anahtarı gerekli!', 'error'); return; }
 
-  // Mevcut kayıt var mı?
   const mevcut = sozlukVeriler.find(t => t.terim.toLowerCase() === terim.toLowerCase());
   if (mevcut) {
     await sozlukSorulmaSayisiArtir({ db, mevcutId: mevcut.id, mevcutSorulma: mevcut.sorulma }).catch(() => {});
@@ -781,14 +761,12 @@ async function pushTerimGonderById(id) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // ── Tab navigasyonu ──
   el('mainNav').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-tab]');
     if (!btn) return;
     _switchTab(btn.dataset.tab, btn);
   });
 
-  // ── Hisse filtre chip'leri ──
   document.querySelectorAll('.chip[data-filter]').forEach(btn => {
     btn.addEventListener('click', () => {
       setState({ aktifFilter: btn.dataset.filter });
@@ -798,7 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── Modal kapat ──
   document.addEventListener('click', (e) => {
     const id = e.target.dataset.modalClose;
     if (id) closeModal(id);
@@ -807,26 +784,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ── Auth ──
   el('btnGoogleLogin')?.addEventListener('click', () => window.googleLogin());
   el('btnLogout')?.addEventListener('click', () => window.logout());
-
-  // ── Topbar ──
   el('btnGuncelle')?.addEventListener('click', () => window.verileriGuncelle());
 
-  // ── SPK uyarı bant kapatma ──
   el('btnSpkKapat')?.addEventListener('click', () => {
     el('spkUyari').style.display = 'none';
   });
 
-  // ── Hisse arama ──
   el('searchInput')?.addEventListener('input', () => renderHisseler());
   el('searchInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') window.hisseAra(e.target.value);
   });
   el('btnTakibiKaldir')?.addEventListener('click', () => window.takibiKaldir());
 
-  // ── Sinyal geçmişi ──
   el('dogrulamaSuresi')?.addEventListener('change', (e) => {
     setState({ dogrulamaGun: parseInt(e.target.value) });
     renderSinyalGecmisi();
@@ -834,10 +805,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   el('btnSinyalleriGuncelle')?.addEventListener('click', () => window.sinyalleriGuncelle());
 
-  // ── Haberler ──
   el('btnHaberleriYenile')?.addEventListener('click', () => _haberleriYenile());
 
-  // ── Sözlük ──
   el('sozlukSearch')?.addEventListener('input', (e) => {
     renderSozluk(sozlukVeriler, e.target.value);
   });
@@ -847,21 +816,15 @@ document.addEventListener('DOMContentLoaded', () => {
     terimSorAPI(q);
   });
   el('btnPushGonder')?.addEventListener('click', () => openModal('pushModal'));
-
-  // ── Push modal ──
   el('btnPushGonderOnayla')?.addEventListener('click', () => window.pushGonderOnay());
-
-  // ── Portföy modal ──
   el('btnPortfoyKaydet')?.addEventListener('click', () => window.portfoyKaydet());
 
-  // ── Hisse detay modal ──
   el('detayAiBtn')?.addEventListener('click', () => window.hisseAiAnalizEt());
   el('detayTakipBtn')?.addEventListener('click', () => window.detayTakipToggle());
   el('detayPortfoyEkleBtn')?.addEventListener('click', () => {
     if (state.detayKod) portfoyModalAc(state.detayKod, hisseAdi(state.detayKod));
   });
 
-  // ── Admin ──
   el('btnKullaniciEkle')?.addEventListener('click', () => openModal('addUserModal'));
   el('btnKullaniciEkleOnayla')?.addEventListener('click', () => window.kullaniciEkle());
   el('btnSaveApiKey')?.addEventListener('click', () => window.saveApiKey());
@@ -945,9 +908,7 @@ window.saveApiKey = async () => {
     showToast('API anahtarı kaydedildi ✓');
     el('apiStatus').textContent = key ? '✓ Tanımlı' : 'Tanımlı değil';
     el('apiStatus').style.color = key ? 'var(--accent)' : 'var(--muted)';
-  } catch (e) {
-    // apiSaveApiKey zaten _notify çağırıyor
-  }
+  } catch (e) {}
 };
 
 window.mukerrerTemizle = async () => {
