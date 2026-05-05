@@ -106,7 +106,13 @@ export function renderPiyasaKartlari() {
         </div>`;
       })()
     : '';
-
+    const xu030Html = pv.xu030
+    ? `<div class="ticker-item">
+        <span class="ticker-label">BIST 30</span>
+        <span class="ticker-value">${state.piyasaVerisi.xu030?.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+        <span class="ticker-change ${state.piyasaVerisi.xu030?.degisim >= 0 ? 'pos' : 'neg'}">${state.piyasaVerisi.xu030?.degisim >= 0 ? '+' : ''}${state.piyasaVerisi.xu030?.degisim}%</span>
+      </div>`
+    : '';
   container.innerHTML =
     xu100Html +
     _item('USD / TRY', usdtry ? usdtry.fiyat?.toFixed(2) + ' ₺' : null, usdtry?.degisim, true) +
