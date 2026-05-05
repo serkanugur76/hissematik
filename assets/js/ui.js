@@ -78,7 +78,7 @@ function _piyasaYonBilgi(deg) {
 }
 
 export function renderPiyasaKartlari() {
-  const { xu100, usdtry, eurtry } = state.piyasaVerisi;
+  const { xu100, xu030, usdtry, eurtry } = state.piyasaVerisi;
   const container = el('piyasaKartlari');
   if (!container) return;
 
@@ -106,11 +106,11 @@ export function renderPiyasaKartlari() {
         </div>`;
       })()
     : '';
-    const xu030Html = pv.xu030
+    const xu030Html = xu030
     ? `<div class="ticker-item">
         <span class="ticker-label">BIST 30</span>
-        <span class="ticker-value">${state.piyasaVerisi.xu030?.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
-        <span class="ticker-change ${state.piyasaVerisi.xu030?.degisim >= 0 ? 'pos' : 'neg'}">${state.piyasaVerisi.xu030?.degisim >= 0 ? '+' : ''}${state.piyasaVerisi.xu030?.degisim}%</span>
+        <span class="ticker-value">${xu030.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+        <span class="ticker-change ${xu030.degisim >= 0 ? 'pos' : 'neg'}">${xu030.degisim >= 0 ? '+' : ''}${xu030.degisim}%</span>
       </div>`
     : '';
   container.innerHTML =
