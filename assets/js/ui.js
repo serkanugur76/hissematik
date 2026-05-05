@@ -255,7 +255,11 @@ export function renderHisseler() {
   const grid = el('hisseGrid');
   grid.innerHTML = '';
 
-  BIST
+  const _bistKodlar = new Set(BIST.map(([k]) => k));
+  const _ekstra = Object.keys(veriler).filter(k => !_bistKodlar.has(k)).map(k => [k, k + ' (Özel)']);
+  const _tumListe = [...BIST, ..._ekstra];
+
+  _tumListe
     .filter(([k, a]) => {
       if (filtre === 'takip'   && !takipEdilen.has(k)) return false;
       if (filtre === 'portfoy' && !portfoy[k])          return false;
