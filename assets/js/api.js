@@ -20,7 +20,7 @@ import {
 } from './firebase.js';
 
 import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
-import { state } from './state.js';
+
 // ─────────────────────────────────────────────
 // SABİTLER
 // ─────────────────────────────────────────────
@@ -300,7 +300,7 @@ export async function aiPortfoyAnalizYap({
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 800);
-    try { await tokenKaydet({ currentUser: state.currentUser, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiPortfoyAnalizYap hatası:', e);
@@ -351,7 +351,7 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
-    try { await tokenKaydet({ currentUser: state.currentUser, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
     return { metin: text, tarih: Date.now(), sembol: kod };
   } catch (e) {
     console.error('aiHisseAnalizEt hatası:', e);
@@ -378,7 +378,7 @@ export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 500);
-    try { await tokenKaydet({ currentUser: state.currentUser, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
     const temiz = text.replace(/```json|```/g, '').trim();
     return JSON.parse(temiz);
   } catch (e) {
@@ -401,7 +401,7 @@ export async function aiTerimAcikla({ key, terim }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 300);
-    try { await tokenKaydet({ currentUser: state.currentUser, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiTerimAcikla hatası:', e);
@@ -429,7 +429,7 @@ export async function aiGunSonuOzeti({ key, analizler }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 400);
-    try { await tokenKaydet({ currentUser: state.currentUser, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
     return { text };
   } catch (e) {
     console.error('aiGunSonuOzeti hatası:', e);
