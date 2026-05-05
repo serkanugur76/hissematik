@@ -159,21 +159,43 @@ export async function fetchTopluYahoo(semboller, piyasaYon = undefined) {
 
 export async function fetchTumHisseFiyatlari() {
   try {
-    const res = await fetch(
-      `${PROXY}/?tumhisseler=1`,
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data?.data || [];
+    const { BIST } = await import('./state.js');
+    const tumKodlar = BIST.map(([k]) => k);
+    const grupBoyutu = 20;
+    const sonuclar = [];
+
+    for (let i = 0; i < tumKodlar.length; i += grupBoyutu) {
+      const grup = tumKodlar.slice(i, i + grupBoyutu);
+      try {
+        const res = await fetch(
+          `${PROXY}/?semboller=${grup.join(',')}`,
+          { signal: AbortSignal.timeout(30000) }
+        );
+        if (!res.ok) continue;
+        const topluVeri = await res.json();
+
+        for (const [sembol, json] of Object.entries(topluVeri)) {
+          const meta = json?.chart?.result?.[0]?.meta;
+          if (!meta) continue;
+          sonuclar.push({
+            KOD:     sembol.replace('.IS', ''),
+            KAPANIS: meta.regularMarketPrice || 0,
+            YUZDE:   meta.chartPreviousClose > 0
+              ? +((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose * 100).toFixed(2)
+              : 0,
+            HACIM:   meta.regularMarketVolume || 0,
+          });
+        }
+      } catch (_) {}
+    }
+
+    return sonuclar;
   } catch (e) {
     console.error('fetchTumHisseFiyatlari hatası:', e);
-    // #6 — Kullanıcıya bildir
     _notify('Yahoo Finance bağlantısı kurulamadı. Veriler güncellenemedi.');
     return [];
   }
 }
-
 // ─────────────────────────────────────────────
 // YAHOO PROXY — PİYASA GENEL VERİSİ
 // ─────────────────────────────────────────────
