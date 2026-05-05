@@ -832,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnTokenYenile')?.addEventListener('click', () => window.loadTokenIstatistik());
   el('btnGunSonuOzet')?.addEventListener('click', () => window.gunSonuOzetOlustur());
   el('detayPaylasBtn')?.addEventListener('click', async () => {
-    const hedef = document.querySelector('#hisseDetayModal .modal--wide');
+    const hedef = document.querySelector('#hisseDetayModal .modal-body');
     if (!hedef) return;
     const btn = el('detayPaylasBtn');
     btn.textContent = '⏳ Hazırlanıyor...';
@@ -842,8 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
         backgroundColor: '#0f1117',
         scale: 2,
         useCORS: true,
-        windowWidth: hedef.scrollWidth,
-        windowHeight: hedef.scrollHeight,
       });
       const link = document.createElement('a');
       const kod = el('detayHisseAdi')?.textContent || 'hisse';
