@@ -855,6 +855,176 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.disabled = false;
     }
   });
+  el('detayPaylasBtn')?.addEventListener('click', () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+
+    // Arka plan
+    doc.setFillColor(15, 17, 23);
+    doc.rect(0, 0, W, H, 'F');
+
+    // Üst gradient şerit
+    doc.setFillColor(0, 229, 160);
+    doc.rect(0, 0, W, 2, 'F');
+
+    // Logo
+    doc.setTextColor(0, 229, 160);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Hisse', 15, 18);
+    doc.setTextColor(255, 255, 255);
+    doc.text('MATiK', 38, 18);
+
+    // Slogan
+    doc.setFontSize(10);
+    doc.setTextColor(180, 180, 180);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Aylik 500 ile tum riskinizi minimize edin', 15, 26);
+
+    // Hisse başlık kutusu
+    const kod = el('detayHisseAdi')?.textContent || '—';
+    const sirket = el('detayHisseSirket')?.textContent || '—';
+    const v = state.veriler?.[kod] || {};
+
+    doc.setFillColor(25, 30, 40);
+    doc.roundedRect(10, 32, W - 20, 28, 3, 3, 'F');
+    doc.setFillColor(0, 229, 160);
+    doc.roundedRect(10, 32, 4, 28, 2, 2, 'F');
+
+    doc.setTextColor(0, 229, 160);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(kod, 20, 43);
+
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(sirket, 20, 51);
+
+    const fiyat = v.fiyat ? v.fiyat + ' TL' : '—';
+    const degisim = v.degisim != null ? (v.degisim >= 0 ? '+' : '') + v.degisim + '%' : '—';
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(fiyat, W - 15, 43, { align: 'right' });
+    doc.setFontSize(10);
+    doc.setTextColor(v.degisim >= 0 ? 0 : 255, v.degisim >= 0 ? 229 : 69, v.degisim >= 0 ? 160 : 96);
+    doc.text(degisim, W - 15, 51, { align: 'right' });
+
+    // Teknik Göstergeler başlık
+    doc.setTextColor(0, 229, 160);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Teknik Gostergeler', 15, 72);
+    doc.setDrawColor(0, 229, 160);
+    doc.setLineWidth(0.3);
+    doc.line(15, 74, W - 15, 74);
+
+    // Göstergeler grid
+    const gostergeler = [
+      ['RSI (14)', v.rsi ?? '—', v.rsi < 30 ? 'Asiri Satiim' : v.rsi > 70 ? 'Asiri Alim' : 'Notr'],
+      ['MACD Hist', v.macdHist?.toFixed(3) ?? '—', v.macdHist > 0 ? 'Pozitif' : 'Negatif'],
+      ['MA 20', v.ma20 ? v.ma20.toFixed(2) + ' TL' : '—', ''],
+      ['MA 50', v.ma50 ? v.ma50.toFixed(2) + ' TL' : '—', ''],
+      ['Bollinger %', v.bollinger?.yuzde + '%' ?? '—', v.bollinger?.yuzde < 25 ? 'Alt Bant' : v.bollinger?.yuzde > 75 ? 'Ust Bant' : 'Orta'],
+      ['Hacim Fark', v.hacimFark ? (v.hacimFark > 0 ? '+' : '') + v.hacimFark + '%' : '—', v.hacimFark > 50 ? 'Spike' : 'Normal'],
+    ];
+
+    let gy = 80;
+    const gw = (W - 30) / 3;
+    gostergeler.forEach((([lbl, val, sub], i) => {
+      const gx = 15 + (i % 3) * gw;
+      if (i % 3 === 0 && i > 0) gy += 22;
+
+      doc.setFillColor(25, 30, 40);
+      doc.roundedRect(gx, gy, gw - 3, 20, 2, 2, 'F');
+
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(lbl, gx + 3, gy + 6);
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(val), gx + 3, gy + 13);
+
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(sub, gx + 3, gy + 18);
+    }));
+
+    // Sinyal
+    gy += 28;
+    const sinyal = v.sinyal || 'BEKLE';
+    const sinyalRenk = sinyal.includes('AL') ? [0, 229, 160] : sinyal.includes('SAT') ? [255, 69, 96] : [255, 200, 50];
+    doc.setFillColor(...sinyalRenk);
+    doc.roundedRect(15, gy, 50, 10, 2, 2, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(sinyal, 40, gy + 7, { align: 'center' });
+
+    // AI Analiz
+    gy += 18;
+    doc.setTextColor(0, 229, 160);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AI Karar Analizi', 15, gy);
+    doc.line(15, gy + 2, W - 15, gy + 2);
+
+    gy += 8;
+    doc.setFillColor(20, 25, 35);
+    doc.roundedRect(10, gy, W - 20, 80, 3, 3, 'F');
+
+    const aiMetin = el('detayAiIcerik')?.innerText || 'Analiz bulunamadi.';
+    const temizMetin = aiMetin.replace(/[*#]/g, '').trim();
+    doc.setTextColor(180, 210, 200);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    const satirlar = doc.splitTextToSize(temizMetin, W - 30);
+    doc.text(satirlar.slice(0, 18), 15, gy + 8);
+
+    // Alt pazarlama bölümü
+    gy = H - 55;
+    doc.setFillColor(0, 229, 160, 0.1);
+    doc.setFillColor(20, 40, 35);
+    doc.roundedRect(10, gy, W - 20, 38, 3, 3, 'F');
+    doc.setDrawColor(0, 229, 160);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(10, gy, W - 20, 38, 3, 3, 'S');
+
+    doc.setTextColor(0, 229, 160);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Aylik 500 TL ile Riskinizi Minimize Edin!', W / 2, gy + 10, { align: 'center' });
+
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    const pazarlamaMetin = 'HisseMatik ile yapay zeka destekli teknik analiz, gercek zamanli sinyaller ve portfoy takibini tek platformda yapin. RSI, MACD, Bollinger ve daha fazlasi ile piyasanin bir adim onunde olun.';
+    const pSatirlar = doc.splitTextToSize(pazarlamaMetin, W - 40);
+    doc.text(pSatirlar, W / 2, gy + 18, { align: 'center' });
+
+    doc.setTextColor(0, 229, 160);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Instagram: @algoritmatematik', W / 2, gy + 32, { align: 'center' });
+
+    // Alt çizgi
+    doc.setFillColor(0, 229, 160);
+    doc.rect(0, H - 2, W, 2, 'F');
+
+    // Tarih
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('HisseMatik • ' + new Date().toLocaleDateString('tr-TR') + ' • Bu rapor yatirim tavsiyesi degildir.', W / 2, H - 5, { align: 'center' });
+
+    doc.save('HisseMatik_' + kod + '_' + new Date().toLocaleDateString('tr-TR').replace(/\./g, '-') + '.pdf');
+  });
 });
 
 // ─────────────────────────────────────────────
