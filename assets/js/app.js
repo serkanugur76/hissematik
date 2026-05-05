@@ -977,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     gy += 8;
     doc.setFillColor(20, 25, 35);
-    doc.roundedRect(10, gy, W - 20, 80, 3, 3, 'F');
+    doc.roundedRect(10, gy, W - 20, 95, 3, 3, 'F');
 
     const aiMetin = el('detayAiIcerik')?.innerText || 'Analiz bulunamadi.';
     const temizMetin = aiMetin
@@ -988,10 +988,10 @@ document.addEventListener('DOMContentLoaded', () => {
   })
   .trim();
     doc.setTextColor(180, 210, 200);
-    doc.setFontSize(8.5);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     const satirlar = doc.splitTextToSize(temizMetin, W - 30);
-    doc.text(satirlar.slice(0, 18), 15, gy + 8);
+    doc.text(satirlar.slice(0, 22), 15, gy + 8);
 
     // Alt pazarlama bölümü
     gy = H - 55;
