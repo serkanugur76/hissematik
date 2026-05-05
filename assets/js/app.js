@@ -980,7 +980,13 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.roundedRect(10, gy, W - 20, 80, 3, 3, 'F');
 
     const aiMetin = el('detayAiIcerik')?.innerText || 'Analiz bulunamadi.';
-    const temizMetin = aiMetin.replace(/[*#]/g, '').trim();
+    const temizMetin = aiMetin
+  .replace(/[*#]/g, '')
+  .replace(/[^\x00-\x7F]/g, (c) => {
+    const map = { 'ş':'s','Ş':'S','ğ':'g','Ğ':'G','ü':'u','Ü':'U','ı':'i','İ':'I','ö':'o','Ö':'O','ç':'c','Ç':'C','â':'a','î':'i','û':'u' };
+    return map[c] || '';
+  })
+  .trim();
     doc.setTextColor(180, 210, 200);
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
