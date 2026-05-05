@@ -466,7 +466,7 @@ export async function tokenKaydet({ currentUser, tokens }) {
       sonGuncelleme: Date.now(),
     });
   } catch (e) {
-    console.error('tokenKaydet hatası:', e);
+
   }
 }
 
