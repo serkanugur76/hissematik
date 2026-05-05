@@ -264,10 +264,6 @@ export function renderHisseler() {
       if (q && !k.toLowerCase().includes(q) && !a.toLowerCase().includes(q)) return false;
       return true;
     })
-    .filter(([k]) => {
-      if (Object.keys(veriler).length === 0) return true;
-      return veriler[k] !== undefined;
-    })
     .forEach(([k, a]) => {
       const isTakip = takipEdilen.has(k);
       const isPF    = !!portfoy[k];
