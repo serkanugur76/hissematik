@@ -245,7 +245,17 @@ onAuthStateChanged(auth, async (user) => {
   } catch (e) {
     showToast('Sinyal geçmişi yüklenemedi — Firebase bağlantısını kontrol edin.', 'error');
   }
-
+// Tam BIST listesini proxy'den çek
+try {
+  const bistRes = await fetch('https://hissematik-proxy.ugurserkan.workers.dev/?bistliste=1');
+  const bistData = await bistRes.json();
+  if (bistData?.hisseler?.length > 0) {
+    const mevcutKodlar = new Set(BIST.map(([k]) => k));
+    bistData.hisseler.forEach(({ kod, ad }) => {
+      if (!mevcutKodlar.has(kod)) BIST.push([kod, ad]);
+    });
+  }
+} catch (_) {}
   renderHisseler();
   renderDashboard();
   renderPortfoy();
