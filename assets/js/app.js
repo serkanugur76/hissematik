@@ -400,7 +400,7 @@ async function _piyasaVerisiCek() {
 
     const pv = { ...state.piyasaVerisi };
 
-    const xu100 = data['^XU100']?.chart?.result?.[0];
+    const xu100 = data['XU100.IS']?.chart?.result?.[0];
     if (xu100) {
       const f = xu100.meta.regularMarketPrice || 0;
       const o = xu100.meta.chartPreviousClose  || 0;
