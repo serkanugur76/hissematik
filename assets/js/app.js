@@ -422,7 +422,12 @@ async function _piyasaVerisiCek() {
       const o = eurtry.meta.chartPreviousClose  || 0;
       pv.eurtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
-
+    const xu030 = data['XU030.IS']?.chart?.result?.[0];
+    if (xu030) {
+      const f = xu030.meta.regularMarketPrice || 0;
+      const o = xu030.meta.chartPreviousClose  || 0;
+      pv.xu030 = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    }
     setState({ piyasaVerisi: pv });
     renderPiyasaKartlari();
   } catch (e) {
