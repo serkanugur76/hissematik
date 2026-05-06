@@ -616,19 +616,25 @@ export async function mukerrerSinyalleriTemizle({ db }) {
 
 export async function saveUserData({ db, currentUser, takipEdilen, portfoy, veriler }) {
   if (!currentUser) return;
+  
+  // Boş takip listesi varsa yazma — veri kaybı önleme
+  const takipDizi = [...takipEdilen];
+  if (takipDizi.length === 0 && Object.keys(portfoy).length === 0) {
+    console.warn('saveUserData: Boş veri, yazılmadı.');
+    return;
+  }
+
   try {
     await updateDoc(doc(db, 'users', currentUser.uid), {
-      takipEdilen: [...takipEdilen],
+      takipEdilen: takipDizi,
       portfoy,
       veriler,
     });
   } catch (e) {
     console.error('saveUserData hatası:', e);
-    // #6 — Yazma hatası kullanıcıya gösterilir
     _notify('Verileriniz kaydedilemedi. İnternet bağlantınızı kontrol edin.', 'error');
   }
 }
-
 // ─────────────────────────────────────────────
 // FİRESTORE — API ANAHTARI KAYDET (Admin)
 // ─────────────────────────────────────────────
