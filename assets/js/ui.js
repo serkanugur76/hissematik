@@ -67,9 +67,6 @@ export function renderTopbar() {
 // PİYASA KARTLARI (BIST100 / USD / EUR)
 // ─────────────────────────────────────────────
 
-// ─────────────────────────────────────────────
-// YARDIMCI — piyasa yön bilgisi hesapla
-// ─────────────────────────────────────────────
 function _piyasaYonBilgi(deg) {
   if (deg >= 1.5)  return { etiket: 'Güçlü Yükseliş', cls: 'yukselis', aciklama: 'AL sinyalleri güçlü' };
   if (deg >= 0)    return { etiket: 'Yatay / Hafif +', cls: 'yatay',    aciklama: 'Seçici alım yapılabilir' };
@@ -85,7 +82,6 @@ export function renderPiyasaKartlari() {
   const _item = (label, deger, degisim, tersCls = false) => {
     if (!deger) return '';
     const d = parseFloat(degisim) || 0;
-    // tersCls=true: TL güçlenirse kötü, USD yükselirse kötü
     const posCls = tersCls ? 'neg' : 'pos';
     const negCls = tersCls ? 'pos' : 'neg';
     return `<div class="ticker-item">
@@ -121,7 +117,6 @@ export function renderPiyasaKartlari() {
 }
 
 export function renderPiyasaYonu() {
-  // artık renderPiyasaKartlari içinde inline yapılıyor
   renderPiyasaKartlari();
 }
 
@@ -136,7 +131,6 @@ export function renderSummary() {
   const sumAl  = Object.values(veriler).filter(v => v.sinyal === 'GÜÇLÜ AL').length;
   const sumSat = Object.values(veriler).filter(v => v.sinyal === 'GÜÇLÜ SAT').length;
 
-  // Summary kartlarını summary-grid class'ı ile yeniden render et
   const summaryCards = el('summaryCards');
   if (summaryCards) {
     summaryCards.className = 'summary-grid';
@@ -158,14 +152,12 @@ export function renderSummary() {
         <div class="sc-value yellow">${toplam > 0 ? '%' + isabet : '—'}</div>
       </div>`;
   } else {
-    // Fallback: eski id'ler
     el('sumTakip')  && (el('sumTakip').textContent  = takipEdilen.size);
     el('sumAl')     && (el('sumAl').textContent     = sumAl  || '—');
     el('sumSat')    && (el('sumSat').textContent     = sumSat || '—');
     el('sumIsabet') && (el('sumIsabet').textContent  = toplam > 0 ? '%' + isabet : '—');
   }
 
-  // Sinyal tab özet
   el('sinTopToplam') && (el('sinTopToplam').textContent = state.sinyalGecmisi.length);
   el('sinTopDogru')  && (el('sinTopDogru').textContent  = dogru);
   el('sinTopYanlis') && (el('sinTopYanlis').textContent = yanlis);
@@ -187,7 +179,6 @@ export function renderDashboard() {
     return;
   }
 
-  // AI yorumunu glassmorphism kutusu ile göster
   const lastSinyal = sinyalGecmisi[0];
   const aiBox = el('aiBoxContainer');
   if (aiBox && lastSinyal?.aiYorum) {
@@ -201,7 +192,6 @@ export function renderDashboard() {
     </div>`;
   }
 
-  // Dashboard: table body satırları (sütunlar: Hisse, Fiyat, Değişim, RSI, Sinyal, Güven, MACD, Hacim, Bollinger)
   if (container) {
     container.innerHTML = rows.map(([k, v]) => {
       const rsiPct   = Math.min(100, Math.max(0, v.rsi || 50));
@@ -215,9 +205,9 @@ export function renderDashboard() {
         ? `<span class="pos">+${v.hacimFark}%</span>`
         : v.hacimFark < 0 ? `<span class="neg">${v.hacimFark}%</span>` : '<span class="muted">—</span>';
 
-      const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
-      const bolRenk  = v.bollinger?.yuzde < 25 ? 'var(--accent)'
-                     : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
+      const macdRenk  = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
+      const bolRenk   = v.bollinger?.yuzde < 25 ? 'var(--accent)'
+                      : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
       const degIsaret = v.degisim >= 0 ? '+' : '';
 
       return `<tr>
@@ -316,7 +306,6 @@ export function renderHisseler() {
       card.oncontextmenu = (e) => { e.preventDefault(); portfoyModalAc(k, a); };
       grid.appendChild(card);
 
-      // Analiz butonu
       if (v) {
         const btn = document.createElement('button');
         btn.textContent  = '🔍 Analiz Et';
@@ -455,12 +444,10 @@ export function renderHisseDetay(kod) {
   el('detayHisseAdi').textContent   = kod;
   el('detayHisseSirket').textContent = ad;
 
-  // Takip butonu
   const takipBtn = el('detayTakipBtn');
   if (takipEdilen.has(kod)) { takipBtn.textContent = '★ Takipte'; takipBtn.style.color = 'var(--accent)'; }
   else                       { takipBtn.textContent = '☆ Takibe Al'; takipBtn.style.color = ''; }
 
-  // Hero + Özet kartlar
   const ozetEl = el('detayOzetKartlar');
   if (v) {
     const degCls     = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
@@ -474,7 +461,6 @@ export function renderHisseDetay(kod) {
     const stochSub   = (v.stochRsi?.k ?? 50) < 20 ? 'Aşırı Satım' : (v.stochRsi?.k ?? 50) > 80 ? 'Aşırı Alım' : 'Nötr';
 
     ozetEl.innerHTML = `
-      <!-- Hero: Fiyat + Sinyal -->
       <div class="detay-hero" style="grid-column:1/-1">
         <div>
           <div class="detay-hero-fiyat">${v.fiyat} ₺</div>
@@ -489,7 +475,6 @@ export function renderHisseDetay(kod) {
         </div>
       </div>
 
-      <!-- Micro-kartlar: kritik göstergeler -->
       <div class="detay-micro-card ${v.rsi < 30 ? 'accent' : v.rsi > 70 ? 'danger' : ''}">
         <div class="detay-mc-label">RSI (14)</div>
         <div class="detay-mc-value" style="color:${rsiColor}">${v.rsi}</div>
@@ -513,13 +498,11 @@ export function renderHisseDetay(kod) {
     ozetEl.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;padding:0.5rem">Veri yok — önce güncelle</div>`;
   }
 
-  // Teknik göstergeler
   renderDetayTeknik(kod);
 
-  // Piyasa bağlamı
   const xu  = piyasaVerisi.xu100;
   const usd = piyasaVerisi.usdtry;
-  const xuRenk    = (xu?.degisim ?? 0) >= 0 ? 'var(--accent)' : 'var(--red)';
+  const xuRenk     = (xu?.degisim ?? 0) >= 0 ? 'var(--accent)' : 'var(--red)';
   const piyasaRenk = (xu?.degisim ?? 0) > 0  ? 'var(--accent)'
                    : (xu?.degisim ?? 0) < -1  ? 'var(--red)' : 'var(--yellow)';
   const xuFiyatStr = xu
@@ -536,7 +519,6 @@ export function renderHisseDetay(kod) {
       <div><span style='color:var(--muted)'>Piyasa:</span> <span style='color:${piyasaRenk}'>${piyasaEtiket}</span></div>
     </div>`;
 
-  // İlgili haberler
   const ilgili = haberlerData.filter(h => h.baslik?.includes(kod) || h.baslik?.includes(ad.split(' ')[0]));
   if (ilgili.length > 0) {
     el('detayHaberler').innerHTML = ilgili.slice(0, 3).map(h =>
@@ -549,7 +531,6 @@ export function renderHisseDetay(kod) {
     el('detayHaberlerBlok').style.display = 'none';
   }
 
-  // Portföy durumu
   const pf = portfoy[kod];
   if (pf && v) {
     const kz  = (v.fiyat - pf.alisFiyati) * pf.adet;
@@ -566,13 +547,11 @@ export function renderHisseDetay(kod) {
     el('detayPortfoyBlok').style.display = 'none';
   }
 
-  // AI içeriği sıfırla
   el('detayAiIcerik').innerHTML = `<span style="color:var(--muted)">Analiz için butona bas...</span>`;
   el('detayAiBtn').disabled     = false;
   el('detayAiBtn').textContent  = '⬡ AI ile Analiz Et';
 
   openModal('hisseDetayModal');
-  // Modal body'yi en üste sıfırla
   const modalBody = document.querySelector('#hisseDetayModal .modal-body');
   if (modalBody) modalBody.scrollTop = 0;
 }
@@ -582,7 +561,6 @@ export function renderDetayTeknik(kod) {
   const teknikEl = el('detayTeknik');
   if (!v || !teknikEl) return;
 
-  // Renk hesapları — template dışında
   const maRenk  = v.ma20 > v.ma50 ? 'var(--accent)' : 'var(--red)';
   const bolRenk = !v.bollinger ? 'var(--muted)'
     : v.bollinger.yuzde < 25 ? 'var(--accent)'
@@ -592,7 +570,6 @@ export function renderDetayTeknik(kod) {
   const hRenk   = v.hacimFark > 0 ? 'var(--accent)' : 'var(--red)';
   const gRenk   = (v.guvenSkoru ?? 0) >= 70 ? 'var(--accent)' : (v.guvenSkoru ?? 0) >= 50 ? 'var(--yellow)' : 'var(--muted)';
 
-  // Değer string'leri
   const bolVal  = v.bollinger ? v.bollinger.yuzde + '%' : '—';
   const bolSub  = v.bollinger?.yuzde < 25 ? 'Alt bant' : v.bollinger?.yuzde > 75 ? 'Üst bant' : 'Orta';
   const wVal    = v.williamsR ?? '—';
@@ -601,14 +578,12 @@ export function renderDetayTeknik(kod) {
   const hVal    = v.hacimFark > 0 ? '+' + v.hacimFark + '%' : v.hacimFark + '%';
   const hSub    = v.hacimFark > 50 ? 'Spike' : 'Normal';
 
-  // Kart üreteci — backtick, tek tırnak yok
   const mc = (lbl, val, sub, renk) => {
     const st = renk ? ` style="color:${renk}"` : '';
     const sb = sub  ? `<div class="mc-sub">${sub}</div>` : '';
     return `<div class="micro-card"><div class="mc-label">${lbl}</div><div class="mc-value"${st}>${val}</div>${sb}</div>`;
   };
 
-  // 4 sütun grid — 8 sabit kart her zaman görünür
   teknikEl.className = 'micro-grid';
   teknikEl.innerHTML =
     mc('Bollinger %', bolVal,   bolSub,           bolRenk) +
@@ -625,39 +600,140 @@ export function renderDetayTeknik(kod) {
     (v.hafta52L ? mc('52H Min', v.hafta52L + ' ₺',  '', 'var(--accent)') : '');
 }
 
+// ─────────────────────────────────────────────
+// AI ANALİZ SONUCU — YENİ RENDER
+// ─────────────────────────────────────────────
+//
+// api.js'den gelen analiz objesi:
+//   Yeni format : { karar, ozet, maddeler[], destek, hedef, stopLoss, risk, uyari, tarih, sembol }
+//   Eski format : { metin, tarih, sembol }  ← Firestore cache'den eski kayıtlar
+//
+// Her iki formatı sorunsuz gösterir.
+// ─────────────────────────────────────────────
 
 export function renderHisseAnalizSonucu(analiz) {
   const aiEl = el('detayAiIcerik');
   if (!aiEl || !analiz) return;
 
-  const kararRenk = analiz.karar === 'AL'   ? 'var(--accent)' :
-                    analiz.karar === 'ALMA'  ? 'var(--red)'    : 'var(--yellow)';
-  const kararCls  = analiz.karar === 'AL'   ? 'guclu-al' :
-                    analiz.karar === 'ALMA'  ? 'guclu-sat' : 'bekle';
+  // ── 1. Format normalize
+  let veri = null;
 
-  const fiyatChip = (label, val, renk = '') => {
-    if (!val) return '';
-    const style = renk ? ` style='color:${renk}'` : '';
-    return `<div class='micro-card'>
-      <div class='mc-label'>${label}</div>
-      <div class='mc-value mono'${style}>${val} ₺</div>
-    </div>`;
+  if (analiz.maddeler && Array.isArray(analiz.maddeler)) {
+    // Yeni JSON format — direkt kullan
+    veri = analiz;
+  } else if (analiz.metin) {
+    // Eski format: ham metin → JSON parse dene
+    try {
+      const temiz  = analiz.metin.replace(/```json|```/g, '').trim();
+      const ilkSus = temiz.indexOf('{');
+      const parsed = JSON.parse(ilkSus >= 0 ? temiz.slice(ilkSus) : temiz);
+      if (parsed.maddeler) {
+        veri = { ...parsed, tarih: analiz.tarih, sembol: analiz.sembol };
+      }
+    } catch (_) { /* parse başarısız — metin olarak göster */ }
+  }
+
+  // ── 2. Eski/parse edilemeyen metin → temizleyip madde madde göster
+  if (!veri) {
+    const kaynak = analiz.metin || (typeof analiz === 'string' ? analiz : '');
+    if (!kaynak) {
+      aiEl.innerHTML = '<span style="color:var(--muted);font-size:0.8rem">Analiz verisi okunamadı.</span>';
+      return;
+    }
+
+    const temizlendi = kaynak
+      .replace(/^#{1,3}\s+/gm, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/^---+$/gm, '')
+      .replace(/^>\s*/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    const satirlar = temizlendi
+      .split(/\n+/)
+      .map(s => s.replace(/^[-•]\s*/, '').trim())
+      .filter(Boolean);
+
+    const tarihHtml = analiz.tarih
+      ? '<div style="font-size:0.63rem;color:var(--muted);font-family:var(--mono);margin-bottom:0.65rem">' +
+        new Date(analiz.tarih).toLocaleString('tr-TR') + '</div>'
+      : '';
+
+    aiEl.innerHTML = tarihHtml +
+      '<div style="display:flex;flex-direction:column;gap:0.4rem">' +
+      satirlar.map(s =>
+        '<div style="display:flex;align-items:flex-start;gap:0.5rem;' +
+        'padding:0.5rem 0.65rem;border-radius:8px;background:rgba(255,255,255,0.03)">' +
+        '<span style="color:var(--accent);flex-shrink:0;margin-top:1px">›</span>' +
+        '<span style="font-size:0.81rem;line-height:1.65;color:#b8ddd0">' + s + '</span>' +
+        '</div>'
+      ).join('') +
+      '</div>';
+    return;
+  }
+
+  // ── 3. Yeni JSON format — zengin kart layout
+  const kararCls = veri.karar === 'AL'   ? 'guclu-al' :
+                   veri.karar === 'ALMA'  ? 'guclu-sat' : 'bekle';
+  const riskRenk = veri.risk === 'Düşük' ? 'var(--accent)' :
+                   veri.risk === 'Yüksek' ? 'var(--red)'    : 'var(--yellow)';
+
+  const chip = (lbl, val, renk) => {
+    if (!val || val === 0) return '';
+    const st = renk ? ' style="color:' + renk + '"' : '';
+    return '<div class="micro-card" style="min-width:80px">' +
+      '<div class="mc-label">' + lbl + '</div>' +
+      '<div class="mc-value mono"' + st + '>' + val + ' ₺</div>' +
+      '</div>';
   };
 
-  aiEl.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem">
-      <div>
-        <span class="sinyal-badge ${kararCls}" style="font-size:0.9rem;padding:0.4rem 1.1rem">${analiz.karar || '—'}</span>
-      </div>
-      <div style="font-size:0.65rem;color:var(--muted);font-family:var(--mono)">${new Date(analiz.tarih).toLocaleString('tr-TR')}</div>
-    </div>
-    <div style="font-size:0.83rem;line-height:1.85;color:#b8ddd0;margin-bottom:0.875rem">${analiz.gerekce || ''}</div>
-    <div class="micro-grid" style="grid-template-columns:repeat(auto-fill,minmax(100px,1fr))">
-      ${fiyatChip('Giriş Fiyatı', analiz.girisFiyati)}
-      ${fiyatChip('Stop Loss',    analiz.stopLoss,    'var(--red)')}
-      ${fiyatChip('Hedef Fiyat', analiz.hedefFiyat,  'var(--accent)')}
-      ${analiz.risk ? `<div class="micro-card"><div class="mc-label">Risk</div><div class="mc-value">${analiz.risk}</div></div>` : ''}
-    </div>`;
+  const maddeHTML = (veri.maddeler || []).map(m =>
+    '<div style="display:flex;gap:0.6rem;align-items:flex-start;' +
+    'padding:0.5rem 0.65rem;border-radius:8px;' +
+    'background:rgba(255,255,255,0.035);margin-bottom:0.3rem">' +
+    '<span style="font-size:0.95rem;line-height:1.5;flex-shrink:0">' + (m.ikon || '•') + '</span>' +
+    '<div style="flex:1;min-width:0">' +
+    '<div style="font-size:0.78rem;font-weight:600;color:#e0f0e8;margin-bottom:0.15rem">' + (m.baslik || '') + '</div>' +
+    '<div style="font-size:0.76rem;line-height:1.65;color:#9bbfb0">' + (m.aciklama || '') + '</div>' +
+    '</div></div>'
+  ).join('');
+
+  const tarihStr = veri.tarih ? new Date(veri.tarih).toLocaleString('tr-TR') : '';
+
+  aiEl.innerHTML =
+    // Başlık: karar badge + tarih
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">' +
+    '<span class="sinyal-badge ' + kararCls + '" style="font-size:0.88rem;padding:0.35rem 1rem">' + (veri.karar || '—') + '</span>' +
+    '<span style="font-size:0.63rem;color:var(--muted);font-family:var(--mono)">' + tarihStr + '</span>' +
+    '</div>' +
+
+    // Özet cümle
+    (veri.ozet
+      ? '<div style="font-size:0.82rem;line-height:1.6;color:#c8e6d8;padding:0.5rem 0.65rem;border-radius:8px;' +
+        'background:rgba(0,229,160,0.06);border-left:2px solid rgba(0,229,160,0.3);margin-bottom:0.65rem">' +
+        veri.ozet + '</div>'
+      : '') +
+
+    // Madde madde açıklamalar
+    '<div style="margin-bottom:0.65rem">' + maddeHTML + '</div>' +
+
+    // Fiyat seviyeleri kartları
+    '<div class="micro-grid" style="grid-template-columns:repeat(auto-fill,minmax(85px,1fr));margin-bottom:0.5rem">' +
+    chip('Destek',  veri.destek,  '') +
+    chip('Hedef',   veri.hedef,   'var(--accent)') +
+    chip('Stop',    veri.stopLoss,'var(--red)') +
+    (veri.risk
+      ? '<div class="micro-card"><div class="mc-label">Risk</div>' +
+        '<div class="mc-value" style="color:' + riskRenk + '">' + veri.risk + '</div></div>'
+      : '') +
+    '</div>' +
+
+    // Uyarı notu
+    (veri.uyari
+      ? '<div style="font-size:0.72rem;color:var(--muted);line-height:1.55;padding:0.4rem 0.6rem;border-radius:6px;' +
+        'background:rgba(255,209,102,0.06);border-left:2px solid rgba(255,209,102,0.25)">⚠️ ' +
+        veri.uyari + '</div>'
+      : '');
 }
 
 // ─────────────────────────────────────────────
@@ -727,7 +803,7 @@ const TEMEL_TERIMLER = [
 
 export function renderPopularTerimler() {
   const container = el('popularTerimler');
-  if (!container || container.childNodes.length > 0) return; // tek sefer
+  if (!container || container.childNodes.length > 0) return;
   TEMEL_TERIMLER.forEach(terim => {
     const chip    = document.createElement('button');
     chip.className = 'terim-chip';
@@ -793,27 +869,16 @@ export function showPushBildirim(baslik, mesaj) {
 // ─────────────────────────────────────────────
 
 export function switchTab(name, buttonEl) {
-  // Tüm nav butonlarından active kaldır
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  // Hem <div> hem <main> panel'lerini gizle
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  // Seçilen butonu vurgula
   if (buttonEl) buttonEl.classList.add('active');
-  // Hedef paneli göster
   const target = el('panel-' + name);
   if (target) target.classList.add('active');
 }
 
 // ─────────────────────────────────────────────
 // GLOBAL KÖPRÜ — window._uiCallbacks
-//
-// ui.js DOM event'lerinden app.js'deki fonksiyonlara
-// bağlanmak için bu nesneyi kullanır.
-// app.js başlarken bu nesneyi doldurur.
 // ─────────────────────────────────────────────
 
 window._uiCallbacks = {};
-
-// hisseDetayAc global olarak da erişilebilir olmalı
-// (onclick string'lerinde doğrudan çağrılıyor)
 window.hisseDetayAc = (kod) => window._uiCallbacks?.hisseDetayAc?.(kod);
