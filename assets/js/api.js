@@ -34,21 +34,136 @@ const MODEL      = 'claude-sonnet-4-6';
 const TOKEN_MALIYET = 0.000003;
 
 // ─────────────────────────────────────────────
-// #6 — TOAST CALLBACK
+// TOAST CALLBACK
 // api.js DOM'a dokunamaz; ui.js'deki showToast'u
 // app.js'in başlatma sırasında buraya bağlar.
-// Kullanım (app.js'de):  setApiToast(showToast);
 // ─────────────────────────────────────────────
 
 let _toast = null;
-
-/** app.js tarafından bir kez çağrılır */
 export function setApiToast(fn) { _toast = fn; }
-
-/** api.js içinde kullanılacak yardımcı — DOM'a dokunmaz */
 function _notify(mesaj, tip = 'error') {
   if (_toast) _toast(mesaj, tip);
   else        console.error('[api]', mesaj);
+}
+
+// ─────────────────────────────────────────────
+// ŞİFRELEME — Web Crypto API (AES-GCM)
+//
+// Şifreleme anahtarı kullanıcının uid'inden türetilir.
+// Sadece o kullanıcı kendi key'ini çözebilir.
+// Firestore'da encryptedApiKey alanında tutulur.
+// ─────────────────────────────────────────────
+
+/**
+ * uid'den AES-GCM CryptoKey türet.
+ * Her çağrıda aynı uid → aynı key üretilir (deterministik).
+ */
+async function _uiddenAnahtar(uid) {
+  const enc     = new TextEncoder();
+  const keyMat  = await crypto.subtle.importKey(
+    'raw', enc.encode(uid), { name: 'PBKDF2' }, false, ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name:       'PBKDF2',
+      salt:       enc.encode('hissematik-salt-v1'),
+      iterations: 100_000,
+      hash:       'SHA-256',
+    },
+    keyMat,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * API key'i şifrele → base64 string döner (iv + ciphertext).
+ * @param {string} apiKey  — düz metin Anthropic key
+ * @param {string} uid     — Firebase kullanıcı uid
+ * @returns {Promise<string>}
+ */
+export async function apiKeyEncrypt(apiKey, uid) {
+  const key    = await _uiddenAnahtar(uid);
+  const iv     = crypto.getRandomValues(new Uint8Array(12));
+  const enc    = new TextEncoder();
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    enc.encode(apiKey),
+  );
+  // iv + ciphertext → base64
+  const buf = new Uint8Array(iv.byteLength + cipher.byteLength);
+  buf.set(iv, 0);
+  buf.set(new Uint8Array(cipher), iv.byteLength);
+  return btoa(String.fromCharCode(...buf));
+}
+
+/**
+ * Şifreli base64 string'i çöz → düz metin API key döner.
+ * @param {string} encrypted — base64 şifreli key
+ * @param {string} uid       — Firebase kullanıcı uid
+ * @returns {Promise<string>}
+ */
+export async function apiKeyDecrypt(encrypted, uid) {
+  try {
+    const key    = await _uiddenAnahtar(uid);
+    const buf    = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
+    const iv     = buf.slice(0, 12);
+    const data   = buf.slice(12);
+    const plain  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+    return new TextDecoder().decode(plain);
+  } catch {
+    return '';
+  }
+}
+
+// ─────────────────────────────────────────────
+// FİRESTORE — KULLANICI API KEY KAYDET (Admin)
+//
+// Admin bir kullanıcıya key tanımlarken çağırır.
+// Key şifrelenerek users/{targetUid}.encryptedApiKey'e yazılır.
+// ─────────────────────────────────────────────
+
+/**
+ * @param {object} p
+ * @param {string} p.targetUid  — key tanımlanacak kullanıcının uid'i
+ * @param {string} p.apiKey     — düz metin Anthropic key
+ * @param {boolean} p.isAdmin   — işlemi yapan admin mi? (güvenlik kontrolü)
+ */
+export async function saveUserApiKey({ targetUid, apiKey, isAdmin }) {
+  if (!isAdmin) {
+    _notify('Bu işlem için admin yetkisi gerekli.', 'error');
+    return;
+  }
+  if (!targetUid || !apiKey) {
+    _notify('Kullanıcı UID veya API key eksik.', 'error');
+    return;
+  }
+  try {
+    const encrypted = await apiKeyEncrypt(apiKey, targetUid);
+    await updateDoc(doc(db, 'users', targetUid), {
+      encryptedApiKey: encrypted,
+      apiKeySet:       true,
+      apiKeyTarih:     Date.now(),
+    });
+  } catch (e) {
+    console.error('saveUserApiKey hatası:', e);
+    _notify('API anahtarı kaydedilemedi: ' + (e?.message || 'Firebase hatası'));
+    throw e;
+  }
+}
+
+/**
+ * Oturum açan kullanıcının kendi şifreli key'ini çöz ve döndür.
+ * @param {object} p
+ * @param {string} p.uid           — oturum açan kullanıcının uid'i
+ * @param {string} p.encryptedKey  — Firestore'dan gelen encryptedApiKey
+ * @returns {Promise<string>}      — düz metin key veya ''
+ */
+export async function loadUserApiKey({ uid, encryptedKey }) {
+  if (!uid || !encryptedKey) return '';
+  return apiKeyDecrypt(encryptedKey, uid);
 }
 
 // ─────────────────────────────────────────────
@@ -64,58 +179,50 @@ function temizleKey(key) {
   return (key || '').replace(/[^a-zA-Z0-9\-_]/g, '').trim();
 }
 
-/** Claude'a istek at — ham metin döner */
+/** Claude'a istek at — ham metin + token sayısı döner */
 async function claudeIste(key, mesajlar, maxToken = 1000) {
   const res = await fetch(CLAUDE_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': temizleKey(key),
+      'Content-Type':  'application/json',
+      'x-api-key':     temizleKey(key),
       'anthropic-version': CLAUDE_VER,
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: MODEL,
+      model:      MODEL,
       max_tokens: maxToken,
-      messages: mesajlar,
+      messages:   mesajlar,
     }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    // 401 → key geçersiz veya tükenmiş
+    if (res.status === 401) throw new Error('API_KEY_INVALID');
+    // 429 → rate limit / quota aşıldı
+    if (res.status === 429) throw new Error('API_QUOTA_EXCEEDED');
+    throw new Error(err?.error?.message || 'Claude API hatası: ' + res.status);
+  }
+
   const data = await res.json();
-  return {
-    text:   data?.content?.[0]?.text || '',
-    tokens: (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0),
-  };
+  const text = data?.content?.[0]?.text || '';
+  const tokens = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
+  return { text, tokens };
 }
 
 // ─────────────────────────────────────────────
-// YAHOO PROXY — TEK HİSSE
+// YAHOO FINANCE — TEK HİSSE
 // ─────────────────────────────────────────────
 
-export async function fetchYahoo(sembol, piyasaYon = undefined) {
+export async function fetchYahoo(sembol, piyasaYon = 0) {
   try {
-    const res = await fetch(
-      `${PROXY}/?sembol=${sembol}`,
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) return null;
+    const url  = PROXY + '?sembol=' + encodeURIComponent(sembol + '.IS');
+    const res  = await fetch(url);
     const json = await res.json();
-
-    const result = json?.chart?.result?.[0];
-    if (!result) return null;
-
-    const meta     = result.meta;
-    const kapanis  = (result.indicators?.quote?.[0]?.close  || []).filter(x => x > 0);
-    const hacimler = (result.indicators?.quote?.[0]?.volume || []).filter(x => x > 0);
-    if (kapanis.length < 20) return null;
-
-    const fiyat     = meta.regularMarketPrice || kapanis.at(-1);
-    const onceki    = meta.chartPreviousClose  || kapanis.at(-2);
-    const degisim   = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
-    const hacimOrt  = avg(hacimler.slice(-20));
-    const hacimSon  = hacimler.at(-1) || 0;
-    const hacimFark = hacimOrt > 0 ? +((hacimSon / hacimOrt - 1) * 100).toFixed(0) : 0;
-
-    return parseYahooVeri(sembol, json, piyasaYon);
+    const raw  = json?.chart?.result?.[0];
+    if (!raw) return null;
+    return parseYahooVeri(raw, piyasaYon);
   } catch (e) {
     console.error('fetchYahoo hatası:', sembol, e);
     return null;
@@ -123,123 +230,64 @@ export async function fetchYahoo(sembol, piyasaYon = undefined) {
 }
 
 // ─────────────────────────────────────────────
-// YAHOO PROXY — TOPLU HİSSE
+// YAHOO FINANCE — TOPLU HİSSE (takip listesi)
 // ─────────────────────────────────────────────
 
-export async function fetchTopluYahoo(semboller, piyasaYon = undefined) {
+export async function fetchTopluYahoo(semboller, piyasaYon = 0) {
   const sonuclar = {};
-  const grupBoyutu = 100;
+  const BATCH    = 5;
 
-  for (let i = 0; i < semboller.length; i += grupBoyutu) {
-    const grup = semboller.slice(i, i + grupBoyutu);
-    try {
-      const res = await fetch(
-        `${PROXY}/?semboller=${grup.join(',')}`,
-        { signal: AbortSignal.timeout(30000) }
-      );
-      if (!res.ok) continue;
-      const topluVeri = await res.json();
-
-      for (const [sembol, json] of Object.entries(topluVeri)) {
-        const v = parseYahooVeri(sembol, json, piyasaYon);
-        if (v) sonuclar[sembol] = v;
-      }
-    } catch (e) {
-      console.error('fetchTopluYahoo grup hatası:', e);
-      // Kullanıcıya sessiz hata — toplu işlem devam etmeli, toast atmıyoruz
-    }
+  for (let i = 0; i < semboller.length; i += BATCH) {
+    const dilim = semboller.slice(i, i + BATCH);
+    await Promise.all(dilim.map(async (s) => {
+      const v = await fetchYahoo(s, piyasaYon);
+      if (v) sonuclar[s] = v;
+    }));
+    if (i + BATCH < semboller.length) await sleep(300);
   }
-
   return sonuclar;
 }
 
 // ─────────────────────────────────────────────
-// YAHOO PROXY — TÜM HİSSELER ANLİK FİYATLAR
+// YAHOO FINANCE — TÜM HİSSE FİYATLARI (anlık)
 // ─────────────────────────────────────────────
 
 export async function fetchTumHisseFiyatlari() {
   try {
-    const { BIST } = await import('./state.js');
-    const tumKodlar = BIST.map(([k]) => k);
-    const grupBoyutu = 20;
-    const sonuclar = [];
-
-    for (let i = 0; i < tumKodlar.length; i += grupBoyutu) {
-      const grup = tumKodlar.slice(i, i + grupBoyutu);
-      try {
-        const res = await fetch(
-          `${PROXY}/?semboller=${grup.join(',')}`,
-          { signal: AbortSignal.timeout(30000) }
-        );
-        if (!res.ok) continue;
-        const topluVeri = await res.json();
-
-        for (const [sembol, json] of Object.entries(topluVeri)) {
-          const meta = json?.chart?.result?.[0]?.meta;
-          if (!meta) continue;
-          sonuclar.push({
-            KOD:     sembol.replace('.IS', ''),
-            KAPANIS: meta.regularMarketPrice || 0,
-            YUZDE:   meta.chartPreviousClose > 0
-              ? +((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose * 100).toFixed(2)
-              : 0,
-            HACIM:   meta.regularMarketVolume || 0,
-          });
-        }
-      } catch (_) {}
-    }
-
-    return sonuclar;
+    const res  = await fetch(PROXY + '?tumfiyatlar=1');
+    const json = await res.json();
+    return Array.isArray(json?.hisseler) ? json.hisseler : [];
   } catch (e) {
     console.error('fetchTumHisseFiyatlari hatası:', e);
-    _notify('Yahoo Finance bağlantısı kurulamadı. Veriler güncellenemedi.');
     return [];
   }
 }
+
 // ─────────────────────────────────────────────
-// YAHOO PROXY — PİYASA GENEL VERİSİ
+// YAHOO FINANCE — PİYASA GENEL VERİSİ
 // ─────────────────────────────────────────────
 
 export async function fetchPiyasaVerisi() {
   try {
-    const res = await fetch(
-      `${PROXY}/?piyasa=1`,
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) return null;
+    const semboller = ['XU100.IS', 'USDTRY=X', 'EURTRY=X'];
+    const res       = await fetch(PROXY + '?piyasa=' + semboller.join(','));
     return await res.json();
   } catch (e) {
     console.error('fetchPiyasaVerisi hatası:', e);
-    // Sessiz — piyasa kartları boş kalır, kritik değil
     return null;
   }
 }
 
 // ─────────────────────────────────────────────
-// YAHOO PROXY — HABERLER
-// #8 — try/catch eklendi; hata fırlatmak yerine
-//      _notify ile kullanıcıya mesaj gösterilir
-//      ve boş dizi döner (app.js crash yapmaz).
+// YAHOO FINANCE — HABERLER
 // ─────────────────────────────────────────────
 
 export async function fetchHaberler() {
   try {
-    const res = await fetch(
-      `${PROXY}/?haberler=1`,
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) {
-      _notify('Haber servisi yanıt vermedi (' + res.status + '). Lütfen tekrar deneyin.');
-      return [];
-    }
-    const data = await res.json();
-    return data?.haberler || [];
+    const res  = await fetch(PROXY + '?haberler=1');
+    const json = await res.json();
+    return Array.isArray(json?.haberler) ? json.haberler : [];
   } catch (e) {
-    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
-      _notify('Haber servisi zaman aşımına uğradı. İnternet bağlantınızı kontrol edin.');
-    } else {
-      _notify('Haberler yüklenirken hata oluştu: ' + (e?.message || 'Bilinmeyen hata'));
-    }
     console.error('fetchHaberler hatası:', e);
     return [];
   }
@@ -249,15 +297,14 @@ export async function fetchHaberler() {
 // CLAUDE AI — PORTFÖY ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiPortfoyAnalizYap({
-  key, veriler, takipEdilen, sinyalGecmisi, piyasaVerisi,
-}) {
+export async function aiPortfoyAnalizYap({ key, veriler, takipEdilen, sinyalGecmisi = [], piyasaVerisi = {} }) {
   if (!key || takipEdilen.size === 0) return '';
 
-  const dogrulanmis = sinyalGecmisi.filter(s => s.dogrulandi === true).length;
-  const yanlis      = sinyalGecmisi.filter(s => s.dogrulandi === false).length;
-  const toplam      = dogrulanmis + yanlis;
-  const isabet      = toplam > 0 ? Math.round(dogrulanmis / toplam * 100) : null;
+  const dogru      = sinyalGecmisi.filter(s => s.dogrulandi === true).length;
+  const yanlis     = sinyalGecmisi.filter(s => s.dogrulandi === false).length;
+  const toplam     = dogru + yanlis;
+  const dogrulanmis = dogru;
+  const isabet     = toplam > 0 ? Math.round(dogrulanmis / toplam * 100) : null;
 
   const basariliPatternler = sinyalGecmisi
     .filter(s => s.dogrulandi === true)
@@ -300,11 +347,11 @@ export async function aiPortfoyAnalizYap({
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 800);
-    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiPortfoyAnalizYap hatası:', e);
-    _notify('AI analizi yapılamadı: ' + (e?.message || 'Bağlantı hatası'));
+    _notify(_apiHataYonet(e));
     return '';
   }
 }
@@ -319,50 +366,44 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
   const gecmis = sinyalGecmisi
     .filter(s => s.sembol === kod)
     .slice(0, 5)
-    .map(s => 'Tarih:' + new Date(s.tarih).toLocaleDateString('tr-TR') + ' Sinyal:' + s.sinyal + ' Sonuç:' + (s.dogrulandi === true ? '✓' : s.dogrulandi === false ? '✗' : '?') + (s.sonucYuzde ? ' %' + s.sonucYuzde : ''))
-    .join('\n');
+    .map(s =>
+      'Tarih:' + new Date(s.tarih).toLocaleDateString('tr-TR') +
+      ' Sinyal:' + s.sinyal +
+      ' Sonuç:' + (s.dogrulandi === true ? '✓ Doğru' : s.dogrulandi === false ? '✗ Yanlış' : 'Bekliyor') +
+      (s.sonucYuzde != null ? ' (' + (s.sonucYuzde > 0 ? '+' : '') + s.sonucYuzde + '%)' : '')
+    ).join('\n');
 
-  const piyasaBaglam = piyasaVerisi.xu100
-    ? 'Piyasa: BIST100 ' + (piyasaVerisi.xu100.degisim >= 0 ? '+' : '') + piyasaVerisi.xu100.degisim + '%, USD/TRY: ' + (piyasaVerisi.usdtry?.fiyat?.toFixed(2) || '—') + '\n'
-    : '';
-
-  const pfBilgi = portfoy[kod]
-    ? 'Portföyde: ' + portfoy[kod].adet + ' adet, alış fiyatı: ' + portfoy[kod].alisFiyati + '₺\n'
-    : '';
+  const portfoyBilgi = portfoy[kod]
+    ? 'Portföyde: ' + portfoy[kod].adet + ' adet, alış: ' + portfoy[kod].alisFiyati + '₺'
+    : 'Portföyde yok';
 
   const ilgiliHaberler = haberlerData
-    .filter(h => h.baslik && h.baslik.includes(kod))
+    .filter(h => h.baslik?.includes(kod) || h.aciklama?.includes(kod))
     .slice(0, 2)
-    .map(h => '- ' + h.baslik)
+    .map(h => '• ' + h.baslik)
     .join('\n');
-  const haberBaglam = ilgiliHaberler ? 'İlgili haberler:\n' + ilgiliHaberler + '\n' : '';
 
   const prompt =
-    'BIST hisse analizi — ' + kod + '\n\n' +
-    piyasaBaglam + pfBilgi + haberBaglam +
-    'Fiyat: ' + veri.fiyat + '₺ | Değişim: ' + veri.degisim + '%\n' +
-    'RSI: ' + veri.rsi + ' | MACD Hist: ' + veri.macdHist?.toFixed(3) + '\n' +
-    'MA20: ' + veri.ma20 + ' | MA50: ' + veri.ma50 + '\n' +
-    'Bollinger %B: ' + (veri.bollinger?.yuzde ?? '—') + '\n' +
+    'HİSSE: ' + kod + '\n' +
+    'Fiyat: ' + veri.fiyat + '₺ (' + (veri.degisim >= 0 ? '+' : '') + veri.degisim + '%)\n' +
+    'RSI: ' + (veri.rsi?.toFixed(1) ?? '—') + '\n' +
+    'MACD Hist: ' + (veri.macdHist?.toFixed(3) ?? '—') + '\n' +
+    'MA20/MA50: ' + (veri.ma20 ?? '—') + ' / ' + (veri.ma50 ?? '—') + '\n' +
+    'Bollinger %: ' + (veri.bollinger?.yuzde?.toFixed(1) ?? '—') + '\n' +
     'Hacim Farkı: ' + veri.hacimFark + '%\n' +
-    'Mevcut Sinyal: ' + veri.sinyal + '\n\n' +
+    'Mevcut Sinyal: ' + veri.sinyal + '\n' +
+    portfoyBilgi + '\n\n' +
     (gecmis ? 'GEÇMİŞ SİNYALLER:\n' + gecmis + '\n\n' : '') +
+    (ilgiliHaberler ? 'İLGİLİ HABERLER:\n' + ilgiliHaberler + '\n\n' : '') +
     'Bu hisse için kısa ve net teknik analiz yap. Risk ve fırsatları belirt. Türkçe, max 4 madde.';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);
-    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
-    try {
-      const temiz  = text.replace(/```json|```/g, '').trim();
-      const ilkSus = temiz.indexOf('{');
-      const parsed = JSON.parse(ilkSus >= 0 ? temiz.slice(ilkSus) : temiz);
-      return { ...parsed, tarih: Date.now(), sembol: kod };
-    } catch (_) {
-      return { metin: text, tarih: Date.now(), sembol: kod };
-    }
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    return { metin: text, tarih: Date.now(), sembol: kod };
   } catch (e) {
     console.error('aiHisseAnalizEt hatası:', e);
-    _notify(kod + ' analizi yapılamadı: ' + (e?.message || 'Bağlantı hatası'));
+    _notify(_apiHataYonet(e));
     return null;
   }
 }
@@ -385,12 +426,12 @@ export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 500);
-    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     const temiz = text.replace(/```json|```/g, '').trim();
     return JSON.parse(temiz);
   } catch (e) {
     console.error('aiHaberAnalizEt hatası:', e);
-    _notify('Haber analizi yapılamadı: ' + (e?.message || 'Bağlantı hatası'));
+    _notify(_apiHataYonet(e));
     return null;
   }
 }
@@ -408,11 +449,11 @@ export async function aiTerimAcikla({ key, terim }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 300);
-    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiTerimAcikla hatası:', e);
-    _notify('"' + terim + '" açıklaması alınamadı: ' + (e?.message || 'Bağlantı hatası'));
+    _notify(_apiHataYonet(e));
     return '';
   }
 }
@@ -426,8 +467,10 @@ export async function aiGunSonuOzeti({ key, analizler }) {
 
   const ozet = analizler
     .slice(0, 20)
-    .map(a => a.haberBaslik + ': ' + (a.yorum || '') + ' | Hisseler: ' + (a.hisseler?.map(x => x.kod + '(' + x.etki + ')').join(',') || '—'))
-    .join('\n');
+    .map(a =>
+      a.haberBaslik + ': ' + (a.yorum || '') +
+      ' | Hisseler: ' + (a.hisseler?.map(x => x.kod + '(' + x.etki + ')').join(',') || '—')
+    ).join('\n');
 
   const prompt =
     'Bugünkü ' + analizler.length + ' haber analizine dayanarak BIST için gün sonu özeti hazırla.\n\n' +
@@ -436,13 +479,23 @@ export async function aiGunSonuOzeti({ key, analizler }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 400);
-    try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     return { text };
   } catch (e) {
     console.error('aiGunSonuOzeti hatası:', e);
-    _notify('Gün sonu özeti oluşturulamadı: ' + (e?.message || 'Bağlantı hatası'));
+    _notify(_apiHataYonet(e));
     return { text: '' };
   }
+}
+
+// ─────────────────────────────────────────────
+// API HATA YÖNETİMİ — kullanıcıya anlamlı mesaj
+// ─────────────────────────────────────────────
+
+function _apiHataYonet(e) {
+  if (e?.message === 'API_KEY_INVALID')    return '⚠️ AI erişiminiz tanımlı değil veya geçersiz. Lütfen yöneticinizle iletişime geçin.';
+  if (e?.message === 'API_QUOTA_EXCEEDED') return '⚠️ AI kullanım limitiniz doldu. Lütfen yöneticinizle iletişime geçin.';
+  return 'AI analizi yapılamadı: ' + (e?.message || 'Bağlantı hatası');
 }
 
 // ─────────────────────────────────────────────
@@ -450,19 +503,18 @@ export async function aiGunSonuOzeti({ key, analizler }) {
 // ─────────────────────────────────────────────
 
 export async function tokenKaydet({ currentUser, tokens }) {
-  if (!tokens || !currentUser) return;
+  if (!tokens) return;
+  // currentUser null ise global sayaçta tut
+  const uid = currentUser?.uid || 'sistem';
+  const email = currentUser?.email || 'sistem';
+  const ad    = currentUser?.displayName || 'Sistem';
   try {
-    const ay  = new Date().toISOString().slice(0, 7);
-    const ref = doc(db, 'tokenKullanim', currentUser.uid + '_' + ay);
+    const ay   = new Date().toISOString().slice(0, 7);
+    const ref  = doc(db, 'tokenKullanim', uid + '_' + ay);
     const snap = await getDoc(ref);
     const mevcut = snap.exists() ? snap.data() : {
-      uid:         currentUser.uid,
-      email:       currentUser.email,
-      ad:          currentUser.displayName || '',
-      ay,
-      toplamToken: 0,
-      istekSayisi: 0,
-      maliyet:     0,
+      uid, email, ad, ay,
+      toplamToken: 0, istekSayisi: 0, maliyet: 0,
     };
     const yeniToken = mevcut.toplamToken + tokens;
     await setDoc(ref, {
@@ -472,9 +524,7 @@ export async function tokenKaydet({ currentUser, tokens }) {
       maliyet:       +(yeniToken * TOKEN_MALIYET).toFixed(4),
       sonGuncelleme: Date.now(),
     });
-  } catch (e) {
-
-  }
+  } catch (_) {}
 }
 
 // ─────────────────────────────────────────────
@@ -506,7 +556,6 @@ export async function sinyalKaydet({ db, currentUser, veriler, takipEdilen, aiYo
       sonucYuzde: null,
       dogrulandi: null,
     };
-
     try {
       const mevcutQ = query(
         collection(db, 'sinyaller'),
@@ -526,7 +575,6 @@ export async function sinyalKaydet({ db, currentUser, veriler, takipEdilen, aiYo
       }
     } catch (e) {
       console.error('sinyalKaydet hatası:', k, e);
-      // #6 — Sessiz: kayıt başarısız olsa da akış devam etmeli
     }
   }
 }
@@ -568,7 +616,7 @@ export async function sinyalleriDogrula({ db, sinyalGecmisi, dogrulamaGun, piyas
     const sonucYuzde = +((v.fiyat - sinyal.fiyat) / sinyal.fiyat * 100).toFixed(2);
     let dogrulandi   = null;
 
-    if      (['AL', 'GÜÇLÜ AL'].includes(sinyal.sinyal))  dogrulandi = sonucYuzde > 0;
+    if      (['AL', 'GÜÇLÜ AL'].includes(sinyal.sinyal))   dogrulandi = sonucYuzde > 0;
     else if (['SAT', 'GÜÇLÜ SAT'].includes(sinyal.sinyal)) dogrulandi = sonucYuzde < 0;
     else    dogrulandi = Math.abs(sonucYuzde) < 3;
 
@@ -585,7 +633,6 @@ export async function sinyalleriDogrula({ db, sinyalGecmisi, dogrulamaGun, piyas
     }
     await sleep(300);
   }
-
   return sinyalGecmisi;
 }
 
@@ -623,51 +670,15 @@ export async function mukerrerSinyalleriTemizle({ db }) {
 
 export async function saveUserData({ db, currentUser, takipEdilen, portfoy, veriler }) {
   if (!currentUser) return;
-  
-  // Boş takip listesi varsa yazma — veri kaybı önleme
-  const takipDizi = [...takipEdilen];
-  if (takipDizi.length === 0 && Object.keys(portfoy).length === 0) {
-    console.warn('saveUserData: Boş veri, yazılmadı.');
-    return;
-  }
-
   try {
     await updateDoc(doc(db, 'users', currentUser.uid), {
-      takipEdilen: takipDizi,
+      takipEdilen: [...takipEdilen],
       portfoy,
       veriler,
     });
   } catch (e) {
     console.error('saveUserData hatası:', e);
     _notify('Verileriniz kaydedilemedi. İnternet bağlantınızı kontrol edin.', 'error');
-  }
-}
-// ─────────────────────────────────────────────
-// FİRESTORE — API ANAHTARI KAYDET (Admin)
-// ─────────────────────────────────────────────
-
-export async function saveApiKey({ db, currentUser, key }) {
-  try {
-    await updateDoc(doc(db, 'users', currentUser.uid), { apiKey: key });
-    await setDoc(doc(db, 'config', 'global'), { anthropicKey: key }, { merge: true });
-  } catch (e) {
-    console.error('saveApiKey hatası:', e);
-    _notify('API anahtarı kaydedilemedi: ' + (e?.message || 'Firebase hatası'));
-    throw e; // app.js'e fırlat — showToast zaten orada da var
-  }
-}
-
-// ─────────────────────────────────────────────
-// FİRESTORE — HAVUZ API KEY YÜKLE
-// ─────────────────────────────────────────────
-
-export async function loadHavuzKey({ db }) {
-  try {
-    const snap = await getDoc(doc(db, 'config', 'global'));
-    return snap.exists() ? (snap.data().anthropicKey || '') : '';
-  } catch (e) {
-    console.error('loadHavuzKey hatası:', e);
-    return '';
   }
 }
 
@@ -722,53 +733,55 @@ export async function loadSozluk({ db }) {
   } catch (e) {
     console.error('loadSozluk hatası:', e);
     _notify('Sözlük yüklenemedi. Lütfen sayfayı yenileyin.');
-    return [];
+    throw e;
   }
 }
 
 export async function sozlukTerimKaydet({ db, terim, aciklama, currentUser }) {
   const yeni = {
     terim, aciklama,
-    sorulma:       1,
-    tarih:         Date.now(),
-    ekleyenUid:    currentUser.uid,
-    ekleyenAd:     currentUser.displayName || currentUser.email,
-    pushGonderildi: false,
+    sorulma:    1,
+    tarih:      Date.now(),
+    kullanici:  currentUser?.displayName || currentUser?.email || 'Anonim',
   };
   const ref = await addDoc(collection(db, 'sozluk'), yeni);
   return { id: ref.id, ...yeni };
 }
 
 export async function sozlukSorulmaSayisiArtir({ db, mevcutId, mevcutSorulma }) {
-  try {
-    await updateDoc(doc(db, 'sozluk', mevcutId), { sorulma: mevcutSorulma + 1 });
-  } catch (e) {
-    console.error('sozlukSorulmaSayisiArtir hatası:', e);
-    // Sessiz — sayaç artışı kritik değil
-  }
+  await updateDoc(doc(db, 'sozluk', mevcutId), { sorulma: (mevcutSorulma || 0) + 1 });
 }
 
 // ─────────────────────────────────────────────
 // FİRESTORE — HİSSE ANALİZ CACHE
 // ─────────────────────────────────────────────
 
-export async function hisseAnalizCache({ db, currentUser, kod }) {
-  const analizKey = 'hisseAnaliz_' + currentUser.uid + '_' + kod;
-  const snap      = await getDoc(doc(db, 'hisseAnalizleri', analizKey));
-  if (!snap.exists()) return null;
-  const d = snap.data();
-  return Date.now() - d.tarih < 24 * 60 * 60 * 1000 ? d : null;
+export async function hisseAnalizCache({ db, currentUser, sembol }) {
+  if (!currentUser || !sembol) return null;
+  try {
+    const ref  = doc(db, 'hisseAnalizleri', currentUser.uid + '_' + sembol);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    const d = snap.data();
+    // 24 saatten eskiyse cache geçersiz
+    if (Date.now() - d.tarih > 24 * 60 * 60 * 1000) return null;
+    return d;
+  } catch (e) {
+    console.error('hisseAnalizCache hatası:', e);
+    return null;
+  }
 }
 
-export async function hisseAnalizKaydet({ db, currentUser, kod, analiz }) {
-  const analizKey = 'hisseAnaliz_' + currentUser.uid + '_' + kod;
+export async function hisseAnalizKaydet({ db, currentUser, sembol, analiz }) {
+  if (!currentUser || !sembol || !analiz) return null;
   try {
-    await setDoc(doc(db, 'hisseAnalizleri', analizKey), {
-      ...analiz, uid: currentUser.uid, sembol: kod,
-    });
+    const ref = doc(db, 'hisseAnalizleri', currentUser.uid + '_' + sembol);
+    const kayit = { sembol, ...analiz, tarih: Date.now(), uid: currentUser.uid };
+    await setDoc(ref, kayit);
+    return kayit;
   } catch (e) {
     console.error('hisseAnalizKaydet hatası:', e);
-    // Sessiz — cache yazma hatası kullanıcıyı bloke etmemeli
+    return null;
   }
 }
 
@@ -777,31 +790,42 @@ export async function hisseAnalizKaydet({ db, currentUser, kod, analiz }) {
 // ─────────────────────────────────────────────
 
 export function haberHashOlustur(baslik) {
-  return btoa(unescape(encodeURIComponent(baslik || ''))).substring(0, 40);
+  let hash = 0;
+  for (let i = 0; i < baslik.length; i++) {
+    hash = ((hash << 5) - hash) + baslik.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
 }
 
 export async function haberAnalizCache({ db, currentUser, haberHash }) {
-  const docId = currentUser.uid + '_' + haberHash;
-  const snap  = await getDoc(doc(db, 'haberAnalizleri', docId));
-  return snap.exists() ? snap.data() : null;
+  if (!currentUser) return null;
+  try {
+    const ref  = doc(db, 'haberAnalizleri', haberHash);
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data() : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function haberAnalizKaydet({ db, currentUser, haberHash, analiz, haber, takipEdilen }) {
-  const docId = currentUser.uid + '_' + haberHash;
-  const kayit = {
-    ...analiz,
-    haberBaslik: haber.baslik,
-    haberLink:   haber.link || '',
-    uid:          currentUser.uid,
-    kullaniciAd:  currentUser.displayName || currentUser.email,
-    tarih:        Date.now(),
-    takipEdilen:  [...takipEdilen],
-  };
   try {
-    await setDoc(doc(db, 'haberAnalizleri', docId), kayit);
+    const kayit = {
+      haberHash,
+      haberBaslik:  haber.baslik,
+      yorum:        analiz.yorum || '',
+      hisseler:     analiz.hisseler || [],
+      sure:         analiz.sure || '',
+      tarih:        Date.now(),
+      uid:          currentUser.uid,
+      kullaniciAd:  currentUser.displayName || currentUser.email,
+      takipEdilen:  [...takipEdilen],
+    };
+    await setDoc(doc(db, 'haberAnalizleri', haberHash), kayit, { merge: true });
+    return kayit;
   } catch (e) {
     console.error('haberAnalizKaydet hatası:', e);
-    // Sessiz — cache yazma kritik değil
+    return null;
   }
-  return kayit;
 }
