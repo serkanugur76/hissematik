@@ -350,9 +350,16 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
     'Bu hisse için kısa ve net teknik analiz yap. Risk ve fırsatları belirt. Türkçe, max 4 madde.';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);
     try { await tokenKaydet({ currentUser: { uid: 'havuz', email: 'havuz', displayName: 'Havuz' }, tokens }); } catch (_) {}
-    return { metin: text, tarih: Date.now(), sembol: kod };
+    try {
+      const temiz  = text.replace(/```json|```/g, '').trim();
+      const ilkSus = temiz.indexOf('{');
+      const parsed = JSON.parse(ilkSus >= 0 ? temiz.slice(ilkSus) : temiz);
+      return { ...parsed, tarih: Date.now(), sembol: kod };
+    } catch (_) {
+      return { metin: text, tarih: Date.now(), sembol: kod };
+    }
   } catch (e) {
     console.error('aiHisseAnalizEt hatası:', e);
     _notify(kod + ' analizi yapılamadı: ' + (e?.message || 'Bağlantı hatası'));
