@@ -391,20 +391,31 @@
           </button>
         </div>
 
-        <!-- Havuz API anahtarı -->
+        <!-- Admin kendi API key'i -->
         <div style="margin-top:1.25rem">
-          <div class="section-title" style="margin-bottom:0.75rem;font-size:0.78rem">🔑 Havuz API Anahtarı</div>
-          <p class="muted" style="font-size:0.72rem;margin-bottom:0.5rem">
-            Kullanıcılar bu anahtarı göremez. Tüm AI işlemleri buradan yapılır.
+          <div class="section-title" style="margin-bottom:0.5rem;font-size:0.78rem">🔑 Benim API Anahtarım</div>
+          <p class="muted" style="font-size:0.72rem;margin-bottom:0.75rem">
+            Bu key sadece senin işlemlerin için kullanılır. AES-GCM ile şifrelenerek saklanır, kimse okuyamaz.
           </p>
-          <div class="form-group">
-            <input class="form-input" id="adminApiKey" type="password" placeholder="sk-ant-api03-...">
+          <div class="sistem-satir" style="margin-bottom:0.75rem">
+            <span class="muted" style="font-size:0.75rem">Durum</span>
+            <span id="adminKendiKeyDurum" class="muted" style="font-size:0.75rem">Kontrol ediliyor...</span>
           </div>
-          <button class="btn primary" id="btnSaveApiKey" style="width:100%">Kaydet</button>
+          <div class="form-group" style="position:relative">
+            <input
+              class="form-input"
+              id="adminKendiKey"
+              type="password"
+              placeholder="sk-ant-api03-..."
+              autocomplete="off"
+            >
+            <button
+              onclick="const i=document.getElementById('adminKendiKey');i.type=i.type==='password'?'text':'password'"
+              style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem"
+            >👁</button>
+          </div>
+          <button class="btn primary" id="btnAdminKeyKaydet" style="width:100%">🔑 Kaydet</button>
         </div>
-      </div>
-
-    </div>
 
     <!-- Token istatistikleri -->
     <div class="card" style="margin-top:1.5rem">
@@ -482,10 +493,6 @@
     <div class="form-group">
       <label class="form-label" for="newUserEmail">Gmail Adresi</label>
       <input class="form-input" id="newUserEmail" type="email" placeholder="kullanici@gmail.com">
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="newUserApiKey">Anthropic API Anahtarı</label>
-      <input class="form-input" id="newUserApiKey" type="password" placeholder="sk-ant-api03-...">
     </div>
     <div class="form-group">
       <label class="form-label" for="newUserPlan">Plan</label>
@@ -595,6 +602,38 @@
   </div>
 </div>
 
+<!-- Kullanıcı Key Tanımlama Modal -->
+<div class="modal-overlay" id="keyTanimlaModal">
+  <div class="modal">
+    <div class="modal-title" id="keyTanimlaBaslik">Kullanıcı için API Key</div>
+    <div class="modal-sub">
+      Key AES-GCM ile şifrelenerek saklanır. Sadece kullanıcı kendi key'ini çözebilir.
+    </div>
+ 
+    <div class="form-group" style="position:relative">
+      <label class="form-label">Anthropic API Anahtarı</label>
+      <input
+        class="form-input"
+        id="kullaniciKeyInput"
+        type="password"
+        placeholder="sk-ant-api03-..."
+        autocomplete="off"
+      >
+      <button
+        onclick="const i=document.getElementById('kullaniciKeyInput');i.type=i.type==='password'?'text':'password'"
+        style="position:absolute;right:0.5rem;top:calc(50% + 0.6rem);transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem"
+      >👁</button>
+    </div>
+    <p class="muted" style="font-size:0.7rem;margin-top:-0.5rem;margin-bottom:1rem">
+      ⚠️ Key girilip kaydedildikten sonra bir daha görüntülenemez.
+    </p>
+ 
+    <div class="modal-actions">
+      <button class="btn" data-modal-close="keyTanimlaModal">İptal</button>
+      <button class="btn primary" id="btnKullaniciKeyKaydet" onclick="window.kullaniciKeyKaydet()">Kaydet</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════
      GLOBAL UI ELEMANLAR
