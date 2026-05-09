@@ -151,10 +151,12 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   // Erişim kontrolü
+  const isAdmin = ADMIN_EMAILS.includes(user.email);
   let userSnap;
+  let userRef;
   try {
-    const userRef = doc(db, 'users', user.uid);
-    userSnap      = await getDoc(userRef);
+    userRef  = doc(db, 'users', user.uid);
+    userSnap = await getDoc(userRef);
   } catch (e) {
     showToast('Firebase bağlantı hatası: ' + (e?.message || 'Bilinmeyen hata'), 'error');
     el('loadingScreen').classList.add('hide');
@@ -162,11 +164,33 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  const userRef = doc(db, 'users', user.uid);
-  const isAdmin = ADMIN_EMAILS.includes(user.email);
+  // Kayıt yoksa otomatik oluştur — onay bekliyor
+  if (!userSnap.exists() && !isAdmin) {
+    try {
+      await setDoc(userRef, {
+        email:       user.email,
+        name:        user.displayName || '',
+        plan:        'free',
+        active:      false,
+        isAdmin:     false,
+        createdAt:   serverTimestamp(),
+        takipEdilen: [],
+        portfoy:     {},
+        veriler:     {},
+        apiKeySet:   false,
+      });
+    } catch (e) {
+      showToast('Kayıt oluşturulamadı: ' + (e?.message || 'Hata'), 'error');
+    }
+    showToast('Erişim talebiniz alındı. Admin onayı bekleniyor.', 'error');
+    await signOut(auth);
+    el('authScreen').style.display = 'flex';
+    return;
+  }
 
-  if (!isAdmin && !userSnap.exists()) {
-    showToast('Bu e-posta ile erişim izniniz yok.', 'error');
+  // Kayıt var ama onaysız
+  if (!isAdmin && !userSnap.data()?.active) {
+    showToast('Hesabınız henüz onaylanmadı. Lütfen bekleyin.', 'error');
     await signOut(auth);
     el('authScreen').style.display = 'flex';
     return;
@@ -834,9 +858,16 @@ async function loadAdminPanel() {
           (!u.isAdmin
             ? '<button class="btn" onclick="window.kullaniciKeyTanimla(\'' + u.id + '\',\'' + (u.name || u.email) + '\')" ' +
               'style="font-size:0.65rem;padding:2px 7px">🔑 Key</button>' +
+              '<button class="btn danger" onclick="window.kullaniciDevreDisi(\'' + u.id + '\')" ' +
+              'style="font-size:0.65rem;padding:2px 7px">⊘ Ban</button>' +
               '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
               'style="font-size:0.65rem;padding:2px 6px">Sil</button>'
-            : '') +
+            : (u.active === false
+              ? '<button class="btn primary" onclick="window.kullaniciOnayla(\'' + u.id + '\')" ' +
+                'style="font-size:0.65rem;padding:2px 7px">✓ Onayla</button>' +
+                '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
+                'style="font-size:0.65rem;padding:2px 6px">Sil</button>'
+              : '')) +
         '</div>'
       ).join('');
     }
@@ -899,6 +930,27 @@ window.kullaniciKeyKaydet = async () => {
     showToast('Key kaydedilemedi: ' + (e?.message || 'Hata'), 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Kaydet'; }
+  }
+};
+
+window.kullaniciOnayla = async (uid) => {
+  try {
+    await updateDoc(doc(db, 'users', uid), { active: true });
+    showToast('Kullanıcı onaylandı ✓');
+    loadAdminPanel();
+  } catch (e) {
+    showToast('Hata: ' + e.message, 'error');
+  }
+};
+
+window.kullaniciDevreDisi = async (uid) => {
+  if (!confirm('Kullanıcı devre dışı bırakılsın mı?')) return;
+  try {
+    await updateDoc(doc(db, 'users', uid), { active: false });
+    showToast('Kullanıcı devre dışı bırakıldı');
+    loadAdminPanel();
+  } catch (e) {
+    showToast('Hata: ' + e.message, 'error');
   }
 };
 
