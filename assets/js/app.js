@@ -854,20 +854,20 @@ async function loadAdminPanel() {
           '<span style="font-size:0.65rem;color:' + (u.apiKeySet ? 'var(--accent)' : 'var(--muted)') + '">' +
             (u.apiKeySet ? '🔑' : '○') +
           '</span>' +
-          // Key tanımlama butonu (admin olmayan kullanıcılar için)
+          // Aksiyon butonları (admin olmayan kullanıcılar için)
           (!u.isAdmin
-            ? '<button class="btn" onclick="window.kullaniciKeyTanimla(\'' + u.id + '\',\'' + (u.name || u.email) + '\')" ' +
-              'style="font-size:0.65rem;padding:2px 7px">🔑 Key</button>' +
-              '<button class="btn danger" onclick="window.kullaniciDevreDisi(\'' + u.id + '\')" ' +
-              'style="font-size:0.65rem;padding:2px 7px">⊘ Ban</button>' +
-              '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
-              'style="font-size:0.65rem;padding:2px 6px">Sil</button>'
-            : (u.active === false
-              ? '<button class="btn primary" onclick="window.kullaniciOnayla(\'' + u.id + '\')" ' +
-                'style="font-size:0.65rem;padding:2px 7px">✓ Onayla</button>' +
+            ? (u.active
+              ? '<button class="btn" onclick="window.kullaniciKeyTanimla(\'' + u.id + '\',\'' + (u.name || u.email) + '\')" ' +
+                'style="font-size:0.65rem;padding:2px 7px">🔑 Key</button>' +
+                '<button class="btn danger" onclick="window.kullaniciDevreDisi(\'' + u.id + '\')" ' +
+                'style="font-size:0.65rem;padding:2px 7px">⊘ Ban</button>' +
                 '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
                 'style="font-size:0.65rem;padding:2px 6px">Sil</button>'
-              : '')) +
+              : '<button class="btn primary" onclick="window.kullaniciOnayla(\'' + u.id + '\')" ' +
+                'style="font-size:0.65rem;padding:2px 7px">✓ Onayla</button>' +
+                '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
+                'style="font-size:0.65rem;padding:2px 6px">Sil</button>')
+            : '') +
         '</div>'
       ).join('');
     }
