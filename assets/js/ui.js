@@ -74,52 +74,137 @@ function _piyasaYonBilgi(deg) {
   return             { etiket: 'Güçlü Düşüş',    cls: 'dusus',    aciklama: 'SAT baskısı var' };
 }
 
-export function renderPiyasaKartlari() {
-  const { xu100, xu030, usdtry, eurtry } = state.piyasaVerisi;
-  const container = el('piyasaKartlari');
-  if (!container) return;
+// ══════════════════════════════════════════════
+// PATCH: ui.js — renderPiyasaKartlari
+//
+// Eski renderPiyasaKartlari ve renderPiyasaYonu
+// fonksiyonlarını BU KODLA DEĞİŞTİR.
+//
+// Yeni özellikler:
+//  • BIST 100 + piyasa yön etiketi
+//  • BIST 30
+//  • USD/TRY  |  EUR/TRY  |  EUR/USD
+//  • ALTIN gram / çeyrek / tam (TL)
+//  • Kayan (marquee) animasyonu — tüm sayfalarda
+// ══════════════════════════════════════════════
 
-  const _item = (label, deger, degisim, tersCls = false) => {
-    if (!deger) return '';
-    const d = parseFloat(degisim) || 0;
-    const posCls = tersCls ? 'neg' : 'pos';
-    const negCls = tersCls ? 'pos' : 'neg';
-    return `<div class="ticker-item">
-      <span class="ticker-label">${label}</span>
-      <span class="ticker-value">${deger}</span>
-      <span class="ticker-change ${d >= 0 ? posCls : negCls}">${d >= 0 ? '+' : ''}${d}%</span>
-    </div>`;
-  };
-
-  const xu100Html = xu100
-    ? (() => {
-        const { etiket, cls } = _piyasaYonBilgi(xu100.degisim);
-        return `<div class="ticker-item">
-          <span class="ticker-label">BIST 100</span>
-          <span class="ticker-value">${xu100.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
-          <span class="ticker-change ${xu100.degisim >= 0 ? 'pos' : 'neg'}">${xu100.degisim >= 0 ? '+' : ''}${xu100.degisim}%</span>
-          <span class="ticker-yon ${cls}">${etiket}</span>
-        </div>`;
-      })()
-    : '';
-    const xu030Html = xu030
-    ? `<div class="ticker-item">
-        <span class="ticker-label">BIST 30</span>
-        <span class="ticker-value">${xu030.fiyat?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
-        <span class="ticker-change ${xu030.degisim >= 0 ? 'pos' : 'neg'}">${xu030.degisim >= 0 ? '+' : ''}${xu030.degisim}%</span>
-      </div>`
-    : '';
-  container.innerHTML =
-    xu100Html +
-    xu030Html +
-    _item('USD / TRY', usdtry ? usdtry.fiyat?.toFixed(2) + ' ₺' : null, usdtry?.degisim, true) +
-    _item('EUR / TRY', eurtry ? eurtry.fiyat?.toFixed(2) + ' ₺' : null, eurtry?.degisim, true);
+// ─────────────────────────────────────────────
+// Yardımcı: para formatı
+// ─────────────────────────────────────────────
+function _fmt(sayi, ondalik = 2) {
+  if (!sayi && sayi !== 0) return '—';
+  return sayi.toLocaleString('tr-TR', {
+    minimumFractionDigits: ondalik,
+    maximumFractionDigits: ondalik,
+  });
 }
 
+// ─────────────────────────────────────────────
+// Piyasa yönü metni (BIST 100 için)
+// ─────────────────────────────────────────────
+function _piyasaYonBilgi(deg) {
+  if (deg >= 1.5)  return { etiket: 'Güçlü Yükseliş', cls: 'yukselis' };
+  if (deg >= 0)    return { etiket: 'Yatay / +',       cls: 'yatay'    };
+  if (deg >= -1.5) return { etiket: 'Hafif Düşüş',     cls: 'yatay'    };
+  return             { etiket: 'Güçlü Düşüş',     cls: 'dusus'    };
+}
+
+// ─────────────────────────────────────────────
+// Tek bir ticker öğesi oluştur
+// ─────────────────────────────────────────────
+function _tickerItem(label, deger, degisim, tersCls = false, ek = '') {
+  if (!deger) return '';
+  const d      = parseFloat(degisim) || 0;
+  const artis  = tersCls ? (d < 0) : (d >= 0);   // tersCls: kur yükselince kötü
+  const cls    = artis ? 'pos' : 'neg';
+  const isaret = d >= 0 ? '+' : '';
+  return `<div class="ticker-item">
+    <span class="ticker-label">${label}</span>
+    <span class="ticker-value">${deger}</span>
+    <span class="ticker-change ${cls}">${isaret}${d}%</span>
+    ${ek}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// Ana render fonksiyonu
+// ─────────────────────────────────────────────
+export function renderPiyasaKartlari() {
+  const { xu100, xu030, usdtry, eurtry, eurusd, altin } = state.piyasaVerisi;
+
+  // ── BIST 100 (yön etiketli) ───────────────
+  const bist100Html = xu100 ? (() => {
+    const { etiket, cls } = _piyasaYonBilgi(xu100.degisim);
+    const d = xu100.degisim || 0;
+    const artis = d >= 0;
+    return `<div class="ticker-item">
+      <span class="ticker-label">BIST 100</span>
+      <span class="ticker-value">${_fmt(xu100.fiyat, 0)}</span>
+      <span class="ticker-change ${artis ? 'pos' : 'neg'}">${artis ? '+' : ''}${d}%</span>
+      <span class="ticker-yon ${cls}">${etiket}</span>
+    </div>`;
+  })() : '';
+
+  // ── BIST 30 ───────────────────────────────
+  const bist30Html = _tickerItem(
+    'BIST 30',
+    xu030 ? _fmt(xu030.fiyat, 0) : null,
+    xu030?.degisim,
+  );
+
+  // ── Döviz ─────────────────────────────────
+  const usdHtml  = _tickerItem('USD/TRY',  usdtry ? _fmt(usdtry.fiyat) + ' ₺' : null, usdtry?.degisim, true);
+  const eurHtml  = _tickerItem('EUR/TRY',  eurtry ? _fmt(eurtry.fiyat) + ' ₺' : null, eurtry?.degisim, true);
+  const euusdHtml = _tickerItem('EUR/USD', eurusd ? _fmt(eurusd.fiyat, 4)        : null, eurusd?.degisim);
+
+  // ── Altın ─────────────────────────────────
+  let altinHtml = '';
+  if (altin) {
+    const d   = altin.degisim || 0;
+    const cls = d >= 0 ? 'pos' : 'neg';
+    const isk = d >= 0 ? '+' : '';
+
+    if (altin.gramTL) {
+      altinHtml += `<div class="ticker-item">
+        <span class="ticker-label">ALTIN GR</span>
+        <span class="ticker-value">${_fmt(altin.gramTL)} ₺</span>
+        <span class="ticker-change ${cls}">${isk}${d}%</span>
+      </div>`;
+    }
+    if (altin.ceyrekTL) {
+      altinHtml += `<div class="ticker-item">
+        <span class="ticker-label">ÇEYREK</span>
+        <span class="ticker-value">${_fmt(altin.ceyrekTL, 0)} ₺</span>
+        <span class="ticker-change ${cls}">${isk}${d}%</span>
+      </div>`;
+    }
+    if (altin.tamTL) {
+      altinHtml += `<div class="ticker-item">
+        <span class="ticker-label">TAM ALTIN</span>
+        <span class="ticker-value">${_fmt(altin.tamTL, 0)} ₺</span>
+        <span class="ticker-change ${cls}">${isk}${d}%</span>
+      </div>`;
+    }
+  }
+
+  // ── İçerik birleştir ─────────────────────
+  const icerik = bist100Html + bist30Html + usdHtml + eurHtml + euusdHtml + altinHtml;
+
+  // Her ticker-bar'ı güncelle (dashboard + diğer paneller)
+  document.querySelectorAll('.ticker-bar').forEach(container => {
+    // Kayan animasyon: inner wrapper ile
+    container.innerHTML = `
+      <div class="ticker-track">
+        <div class="ticker-inner">${icerik}</div>
+        <div class="ticker-inner" aria-hidden="true">${icerik}</div>
+      </div>`;
+  });
+}
+
+// Alias — geriye dönük uyumluluk
 export function renderPiyasaYonu() {
   renderPiyasaKartlari();
 }
-
 // ─────────────────────────────────────────────
 // ÖZET KARTLAR (takip, güçlü al/sat, isabet)
 // ─────────────────────────────────────────────

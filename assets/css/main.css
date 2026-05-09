@@ -1049,3 +1049,118 @@ tr:last-child td { border-bottom:none; }
   .panel[data-panel] {
     min-width: 0;  /* flex child taşmasını önler */
   }
+  /* ══════════════════════════════════════════════
+   HisseMatik — CSS PATCH: Kayan Ticker Şeridi
+   main.css'in SONUNA ekle (mevcut .ticker-bar
+   kurallarını bu blok override eder).
+   ══════════════════════════════════════════════ */
+
+/* ── Ticker dış kap (sabit, overflow gizli) ── */
+.ticker-bar {
+  position: sticky;
+  top: 0;
+  z-index: 80;           /* topbar altında kalır */
+  display: block;
+  overflow: hidden;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  height: 36px;
+  /* Yükseklik sabit — içerik kayar */
+}
+
+/* ── Track: flex row, taşar ── */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 60s linear infinite;
+}
+
+/* Hover → durdur */
+.ticker-bar:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+/* ── İki kopya yan yana (seamless loop) ── */
+.ticker-inner {
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* ── Tek öğe ── */
+.ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1.1rem;
+  height: 36px;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+  transition: background 0.15s;
+}
+.ticker-item:hover {
+  background: var(--bg3);
+}
+
+.ticker-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+}
+.ticker-value {
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.ticker-change {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.ticker-change.pos { color: var(--accent); }
+.ticker-change.neg { color: var(--red);    }
+
+/* Piyasa yön etiketi (BIST 100 yanı) */
+.ticker-yon {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.ticker-yon.yukselis { background: rgba(0,229,160,0.12); color: var(--accent); }
+.ticker-yon.yatay    { background: rgba(255,209,102,0.12); color: var(--yellow); }
+.ticker-yon.dusus    { background: rgba(239,83,80,0.12);  color: var(--red);    }
+
+/* ── Kayan animasyon ── */
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── Yükleme durumu (veri gelmeden) ── */
+.ticker-bar:empty::after,
+.ticker-bar .ticker-loading {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 1rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  content: 'Piyasa verisi yükleniyor...';
+}
+
+/* ── Mobil: daha küçük font ── */
+@media (max-width: 640px) {
+  .ticker-bar    { height: 32px; }
+  .ticker-item   { padding: 0 0.75rem; height: 32px; gap: 0.4rem; }
+  .ticker-value  { font-size: 0.78rem; }
+  .ticker-label  { font-size: 0.58rem; }
+  .ticker-change { font-size: 0.7rem; }
+  .ticker-yon    { display: none; } /* mobilde yer kaplıyor */
+}

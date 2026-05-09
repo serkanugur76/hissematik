@@ -414,6 +414,13 @@ window.verileriGuncelle = async () => {
 // PİYASA VERİSİ
 // ─────────────────────────────────────────────
 
+// ══════════════════════════════════════════════
+// PATCH: app.js — _piyasaVerisiCek fonksiyonu
+//
+// Mevcut _piyasaVerisiCek fonksiyonunu BU KODLA DEĞİŞTİR.
+// Yeni semboller: ^XU030, EURUSD=X, GC=F
+// ══════════════════════════════════════════════
+
 async function _piyasaVerisiCek() {
   try {
     const data = await fetchPiyasaVerisi();
@@ -421,7 +428,8 @@ async function _piyasaVerisiCek() {
 
     const pv = { ...state.piyasaVerisi };
 
-    const xu100 = data['XU100.IS']?.chart?.result?.[0];
+    // ── BIST 100 ──────────────────────────────
+    const xu100 = data['^XU100']?.chart?.result?.[0];
     if (xu100) {
       const f = xu100.meta.regularMarketPrice || 0;
       const o = xu100.meta.chartPreviousClose  || 0;
@@ -430,6 +438,15 @@ async function _piyasaVerisiCek() {
       pv.yon   = d;
     }
 
+    // ── BIST 30 ───────────────────────────────
+    const xu030 = data['^XU030']?.chart?.result?.[0];
+    if (xu030) {
+      const f = xu030.meta.regularMarketPrice || 0;
+      const o = xu030.meta.chartPreviousClose  || 0;
+      pv.xu030 = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    }
+
+    // ── USD/TRY ───────────────────────────────
     const usdtry = data['USDTRY=X']?.chart?.result?.[0];
     if (usdtry) {
       const f = usdtry.meta.regularMarketPrice || 0;
@@ -437,11 +454,48 @@ async function _piyasaVerisiCek() {
       pv.usdtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
 
+    // ── EUR/TRY ───────────────────────────────
     const eurtry = data['EURTRY=X']?.chart?.result?.[0];
     if (eurtry) {
       const f = eurtry.meta.regularMarketPrice || 0;
       const o = eurtry.meta.chartPreviousClose  || 0;
       pv.eurtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    }
+
+    // ── EUR/USD ───────────────────────────────
+    const eurusd = data['EURUSD=X']?.chart?.result?.[0];
+    if (eurusd) {
+      const f = eurusd.meta.regularMarketPrice || 0;
+      const o = eurusd.meta.chartPreviousClose  || 0;
+      pv.eurusd = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    }
+
+    // ── ALTIN (ONS, USD) ─────────────────────
+    // GC=F = COMEX Gold Futures (ons, USD)
+    // Gram altın ≈ ons / 31.1035 * USD/TRY
+    // Çeyrek ≈ gram * 1.75g (Türkiye standardı 1.75gr)
+    // Tam     ≈ gram * 7.00g
+    const altinOns = data['GC=F']?.chart?.result?.[0];
+    if (altinOns) {
+      const onsUsd = altinOns.meta.regularMarketPrice || 0;
+      const onsUsdOnce = altinOns.meta.chartPreviousClose || 0;
+      const degisim = onsUsdOnce > 0
+        ? +((onsUsd - onsUsdOnce) / onsUsdOnce * 100).toFixed(2)
+        : 0;
+
+      // Gram TL hesabı (USD/TRY gerekli)
+      const kur = pv.usdtry?.fiyat || 0;
+      const gramTL  = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
+      const ceyrekTL = gramTL > 0 ? +(gramTL * 1.75).toFixed(2) : 0;
+      const tamTL    = gramTL > 0 ? +(gramTL * 7.00).toFixed(2)  : 0;
+
+      pv.altin = {
+        onsUsd,          // ons fiyatı (USD)
+        gramTL,          // gram TL
+        ceyrekTL,        // çeyrek altın TL (1.75g)
+        tamTL,           // tam altın TL (7g)
+        degisim,         // ons bazında % değişim
+      };
     }
 
     setState({ piyasaVerisi: pv });
@@ -450,7 +504,6 @@ async function _piyasaVerisiCek() {
     console.error('_piyasaVerisiCek hatası:', e);
   }
 }
-
 // ─────────────────────────────────────────────
 // SİNYAL DOĞRULAMA
 // ─────────────────────────────────────────────
