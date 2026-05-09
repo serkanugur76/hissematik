@@ -129,7 +129,7 @@ if (!navigator.onLine) _offlineBannerGoster();
 
 window.googleLogin = async () => {
   try {
-    await signInWithRedirect(auth, provider);
+    await signInWithPopup(auth, provider);
   } catch (e) {
     showToast('Giriş başarısız: ' + e.message, 'error');
   }
