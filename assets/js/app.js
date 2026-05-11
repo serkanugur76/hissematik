@@ -527,6 +527,7 @@ async function _sinyalleriDogrula() {
 
 async function toggleTakip(k) {
   if (state.takipEdilen.has(k)) {
+    if (!confirm(k + ' takip listesinden çıkarılsın mı?')) return;
     state.takipEdilen.delete(k);
   } else {
     state.takipEdilen.add(k);
