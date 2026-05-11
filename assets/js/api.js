@@ -179,34 +179,46 @@ function temizleKey(key) {
   return (key || '').replace(/[^a-zA-Z0-9\-_]/g, '').trim();
 }
 
-/** Claude'a istek at — ham metin + token sayısı döner */
-async function claudeIste(key, mesajlar, maxToken = 1000) {
-  const res = await fetch(CLAUDE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'x-api-key':     temizleKey(key),
-      'anthropic-version': CLAUDE_VER,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model:      MODEL,
-      max_tokens: maxToken,
-      messages:   mesajlar,
-    }),
-  });
+/**
+ * Claude'a istek at — ham metin + token sayısı döner.
+ * @param {string}   key       — Anthropic API key
+ * @param {object[]} mesajlar  — messages dizisi
+ * @param {number}   maxToken  — max_tokens (varsayılan 1000)
+ * @param {number}   zaman     — ms cinsinden timeout (varsayılan 25 sn)
+ */
+async function claudeIste(key, mesajlar, maxToken = 1000, zaman = 25000) {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), zaman);
+
+  let res;
+  try {
+    res = await fetch(CLAUDE_URL, {
+      signal: controller.signal,
+      method: 'POST',
+      headers: {
+        'Content-Type':            'application/json',
+        'x-api-key':               temizleKey(key),
+        'anthropic-version':       CLAUDE_VER,
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({ model: MODEL, max_tokens: maxToken, messages: mesajlar }),
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('API_TIMEOUT');
+    throw e;
+  }
+  clearTimeout(timeoutId);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    // 401 → key geçersiz veya tükenmiş
     if (res.status === 401) throw new Error('API_KEY_INVALID');
-    // 429 → rate limit / quota aşıldı
     if (res.status === 429) throw new Error('API_QUOTA_EXCEEDED');
     throw new Error(err?.error?.message || 'Claude API hatası: ' + res.status);
   }
 
-  const data = await res.json();
-  const text = data?.content?.[0]?.text || '';
+  const data   = await res.json();
+  const text   = data?.content?.[0]?.text || '';
   const tokens = (data?.usage?.input_tokens || 0) + (data?.usage?.output_tokens || 0);
   return { text, tokens };
 }
@@ -495,6 +507,7 @@ export async function aiGunSonuOzeti({ key, analizler }) {
 function _apiHataYonet(e) {
   if (e?.message === 'API_KEY_INVALID')    return '⚠️ AI erişiminiz tanımlı değil veya geçersiz. Lütfen yöneticinizle iletişime geçin.';
   if (e?.message === 'API_QUOTA_EXCEEDED') return '⚠️ AI kullanım limitiniz doldu. Lütfen yöneticinizle iletişime geçin.';
+  if (e?.message === 'API_TIMEOUT')        return '⚠️ AI yanıt vermedi (zaman aşımı). Lütfen tekrar deneyin.';
   return 'AI analizi yapılamadı: ' + (e?.message || 'Bağlantı hatası');
 }
 

@@ -364,16 +364,13 @@ window.verileriGuncelle = async () => {
   if (aiGerekliMi()) {
     setLoadingMsg('AI analiz yapılıyor...');
     try {
-      aiYorum = await Promise.race([
-        aiPortfoyAnalizYap({
-          key:           aktifKey(),
-          veriler:       state.veriler,
-          takipEdilen:   state.takipEdilen,
-          sinyalGecmisi: state.sinyalGecmisi,
-          piyasaVerisi:  state.piyasaVerisi,
-        }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
-      ]).catch(() => '');
+      aiYorum = await aiPortfoyAnalizYap({
+        key:           aktifKey(),
+        veriler:       state.veriler,
+        takipEdilen:   state.takipEdilen,
+        sinyalGecmisi: state.sinyalGecmisi,
+        piyasaVerisi:  state.piyasaVerisi,
+      });
     } catch (_) {}
   }
 

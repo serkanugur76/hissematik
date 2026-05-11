@@ -365,9 +365,12 @@ export function sinyalClass(sinyal) {
 // YAHOO VERİSİNİ PARSE ET
 // ─────────────────────────────────────────────
 
-export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
+/**
+ * @param {object} result  — json.chart.result[0] (api.js tarafından çözülmüş)
+ * @param {number} [piyasaYon] — BIST100 günlük % değişimi, sinyal filtrelemesi için
+ */
+export function parseYahooVeri(result, piyasaYon = undefined) {
   try {
-    const result = json?.chart?.result?.[0];
     if (!result) return null;
 
     const meta     = result.meta;
@@ -458,7 +461,7 @@ export function parseYahooVeri(sembol, json, piyasaYon = undefined) {
       ts:          Date.now(),
     };
   } catch (e) {
-    console.error('parseYahooVeri hatası:', sembol, e);
+    console.error('parseYahooVeri hatası:', result?.meta?.symbol || '?', e);
     return null;
   }
 }
