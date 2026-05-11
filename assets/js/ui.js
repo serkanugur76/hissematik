@@ -63,16 +63,6 @@ export function renderTopbar() {
   }
 }
 
-// ─────────────────────────────────────────────
-// PİYASA KARTLARI (BIST100 / USD / EUR)
-// ─────────────────────────────────────────────
-
-function _piyasaYonBilgi(deg) {
-  if (deg >= 1.5)  return { etiket: 'Güçlü Yükseliş', cls: 'yukselis', aciklama: 'AL sinyalleri güçlü' };
-  if (deg >= 0)    return { etiket: 'Yatay / Hafif +', cls: 'yatay',    aciklama: 'Seçici alım yapılabilir' };
-  if (deg >= -1.5) return { etiket: 'Hafif Düşüş',    cls: 'yatay',    aciklama: 'AL sinyallerine dikkat' };
-  return             { etiket: 'Güçlü Düşüş',    cls: 'dusus',    aciklama: 'SAT baskısı var' };
-}
 
 // ══════════════════════════════════════════════
 // PATCH: ui.js — renderPiyasaKartlari
