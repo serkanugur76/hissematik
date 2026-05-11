@@ -73,7 +73,7 @@
     </nav>
 
     <div class="topbar-right">
-      <span id="statusIndicator">
+      <span id="statusIndicator" class="topbar-status">
         <span class="status-dot" id="statusDot"></span>
         <span id="statusText">Bekleniyor</span>
       </span>
@@ -82,13 +82,74 @@
 
       <div class="user-pill">
         <div class="user-avatar" id="userAvatar">?</div>
-        <span id="userName">...</span>
+        <span id="userName" class="user-name-text">...</span>
         <span class="admin-badge" id="adminBadge">ADMIN</span>
       </div>
 
-      <button class="btn" id="btnLogout">Çıkış</button>
+      <button class="btn topbar-logout-btn" id="btnLogout">Çıkış</button>
+    </div>
+
+    <!-- Mobil: sağ taraf kompakt -->
+    <div class="topbar-mobile-right">
+      <button class="btn primary btn-sm" id="btnGuncelleMobil">⟳</button>
+      <button class="hamburger-btn" id="btnHamburger" aria-label="Menü" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </header>
+
+  <!-- ── MOBİL MENÜ OVERLAY ── -->
+  <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+      <div class="mobile-menu-user">
+        <div class="user-avatar" id="mobileUserAvatar">?</div>
+        <div class="mobile-menu-user-info">
+          <div class="mobile-menu-user-name" id="mobileUserName">...</div>
+          <div class="mobile-menu-status">
+            <span class="status-dot" id="mobileStatusDot"></span>
+            <span id="mobileStatusText">Bekleniyor</span>
+          </div>
+        </div>
+      </div>
+      <button class="mobile-menu-close" id="btnMobileMenuClose" aria-label="Kapat">✕</button>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav">
+      <button class="mobile-nav-item active" data-tab="dashboard">
+        <span class="mobile-nav-icon">📊</span>
+        <span>Dashboard</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="hisseler">
+        <span class="mobile-nav-icon">📈</span>
+        <span>Hisseler</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="sinyaller">
+        <span class="mobile-nav-icon">🎯</span>
+        <span>Sinyal Geçmişi</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="portfoy">
+        <span class="mobile-nav-icon">💼</span>
+        <span>Portföy</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="haberler">
+        <span class="mobile-nav-icon">📰</span>
+        <span>Haberler</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="sozluk">
+        <span class="mobile-nav-icon">📚</span>
+        <span>Sözlük</span>
+      </button>
+      <button class="mobile-nav-item admin-only" data-tab="admin" style="display:none">
+        <span class="mobile-nav-icon">⚙</span>
+        <span>Admin</span>
+      </button>
+    </nav>
+
+    <div class="mobile-menu-footer">
+      <button class="btn danger" id="btnLogoutMobil">Çıkış Yap</button>
+    </div>
+  </div>
 
   <!-- ── SPK UYARI BANDI ── -->
   <div id="spkUyari" class="spk-bar">

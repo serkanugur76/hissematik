@@ -791,12 +791,64 @@ async function pushTerimGonderById(id) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // Tab navigasyonu
+  // Tab navigasyonu — desktop
   el('mainNav').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-tab]');
     if (!btn) return;
     _switchTab(btn.dataset.tab, btn);
   });
+
+  // Tab navigasyonu — mobil menü
+  el('mobileNav')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-tab]');
+    if (!btn) return;
+    // Mobil nav aktif item güncelle
+    el('mobileNav').querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Desktop nav aktif item senkronize et
+    el('mainNav').querySelectorAll('[data-tab]').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === btn.dataset.tab);
+    });
+    _switchTab(btn.dataset.tab, null);
+    _closeMobileMenu();
+  });
+
+  // Hamburger aç/kapat
+  function _openMobileMenu() {
+    el('mobileMenu')?.classList.add('open');
+    el('mobileMenuOverlay')?.classList.add('show');
+    el('btnHamburger')?.classList.add('open');
+    el('btnHamburger')?.setAttribute('aria-expanded', 'true');
+    // Kullanıcı bilgilerini mobil menüye senkronize et
+    const name   = el('userName')?.textContent;
+    const avatar = el('userAvatar')?.textContent;
+    if (el('mobileUserName'))  el('mobileUserName').textContent  = name  || '...';
+    if (el('mobileUserAvatar')) el('mobileUserAvatar').textContent = avatar || '?';
+    // Status senkronize et
+    const dotCls = el('statusDot')?.className;
+    const statusTxt = el('statusText')?.textContent;
+    if (el('mobileStatusDot') && dotCls)   el('mobileStatusDot').className   = dotCls;
+    if (el('mobileStatusText') && statusTxt) el('mobileStatusText').textContent = statusTxt;
+  }
+  function _closeMobileMenu() {
+    el('mobileMenu')?.classList.remove('open');
+    el('mobileMenuOverlay')?.classList.remove('show');
+    el('btnHamburger')?.classList.remove('open');
+    el('btnHamburger')?.setAttribute('aria-expanded', 'false');
+  }
+
+  el('btnHamburger')?.addEventListener('click', () => {
+    const isOpen = el('mobileMenu')?.classList.contains('open');
+    isOpen ? _closeMobileMenu() : _openMobileMenu();
+  });
+  el('btnMobileMenuClose')?.addEventListener('click', _closeMobileMenu);
+  el('mobileMenuOverlay')?.addEventListener('click', _closeMobileMenu);
+
+  // Mobil güncelle butonu
+  el('btnGuncelleMobil')?.addEventListener('click', () => window.verileriGuncelle());
+
+  // Mobil çıkış
+  el('btnLogoutMobil')?.addEventListener('click', () => window.logout());
 
   // Hisse filtre chip'leri
   document.querySelectorAll('.chip[data-filter]').forEach(btn => {

@@ -54,8 +54,17 @@ export function renderTopbar() {
   const { currentUser, isAdmin } = state;
   if (!currentUser) return;
 
-  el('userName').textContent  = (currentUser.displayName || currentUser.email).split(' ')[0];
-  el('userAvatar').textContent = (currentUser.displayName || currentUser.email)[0].toUpperCase();
+  const name   = (currentUser.displayName || currentUser.email).split(' ')[0];
+  const avatar = (currentUser.displayName || currentUser.email)[0].toUpperCase();
+
+  el('userName').textContent   = name;
+  el('userAvatar').textContent = avatar;
+
+  // Mobil menü kullanıcı bilgilerini senkronize et
+  const mobileUserName   = el('mobileUserName');
+  const mobileUserAvatar = el('mobileUserAvatar');
+  if (mobileUserName)   mobileUserName.textContent   = name;
+  if (mobileUserAvatar) mobileUserAvatar.textContent = avatar;
 
   if (isAdmin) {
     el('adminBadge').style.display = 'inline';
@@ -944,11 +953,17 @@ export function showPushBildirim(baslik, mesaj) {
 // ─────────────────────────────────────────────
 
 export function switchTab(name, buttonEl) {
+  // Desktop nav
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   if (buttonEl) buttonEl.classList.add('active');
   const target = el('panel-' + name);
   if (target) target.classList.add('active');
+
+  // Mobil nav senkronize et
+  document.querySelectorAll('.mobile-nav-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
 }
 
 // ─────────────────────────────────────────────
