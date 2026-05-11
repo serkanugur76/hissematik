@@ -364,13 +364,16 @@ window.verileriGuncelle = async () => {
   if (aiGerekliMi()) {
     setLoadingMsg('AI analiz yapılıyor...');
     try {
-      aiYorum = await aiPortfoyAnalizYap({
-        key:           aktifKey(),
-        veriler:       state.veriler,
-        takipEdilen:   state.takipEdilen,
-        sinyalGecmisi: state.sinyalGecmisi,
-        piyasaVerisi:  state.piyasaVerisi,
-      });
+      aiYorum = await Promise.race([
+        aiPortfoyAnalizYap({
+          key:           aktifKey(),
+          veriler:       state.veriler,
+          takipEdilen:   state.takipEdilen,
+          sinyalGecmisi: state.sinyalGecmisi,
+          piyasaVerisi:  state.piyasaVerisi,
+        }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
+      ]).catch(() => '');
     } catch (_) {}
   }
 
@@ -819,12 +822,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Güncelle
   el('btnGuncelle')?.addEventListener('click', () => window.verileriGuncelle());
 
-  // Hisse arama
-  el('hisseAraInput')?.addEventListener('keydown', (e) => {
+  // Hisse arama — yazarken anlik suzme + Enter ile yeni hisse cekme
+  el('searchInput')?.addEventListener('input', () => renderHisseler());
+  el('searchInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') window.hisseAra(e.target.value);
   });
   el('btnHisseAra')?.addEventListener('click', () => {
-    window.hisseAra(el('hisseAraInput')?.value || '');
+    window.hisseAra(el('searchInput')?.value || '');
   });
 
   // Sözlük
