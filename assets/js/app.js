@@ -364,16 +364,13 @@ window.verileriGuncelle = async () => {
   if (aiGerekliMi()) {
     setLoadingMsg('AI analiz yapılıyor...');
     try {
-      aiYorum = await Promise.race([
-        aiPortfoyAnalizYap({
-          key:           aktifKey(),
-          veriler:       state.veriler,
-          takipEdilen:   state.takipEdilen,
-          sinyalGecmisi: state.sinyalGecmisi,
-          piyasaVerisi:  state.piyasaVerisi,
-        }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
-      ]).catch(() => '');
+      aiYorum = await aiPortfoyAnalizYap({
+        key:           aktifKey(),
+        veriler:       state.veriler,
+        takipEdilen:   state.takipEdilen,
+        sinyalGecmisi: state.sinyalGecmisi,
+        piyasaVerisi:  state.piyasaVerisi,
+      });
     } catch (_) {}
   }
 
@@ -664,7 +661,7 @@ async function _loadHaberler() {
   try {
     state.haberlerData = await fetchHaberler();
     setState({ haberlerYuklendi: true });
-    renderHaberler(state.haberlerData);
+    renderHaberler();
   } catch (e) {
     showToast('Haberler yüklenemedi: ' + (e?.message || 'Bağlantı hatası'), 'error');
   } finally {
@@ -890,40 +887,79 @@ async function loadAdminPanel() {
       adminKeyEl.style.color = aktifKey() ? 'var(--accent)' : 'var(--red)';
     }
 
-    // Kullanıcı listesi — her satırda key tanımlama butonu
+    // Kullanıcı listesi — event delegation ile onclick yok
     const kulListEl = el('kullaniciListesi');
     if (kulListEl) {
-      kulListEl.innerHTML = users.map(u =>
-        '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">' +
-          '<div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--accent);flex-shrink:0">' +
-            (u.name || u.email)[0].toUpperCase() +
-          '</div>' +
-          '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:0.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis">' + (u.name || '—') + '</div>' +
-            '<div style="font-size:0.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis">' + u.email + '</div>' +
-          '</div>' +
-          '<span class="pill ' + (u.active ? 'al' : 'bekle') + '">' + (u.active ? 'Aktif' : 'Pasif') + '</span>' +
-          '<span class="pill bekle" style="font-size:0.6rem">' + (u.plan || 'web') + '</span>' +
-          // Key durumu göstergesi
-          '<span style="font-size:0.65rem;color:' + (u.apiKeySet ? 'var(--accent)' : 'var(--muted)') + '">' +
-            (u.apiKeySet ? '🔑' : '○') +
-          '</span>' +
-          // Aksiyon butonları (admin olmayan kullanıcılar için)
-          (!u.isAdmin
-            ? (u.active
-              ? '<button class="btn" onclick="window.kullaniciKeyTanimla(\'' + u.id + '\',\'' + (u.name || u.email) + '\')" ' +
-                'style="font-size:0.65rem;padding:2px 7px">🔑 Key</button>' +
-                '<button class="btn danger" onclick="window.kullaniciDevreDisi(\'' + u.id + '\')" ' +
-                'style="font-size:0.65rem;padding:2px 7px">⊘ Ban</button>' +
-                '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
-                'style="font-size:0.65rem;padding:2px 6px">Sil</button>'
-              : '<button class="btn primary" onclick="window.kullaniciOnayla(\'' + u.id + '\')" ' +
-                'style="font-size:0.65rem;padding:2px 7px">✓ Onayla</button>' +
-                '<button class="btn danger" onclick="window.kullanicisil(\'' + u.id + '\')" ' +
-                'style="font-size:0.65rem;padding:2px 6px">Sil</button>')
-            : '') +
-        '</div>'
-      ).join('');
+      kulListEl.innerHTML = '';
+      users.forEach(u => {
+        const satir = document.createElement('div');
+        satir.style.cssText = 'display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)';
+
+        const avatar = document.createElement('div');
+        avatar.style.cssText = 'width:28px;height:28px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--accent);flex-shrink:0';
+        avatar.textContent = (u.name || u.email)[0].toUpperCase();
+
+        const bilgi = document.createElement('div');
+        bilgi.style.cssText = 'flex:1;min-width:0';
+        bilgi.innerHTML =
+          '<div style="font-size:0.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis">' + (u.name || '—') + '</div>' +
+          '<div style="font-size:0.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis">' + u.email + '</div>';
+
+        const durum = document.createElement('span');
+        durum.className = 'pill ' + (u.active ? 'al' : 'bekle');
+        durum.textContent = u.active ? 'Aktif' : 'Pasif';
+
+        const plan = document.createElement('span');
+        plan.className = 'pill bekle';
+        plan.style.fontSize = '0.6rem';
+        plan.textContent = u.plan || 'web';
+
+        const keyDurum = document.createElement('span');
+        keyDurum.style.cssText = 'font-size:0.65rem;color:' + (u.apiKeySet ? 'var(--accent)' : 'var(--muted)');
+        keyDurum.textContent = u.apiKeySet ? '🔑' : '○';
+
+        satir.append(avatar, bilgi, durum, plan, keyDurum);
+
+        if (!u.isAdmin) {
+          if (u.active) {
+            const btnKey = document.createElement('button');
+            btnKey.className = 'btn';
+            btnKey.style.cssText = 'font-size:0.65rem;padding:2px 7px';
+            btnKey.textContent = '🔑 Key';
+            btnKey.addEventListener('click', () => window.kullaniciKeyTanimla(u.id, u.name || u.email));
+
+            const btnBan = document.createElement('button');
+            btnBan.className = 'btn danger';
+            btnBan.style.cssText = 'font-size:0.65rem;padding:2px 7px';
+            btnBan.textContent = '⊘ Ban';
+            btnBan.addEventListener('click', () => window.kullaniciDevreDisi(u.id));
+
+            const btnSil = document.createElement('button');
+            btnSil.className = 'btn danger';
+            btnSil.style.cssText = 'font-size:0.65rem;padding:2px 6px';
+            btnSil.textContent = 'Sil';
+            btnSil.addEventListener('click', () => window.kullanicisil(u.id));
+
+            satir.append(btnKey, btnBan, btnSil);
+          } else {
+            const btnOnayla = document.createElement('button');
+            btnOnayla.className = 'btn primary';
+            btnOnayla.style.cssText = 'font-size:0.65rem;padding:2px 7px';
+            btnOnayla.textContent = '✓ Onayla';
+            btnOnayla.addEventListener('click', () => window.kullaniciOnayla(u.id));
+
+            const btnSil = document.createElement('button');
+            btnSil.className = 'btn danger';
+            btnSil.style.cssText = 'font-size:0.65rem;padding:2px 6px';
+            btnSil.textContent = 'Sil';
+            btnSil.addEventListener('click', () => window.kullanicisil(u.id));
+
+            satir.append(btnOnayla, btnSil);
+          }
+        }
+
+        kulListEl.appendChild(satir);
+      });
     }
   } catch (e) {
     console.error('Admin yükleme hatası:', e);

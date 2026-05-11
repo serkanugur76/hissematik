@@ -626,7 +626,7 @@ export function renderHisseDetay(kod) {
   el('detayAiBtn').disabled     = false;
   el('detayAiBtn').textContent  = '⬡ AI ile Analiz Et';
 
-  openModal('hisseDetayModal');
+  // openModal app.js'de cagrilir — buradan kaldirildi
   const modalBody = document.querySelector('#hisseDetayModal .modal-body');
   if (modalBody) modalBody.scrollTop = 0;
 }
