@@ -52,6 +52,7 @@ import {
   tokenKaydet,
   sleep,
   setApiToast,
+  firebaseHataYonet,
 } from './api.js';
 
 import {
@@ -384,7 +385,7 @@ window.verileriGuncelle = async () => {
       aiYorum,
     });
   } catch (e) {
-    showToast('Sinyal kaydedilemedi: ' + (e?.message || 'Firebase hatası'), 'error');
+    showToast('Sinyal kaydedilemedi: ' + firebaseHataYonet(e), 'error');
   }
 
   try {
@@ -394,7 +395,10 @@ window.verileriGuncelle = async () => {
       portfoy:     state.portfoy,
       veriler:     state.veriler,
     });
-  } catch (_) {}
+  } catch (e) {
+    // saveUserData zaten toast gösteriyor, sadece konsola yaz
+    console.warn('verileriGuncelle: saveUserData başarısız', e?.code || e?.message);
+  }
 
   hideLoading();
   setStatus('live', 'Canlı');
@@ -719,7 +723,7 @@ async function _loadSozluk() {
     renderSozluk(sozlukVeriler);
     renderPopularTerimler(sozlukVeriler);
   } catch (e) {
-    showToast('Sözlük yüklenemedi: ' + (e?.message || 'Firebase hatası'), 'error');
+    showToast('Sözlük yüklenemedi: ' + firebaseHataYonet(e), 'error');
   }
 }
 
@@ -963,7 +967,7 @@ async function loadAdminPanel() {
     }
   } catch (e) {
     console.error('Admin yükleme hatası:', e);
-    showToast('Admin paneli yüklenemedi: ' + (e?.message || 'Firebase hatası'), 'error');
+    showToast('Admin paneli yüklenemedi: ' + firebaseHataYonet(e), 'error');
   }
 }
 

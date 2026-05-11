@@ -511,6 +511,25 @@ function _apiHataYonet(e) {
 }
 
 // ─────────────────────────────────────────────
+// FİREBASE HATA YÖNETİMİ — kullanıcıya anlamlı mesaj
+// ─────────────────────────────────────────────
+
+export function firebaseHataYonet(e) {
+  const kod = e?.code || '';
+  if (kod === 'permission-denied' || kod === 'firestore/permission-denied')
+    return 'Erişim reddedildi. Oturumunuzu kapatıp tekrar giriş yapın.';
+  if (kod === 'unavailable' || kod === 'firestore/unavailable')
+    return 'Firebase bağlantısı kesildi. İnternet bağlantınızı kontrol edin.';
+  if (kod === 'deadline-exceeded' || kod === 'firestore/deadline-exceeded')
+    return 'Firebase yanıt vermedi (zaman aşımı). Lütfen tekrar deneyin.';
+  if (kod === 'not-found' || kod === 'firestore/not-found')
+    return 'Veri bulunamadı. Sayfayı yenileyip tekrar deneyin.';
+  if (kod === 'unauthenticated' || kod === 'firestore/unauthenticated')
+    return 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.';
+  return e?.message || 'Firebase hatası. Lütfen tekrar deneyin.';
+}
+
+// ─────────────────────────────────────────────
 // FİRESTORE — TOKEN KULLANIM KAYDET
 // ─────────────────────────────────────────────
 
@@ -690,7 +709,8 @@ export async function saveUserData({ db, currentUser, takipEdilen, portfoy, veri
     });
   } catch (e) {
     console.error('saveUserData hatası:', e);
-    _notify('Verileriniz kaydedilemedi. İnternet bağlantınızı kontrol edin.', 'error');
+    _notify('Verileriniz kaydedilemedi: ' + firebaseHataYonet(e), 'error');
+    throw e; // çağıran taraf da bilsin
   }
 }
 
