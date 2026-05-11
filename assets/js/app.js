@@ -321,11 +321,11 @@ window.verileriGuncelle = async () => {
   try {
     const hisseler = await fetchTumHisseFiyatlari();
     hisseler.forEach(h => {
-      const kod     = h.KOD || h.kod || h.SEMBOL;
+      const kod     = h.kod || h.KOD || h.SEMBOL;
       if (!kod) return;
-      const fiyat   = parseFloat(h.KAPANIS || h.SON   || h.kapanis || 0);
-      const degisim = parseFloat(h.YUZDE   || h.yuzde || 0);
-      const hacim   = parseFloat(h.HACIM   || h.hacim  || 0);
+      const fiyat   = parseFloat(h.SON    || h.KAPANIS || h.kapanis || 0);
+      const degisim = parseFloat(h.YUZDE  || h.yuzde   || 0);
+      const hacim   = parseFloat(h.HACIM  || h.hacim   || 0);
       if (fiyat > 0) {
         if (!state.veriler[kod]) state.veriler[kod] = {};
         state.veriler[kod].fiyat   = +fiyat.toFixed(2);
