@@ -181,10 +181,10 @@ function temizleKey(key) {
 
 /**
  * Claude'a istek at — ham metin + token sayısı döner.
- * @param {string}   key       — Anthropic API key
- * @param {object[]} mesajlar  — messages dizisi
- * @param {number}   maxToken  — max_tokens (varsayılan 1000)
- * @param {number}   zaman     — ms cinsinden timeout (varsayılan 25 sn)
+ * @param {string}   key      — Anthropic API key
+ * @param {object[]} mesajlar — messages dizisi
+ * @param {number}   maxToken — max_tokens (varsayılan 1000)
+ * @param {number}   zaman    — ms timeout (varsayılan 25 sn)
  */
 async function claudeIste(key, mesajlar, maxToken = 1000, zaman = 25000) {
   const controller = new AbortController();
@@ -281,8 +281,7 @@ export async function fetchTumHisseFiyatlari() {
 
 export async function fetchPiyasaVerisi() {
   try {
-    const semboller = ['XU100.IS', 'USDTRY=X', 'EURTRY=X'];
-    const res       = await fetch(PROXY + '?piyasa=' + semboller.join(','));
+    const res = await fetch(PROXY + '?piyasa=1');
     return await res.json();
   } catch (e) {
     console.error('fetchPiyasaVerisi hatası:', e);
