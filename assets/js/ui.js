@@ -11,7 +11,7 @@ import {
   state, setState,
   BIST, BIST30, BIST100,
   sinyalIstatistik, portfoyOzeti, hisseAdi, aktifKey,
-  DOGRULAMA_GUN_VARSAYILAN, renderGrafik,
+  DOGRULAMA_GUN_VARSAYILAN,
 } from './state.js';
 
 import { sinyalClass } from './indicators.js';
