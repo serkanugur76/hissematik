@@ -11,7 +11,7 @@ import {
   state, setState,
   BIST, BIST30, BIST100,
   sinyalIstatistik, portfoyOzeti, hisseAdi, aktifKey,
-  DOGRULAMA_GUN_VARSAYILAN,
+  DOGRULAMA_GUN_VARSAYILAN, renderGrafik,
 } from './state.js';
 
 import { sinyalClass } from './indicators.js';
@@ -1233,4 +1233,163 @@ export function renderKapAnalizSonucu(analiz) {
         'text-transform:uppercase;letter-spacing:0.06em">ETKİLENEN HİSSELER</div>' +
         hisseSatirlar
       : '');
+}
+// ─────────────────────────────────────────────
+// GRAFİK — Canvas tabanlı fiyat grafiği
+// ui.js'in SONUNA ekle, export listesine de ekle:
+//   renderGrafik
+// ─────────────────────────────────────────────
+
+export function renderGrafik(kod, gun = 30) {
+  const v      = state.veriler[kod];
+  const canvas = el('grafikCanvas');
+  const wrap   = el('grafikWrap');
+
+  if (!canvas || !v?.kapanis?.length) {
+    if (wrap) wrap.innerHTML =
+      '<div style="text-align:center;padding:3rem;color:var(--muted);font-size:0.82rem">' +
+      'Grafik verisi yok — önce Güncelle\'ye bas</div>';
+    return;
+  }
+
+  // Veriyi kes — max 60 gün elimizde var
+  const veri = v.kapanis.slice(-Math.min(gun, v.kapanis.length));
+  if (veri.length < 2) return;
+
+  // Canvas boyutu — offsetWidth bazen 0 dönebilir, fallback ver
+  const W = Math.max(canvas.offsetWidth || canvas.parentElement?.offsetWidth || 560, 280);
+  const H = 260;
+  canvas.width  = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 24, right: 18, bottom: 34, left: 56 };
+  const cW  = W - pad.left - pad.right;
+  const cH  = H - pad.top  - pad.bottom;
+
+  const min = Math.min(...veri) * 0.995;
+  const max = Math.max(...veri) * 1.005;
+  const rng = max - min || 1;
+
+  const xOf = i   => pad.left + (i / (veri.length - 1)) * cW;
+  const yOf = val => pad.top  + (1 - (val - min) / rng) * cH;
+
+  // CSS değişkenlerini oku
+  const cs       = getComputedStyle(document.documentElement);
+  const clrMuted = cs.getPropertyValue('--muted').trim()  || '#616478';
+  const clrBrd   = cs.getPropertyValue('--border').trim() || 'rgba(255,255,255,0.06)';
+
+  // ── Izgara ─────────────────────────────────
+  ctx.strokeStyle = clrBrd;
+  ctx.lineWidth   = 0.5;
+  const izgAdet   = 5;
+  for (let i = 0; i <= izgAdet; i++) {
+    const y   = pad.top + (i / izgAdet) * cH;
+    const val = max - (i / izgAdet) * rng;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(W - pad.right, y);
+    ctx.stroke();
+    // Y ekseni etiketi
+    ctx.fillStyle = clrMuted;
+    ctx.font      = '9px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(2), pad.left - 5, y + 3);
+  }
+
+  // ── X ekseni tarih etiketleri ───────────────
+  const nEtiket = Math.min(6, veri.length);
+  ctx.fillStyle = clrMuted;
+  ctx.font      = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  for (let i = 0; i < nEtiket; i++) {
+    const idx     = Math.round(i * (veri.length - 1) / (nEtiket - 1));
+    const x       = xOf(idx);
+    const kalanG  = veri.length - 1 - idx;
+    const etiket  = kalanG === 0 ? 'bugün' : '-' + kalanG + 'g';
+    ctx.fillText(etiket, x, H - pad.bottom + 14);
+  }
+
+  // ── MA 20 (sarı kesik çizgi) ────────────────
+  if (veri.length >= 20) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,209,102,0.45)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 3]);
+    for (let i = 19; i < veri.length; i++) {
+      const dilim = veri.slice(i - 19, i + 1);
+      const ma    = dilim.reduce((a, b) => a + b, 0) / dilim.length;
+      i === 19 ? ctx.moveTo(xOf(i), yOf(ma)) : ctx.lineTo(xOf(i), yOf(ma));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // MA20 etiketi
+    const ma20Son = veri.slice(-20).reduce((a, b) => a + b, 0) / 20;
+    ctx.fillStyle = 'rgba(255,209,102,0.7)';
+    ctx.font      = '8px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('MA20 ' + ma20Son.toFixed(1), pad.left + 2, yOf(ma20Son) - 4);
+  }
+
+  // ── Ana fiyat çizgisi + gradient ───────────
+  const sonFiyat = veri.at(-1);
+  const ilkFiyat = veri[0];
+  const pozitif  = sonFiyat >= ilkFiyat;
+  const anaRenk  = pozitif ? '#00e5a0' : '#ff4560';
+  const renk2    = pozitif ? 'rgba(0,229,160,0.18)' : 'rgba(255,69,96,0.18)';
+
+  // Dolgu gradient
+  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  grad.addColorStop(0, renk2);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), yOf(veri[0]));
+  veri.forEach((val, i) => ctx.lineTo(xOf(i), yOf(val)));
+  ctx.lineTo(xOf(veri.length - 1), H - pad.bottom);
+  ctx.lineTo(xOf(0), H - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Çizgi
+  ctx.beginPath();
+  ctx.strokeStyle = anaRenk;
+  ctx.lineWidth   = 2;
+  ctx.lineJoin    = 'round';
+  ctx.moveTo(xOf(0), yOf(veri[0]));
+  veri.forEach((val, i) => ctx.lineTo(xOf(i), yOf(val)));
+  ctx.stroke();
+
+  // Son nokta
+  const sonX = xOf(veri.length - 1);
+  const sonY = yOf(sonFiyat);
+  ctx.beginPath();
+  ctx.arc(sonX, sonY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = anaRenk;
+  ctx.fill();
+  // Beyaz iç nokta
+  ctx.beginPath();
+  ctx.arc(sonX, sonY, 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+
+  // ── Değişim etiketi (sol üst) ───────────────
+  const degPct  = +((sonFiyat - ilkFiyat) / ilkFiyat * 100).toFixed(2);
+  const degText = (degPct >= 0 ? '▲ +' : '▼ ') + degPct + '%';
+  ctx.fillStyle = anaRenk;
+  ctx.font      = 'bold 12px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(degText, pad.left + 4, pad.top + 15);
+
+  // ── Son fiyat etiketi (sağ üst) ─────────────
+  ctx.font      = 'bold 11px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  const labelY  = Math.max(pad.top + 15, Math.min(sonY - 8, H - pad.bottom - 6));
+  ctx.fillText(sonFiyat.toFixed(2) + ' ₺', W - pad.right, labelY);
 }

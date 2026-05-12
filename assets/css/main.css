@@ -1340,3 +1340,42 @@ tr:last-child td { border-bottom:none; }
   /* Panel padding daralt */
   .panel { padding: 1rem 0.875rem; }
 }
+/*Grafik Analiz Style*/
+.grafik-gun-secici {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.grafik-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 0.68rem;
+  cursor: pointer;
+  font-family: var(--mono);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.grafik-btn:hover  { background: var(--bg4, #191d27); color: var(--text); }
+.grafik-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+ 
+#grafikCanvas {
+  border-radius: 8px;
+  background: var(--bg3);
+  display: block;
+  width: 100%;
+  height: 260px;
+}
+ 
+#grafikAiSonuc {
+  margin-top: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.8;
+  color: var(--text);
+}

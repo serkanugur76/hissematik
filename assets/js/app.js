@@ -96,6 +96,7 @@ let _kapFiltre         = 'tum';
 let _kapSadeceTakip    = false;
 let _kapSeciliBildirim = null;
 let _kapPollingTimer   = null;
+let _grafikGun = 30;   // aktif grafik periyodu
 
 // ─────────────────────────────────────────────
 // UI CALLBACK KÖPRÜSÜ
@@ -605,9 +606,16 @@ async function hisseDetayAc(kod) {
   const veri = state.veriler[kod] || {};
   renderHisseDetay(kod, veri);
   renderDetayTeknik(kod, veri);
+  document.querySelectorAll('.grafik-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.gun) === _grafikGun);
+  });
+  renderGrafik(kod, _grafikGun);
+  const _grafikAiEl = el('grafikAiSonuc');
+  if (_grafikAiEl) { _grafikAiEl.style.display = 'none'; _grafikAiEl.innerHTML = ''; }
+  const _grafikBtn = el('btnGrafikAnaliz');
+  if (_grafikBtn) { _grafikBtn.disabled = false; _grafikBtn.textContent = '📈 Bu Grafiği AI ile Analiz Et'; }
   openModal('hisseDetayModal');
 }
-
 window.detayTakipToggle = () => {
   const k = state.detayKod;
   if (!k) return;
@@ -1086,6 +1094,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Hisse detay modal
   el('detayAiBtn')?.addEventListener('click',          () => window.hisseAiAnalizEt());
   el('detayTakipBtn')?.addEventListener('click',       () => window.detayTakipToggle());
+  el('grafikGunSecici')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-gun]');
+    if (!btn) return;
+    _grafikGun = parseInt(btn.dataset.gun);
+    el('grafikGunSecici').querySelectorAll('.grafik-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderGrafik(state.detayKod, _grafikGun);
+    const aiEl = el('grafikAiSonuc');
+    if (aiEl) { aiEl.style.display = 'none'; aiEl.innerHTML = ''; }
+    const gBtn = el('btnGrafikAnaliz');
+    if (gBtn) { gBtn.disabled = false; gBtn.textContent = '📈 Bu Grafiği AI ile Analiz Et'; }
+  });
+
+  el('btnGrafikAnaliz')?.addEventListener('click', () => window.grafikAnalizEt());
   el('detayPortfoyEkleBtn')?.addEventListener('click', () => {
     if (state.detayKod) portfoyModalAc(state.detayKod, hisseAdi(state.detayKod));
   });
@@ -1407,5 +1429,44 @@ window.pushGonderOnay = async () => {
     showToast('Push gönderildi ✓');
   } catch (e) {
     showToast('Push gönderilemedi: ' + (e?.message || 'Hata'), 'error');
+  }
+};
+window.grafikAnalizEt = async () => {
+  const kod = state.detayKod;
+  if (!kod) return;
+
+  const key = aktifKey();
+  if (!key) { showToast('AI erişiminiz tanımlı değil.', 'error'); return; }
+
+  const btn     = el('btnGrafikAnaliz');
+  const sonucEl = el('grafikAiSonuc');
+  if (!btn || !sonucEl) return;
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Grafik analiz ediliyor...';
+  sonucEl.style.display = 'none';
+
+  try {
+    const veri = state.veriler[kod];
+    if (!veri?.kapanis?.length) {
+      showToast('Grafik verisi yok — önce güncelle', 'error');
+      return;
+    }
+    const text = await aiGrafikAnalizEt({ key, kod, veri, gun: _grafikGun });
+    if (text) {
+      sonucEl.innerHTML = text
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>')
+        .replace(/(\d+[.,]\d+\s*₺)/g, '<strong>$1</strong>');
+      sonucEl.style.display = 'block';
+      btn.textContent       = '⟳ Yeniden Analiz Et';
+    } else {
+      btn.textContent = '📈 Bu Grafiği AI ile Analiz Et';
+    }
+  } catch (e) {
+    showToast('Grafik analizi başarısız: ' + (e?.message || 'Hata'), 'error');
+    btn.textContent = '📈 Bu Grafiği AI ile Analiz Et';
+  } finally {
+    btn.disabled = false;
   }
 };

@@ -725,7 +725,28 @@
 
       <!-- Özet kartlar (js doldurur) -->
       <div class="detay-micro-grid" id="detayOzetKartlar" style="margin-bottom:0.75rem"></div>
-
+      <!-- Fiyat Grafiği -->
+      <section class="detay-bolum" id="detayGrafikBlok">
+        <div class="detay-bolum-baslik" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+          <span>Fiyat Grafiği</span>
+          <div class="grafik-gun-secici" id="grafikGunSecici">
+            <button class="grafik-btn" data-gun="1">1G</button>
+            <button class="grafik-btn" data-gun="3">3G</button>
+            <button class="grafik-btn" data-gun="7">7G</button>
+            <button class="grafik-btn" data-gun="15">15G</button>
+            <button class="grafik-btn active" data-gun="30">30G</button>
+            <button class="grafik-btn" data-gun="45">45G</button>
+            <button class="grafik-btn" data-gun="60">60G</button>
+          </div>
+        </div>
+        <div id="grafikWrap" style="margin-top:0.75rem">
+          <canvas id="grafikCanvas"></canvas>
+        </div>
+        <button class="btn primary" id="btnGrafikAnaliz" style="width:100%;margin-top:0.75rem;font-size:0.82rem">
+          📈 Bu Grafiği AI ile Analiz Et
+        </button>
+        <div id="grafikAiSonuc" style="display:none"></div>
+      </section>
       <!-- Teknik göstergeler -->
       <section class="detay-bolum">
         <div class="detay-bolum-baslik">Teknik Göstergeler</div>

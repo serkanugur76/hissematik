@@ -16,7 +16,7 @@ import {
   db,
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, addDoc,
-  query, where, orderBy, limit, serverTimestamp,
+  query, where, orderBy, limit, serverTimestamp, aiGrafikAnalizEt,
 } from './firebase.js';
 
 import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
@@ -303,7 +303,74 @@ export async function fetchHaberler() {
     return [];
   }
 }
+// ─────────────────────────────────────────────
+// CLAUDE AI — GRAFİK ANALİZİ
+//
+// api.js'de fetchHaberler fonksiyonunun
+// hemen ALTINA ekle.
+// ─────────────────────────────────────────────
 
+export async function aiGrafikAnalizEt({ key, kod, veri, gun }) {
+  if (!key || !veri?.kapanis?.length) return '';
+
+  const kapanis = veri.kapanis.slice(-Math.min(gun, veri.kapanis.length));
+  if (kapanis.length < 3) return '';
+
+  const ilk    = kapanis[0];
+  const son    = kapanis.at(-1);
+  const degPct = +((son - ilk) / ilk * 100).toFixed(2);
+  const min    = +Math.min(...kapanis).toFixed(2);
+  const max    = +Math.max(...kapanis).toFixed(2);
+
+  // MA7 ve MA20
+  const ma7 = +(kapanis.slice(-7).reduce((a, b) => a + b, 0) / Math.min(7, kapanis.length)).toFixed(2);
+  const ma20 = kapanis.length >= 20
+    ? +(kapanis.slice(-20).reduce((a, b) => a + b, 0) / 20).toFixed(2)
+    : null;
+
+  // Son 5 günün yön dizisi — momentum hissi
+  const son5   = kapanis.slice(-5);
+  const yonler = son5.map((v, i) =>
+    i === 0 ? '→' : v > son5[i-1] ? '↑' : v < son5[i-1] ? '↓' : '→'
+  ).join(' ');
+
+  // Trend kırılma noktası — son 10 günde en yüksek/düşük
+  const son10  = kapanis.slice(-10);
+  const max10  = +Math.max(...son10).toFixed(2);
+  const min10  = +Math.min(...son10).toFixed(2);
+
+  const prompt =
+    'Sen BIST teknik analiz uzmanısın. Aşağıdaki grafik verisine göre kısa yorum yap.\n\n' +
+    'HİSSE: ' + kod + '\n' +
+    'DÖNEM: Son ' + gun + ' gün\n' +
+    'İlk kapanış: ' + ilk + '₺  →  Son kapanış: ' + son + '₺\n' +
+    'Dönem değişimi: ' + (degPct >= 0 ? '+' : '') + degPct + '%\n' +
+    'Dönem düşük: ' + min + '₺  |  Dönem yüksek: ' + max + '₺\n' +
+    'Son 10 gün düşük: ' + min10 + '₺  |  Yüksek: ' + max10 + '₺\n' +
+    'MA7: ' + ma7 + '₺' + (ma20 ? '  |  MA20: ' + ma20 + '₺' : '') + '\n' +
+    'Son 5 gün yön: ' + yonler + '\n' +
+    'RSI (14): ' + (veri.rsi?.toFixed(1) ?? '—') + '\n' +
+    'MACD Histogram: ' + (veri.macdHist?.toFixed(3) ?? '—') + '\n' +
+    'Bollinger %: ' + (veri.bollinger?.yuzde?.toFixed(1) ?? '—') + '\n' +
+    'Güven Skoru: ' + (veri.guvenSkoru ?? '—') + '%\n' +
+    'Mevcut Sinyal: ' + veri.sinyal + '\n\n' +
+    'Şunları belirt:\n' +
+    '1. Trend: Yönü ve gücü (kısa ve net)\n' +
+    '2. Kritik Seviyeler: Destek ve direnç (₺ rakamı ver)\n' +
+    '3. Önümüzdeki 1-2 hafta: Ne beklemeli, hangi seviye kırılırsa ne olur\n' +
+    '4. Sinyal değerlendirmesi: Grafik mevcut sinyali destekliyor mu?\n\n' +
+    'Türkçe. Rakam bazlı. 5-6 cümle. Muğlak kalma.';
+
+  try {
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    return text;
+  } catch (e) {
+    console.error('aiGrafikAnalizEt hatası:', e);
+    _notify(_apiHataYonet(e));
+    return '';
+  }
+}
 // ─────────────────────────────────────────────
 // KAP — BİLDİRİMLERİ ÇEK
 //
