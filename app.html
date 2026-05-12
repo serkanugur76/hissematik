@@ -68,6 +68,7 @@
       <button class="nav-tab" data-tab="sinyaller">Sinyal Geçmişi</button>
       <button class="nav-tab" data-tab="portfoy">Portföy</button>
       <button class="nav-tab" data-tab="haberler">📰 Haberler</button>
+      <button class="nav-tab" data-tab="kap">📋 KAP</button>
       <button class="nav-tab" data-tab="sozluk">📚 Sözlük</button>
       <button class="nav-tab admin-only" data-tab="admin">⚙ Admin</button>
     </nav>
@@ -135,6 +136,10 @@
       <button class="mobile-nav-item" data-tab="haberler">
         <span class="mobile-nav-icon">📰</span>
         <span>Haberler</span>
+      </button>
+      <button class="mobile-nav-item" data-tab="kap">
+        <span class="mobile-nav-icon">📋</span>
+        <span>KAP</span>
       </button>
       <button class="mobile-nav-item" data-tab="sozluk">
         <span class="mobile-nav-icon">📚</span>
@@ -346,7 +351,133 @@
     </div>
 
   </main>
+<!-- ════════════════════════════════════════
+     PANEL: KAP BİLDİRİMLERİ
+     
+     Bu bloğu app.html'deki panel-haberler
+     bölümünün HEMEN ALTINA ekle.
+════════════════════════════════════════ -->
+<main class="panel" id="panel-kap">
+  <div class="ticker-bar"></div>
 
+  <div class="section-header">
+    <div>
+      <div class="section-title">📋 KAP Bildirimleri</div>
+      <div class="section-sub">Kamuyu Aydınlatma Platformu — resmi şirket bildirimleri</div>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:center">
+      <!-- Otomatik yenileme göstergesi -->
+      <span id="kapPollingDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block" title="Otomatik yenileme kapalı"></span>
+      <button class="btn" id="btnKapFiltreTakip">Sadece Takip</button>
+      <button class="btn primary" id="btnKapYenile">⟳ Yenile</button>
+    </div>
+  </div>
+
+  <!-- Filtre satırı -->
+  <div class="search-row" style="margin-bottom:1rem">
+    <input
+      class="search-input"
+      id="kapSearch"
+      placeholder="Şirket adı veya hisse kodu ara..."
+      autocomplete="off"
+    >
+    <button class="chip active" data-kap-filter="tum">Tümü</button>
+    <button class="chip" data-kap-filter="FR">Finansal Rapor</button>
+    <button class="chip" data-kap-filter="ODA">Özel Durum</button>
+    <button class="chip" data-kap-filter="DG">Diğer</button>
+  </div>
+
+  <!-- Özet sayaçlar -->
+  <div class="grid-4" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="card-title">Toplam Bildirim</div>
+      <div class="card-value mono" id="kapTopToplam">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Kritik</div>
+      <div class="card-value red mono" id="kapTopKritik">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Takibinizdeki</div>
+      <div class="card-value yellow mono" id="kapTopTakip">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Son Güncelleme</div>
+      <div class="card-value mono" id="kapSonGuncelleme" style="font-size:0.75rem">—</div>
+    </div>
+  </div>
+
+  <!-- Bildirim listesi — JS tarafından doldurulur -->
+  <div id="kapListesi">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">KAP bildirimleri yüklenmedi</div>
+      <div class="empty-sub">Yenile butonuna bas veya sekmeye ilk geçişte otomatik yüklenir</div>
+    </div>
+  </div>
+
+</main>
+
+
+<!-- ════════════════════════════════════════
+     MODAL: KAP BİLDİRİM DETAY + AI ANALİZ
+     
+     Bu bloğu app.html'deki modaller bölümüne
+     (diğer modal'ların yanına) ekle.
+════════════════════════════════════════ -->
+<div class="modal-overlay modal-overlay--scroll" id="kapDetayModal">
+  <div class="modal modal--wide">
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="kapDetayBaslik">—</div>
+        <div class="modal-sub" id="kapDetaySirket"></div>
+      </div>
+      <button class="modal-close" data-modal-close="kapDetayModal" aria-label="Kapat">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Bildirim meta bilgileri -->
+      <div class="detay-micro-grid" id="kapDetayMeta" style="margin-bottom:1rem"></div>
+
+      <!-- İlgili hisse kodları -->
+      <div id="kapDetayKodlarBlok" class="detay-bolum">
+        <div class="detay-bolum-baslik">İlgili Hisse Kodları</div>
+        <div id="kapDetayKodlar" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
+      </div>
+
+      <!-- AI Analiz -->
+      <section class="detay-ai-glass" style="margin-bottom:0.5rem">
+        <div class="detay-ai-label">⬡ AI Karar Analizi — KAP</div>
+        <div id="kapDetayAiIcerik" class="detay-ai-icerik">
+          Bu bildirimin portföyünüze ve takip listenize etkisini öğrenmek için analiz et.
+        </div>
+      </section>
+
+    </div>
+
+    <div class="detay-aksiyonlar">
+      <button class="btn primary" id="kapDetayAiBtn" style="flex:1">⬡ AI ile Analiz Et</button>
+      <button class="btn" id="kapDetayKapBtn">🔗 KAP'ta Aç</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     NAV EKLEME NOTU:
+     
+     app.html'deki mainNav içine şunu ekle:
+     <button class="nav-tab" data-tab="kap">📋 KAP</button>
+     
+     Mobil nav'a da:
+     <button class="mobile-nav-item" data-tab="kap">
+       <span class="mobile-nav-icon">📋</span>
+       <span>KAP</span>
+     </button>
+════════════════════════════════════════ -->
 
   <!-- ════════════════════════════════════════
        PANEL: SÖZLÜK

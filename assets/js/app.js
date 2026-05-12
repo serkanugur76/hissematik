@@ -53,6 +53,14 @@ import {
   sleep,
   setApiToast,
   firebaseHataYonet,
+  // ── KAP ──────────────────────────────────
+  fetchKapBildirimleri,
+  aiKapAnalizEt,
+  kapAnalizCache,
+  kapAnalizKaydet,
+  kapHashOlustur,
+  kapSonIndexAl,
+  kapSonIndexKaydet,
 } from './api.js';
 
 import {
@@ -65,6 +73,11 @@ import {
   renderHaberler, renderHaberAnaliz,
   renderSozluk, renderPopularTerimler,
   showPushBildirim, switchTab,
+  // ── KAP ──────────────────────────────────
+  renderKapListesi,
+  renderKapDetay,
+  renderKapAnalizSonucu,
+  renderKapOzetKartlar,
 } from './ui.js';
 
 setApiToast(showToast);
@@ -73,6 +86,16 @@ setApiToast(showToast);
 // SÖZLÜK LOCAL STATE
 // ─────────────────────────────────────────────
 let sozlukVeriler = [];
+
+// ─────────────────────────────────────────────
+// KAP LOCAL STATE
+// ─────────────────────────────────────────────
+let _kapBildirimler    = [];
+let _kapYuklendi       = false;
+let _kapFiltre         = 'tum';
+let _kapSadeceTakip    = false;
+let _kapSeciliBildirim = null;
+let _kapPollingTimer   = null;
 
 // ─────────────────────────────────────────────
 // UI CALLBACK KÖPRÜSÜ
@@ -85,6 +108,7 @@ window._uiCallbacks = {
   terimSor:        (terim) => terimSorAPI(terim),
   toggleTerim:     (id)    => toggleTerim(id),
   pushTerimGonder: (id)    => pushTerimGonderById(id),
+  kapDetayAc:      (idx)   => _kapDetayAc(idx),
 };
 
 // ─────────────────────────────────────────────
@@ -212,8 +236,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   // ── Kullanıcının şifreli API key'ini çöz ──
-  // encryptedApiKey varsa AES-GCM ile çözülür,
-  // plaintext sadece bellekte (state.anthropicKey) tutulur.
   let anthropicKey = '';
   if (userDoc.encryptedApiKey) {
     anthropicKey = await loadUserApiKey({
@@ -227,7 +249,7 @@ onAuthStateChanged(auth, async (user) => {
     currentUser:  user,
     userDoc,
     isAdmin,
-    anthropicKey,                              // havuzKey YOK — sadece kişisel key
+    anthropicKey,
     takipEdilen:  new Set(userDoc.takipEdilen || []),
     portfoy:      userDoc.portfoy  || {},
     veriler:      userDoc.veriler  || {},
@@ -240,7 +262,6 @@ onAuthStateChanged(auth, async (user) => {
 
   if (isAdmin) loadAdminPanel();
 
-  // API key durumunu topbar'da göster
   _apiKeyDurumGoster();
 
   // İlk yüklemeler
@@ -274,7 +295,6 @@ onAuthStateChanged(auth, async (user) => {
 
 // ─────────────────────────────────────────────
 // API KEY DURUM GÖSTERGESİ
-// Kullanıcının key'i yoksa topbar'da uyarı göster
 // ─────────────────────────────────────────────
 
 function _apiKeyDurumGoster() {
@@ -284,7 +304,6 @@ function _apiKeyDurumGoster() {
     apiStatusEl.textContent = key ? '✓ Tanımlı' : '⚠ Tanımlı değil';
     apiStatusEl.style.color = key ? 'var(--accent)' : 'var(--red)';
   }
-  // Key yoksa AI butonlarını gizlemek yerine mesaj veriyoruz (butonlar kendi kontrolünü yapıyor)
 }
 
 // ─────────────────────────────────────────────
@@ -297,6 +316,7 @@ async function _switchTab(name, btn) {
   if (name === 'sozluk')   await _loadSozluk();
   if (name === 'sinyaller') renderSinyalGecmisi();
   if (name === 'portfoy')  renderPortfoy();
+  if (name === 'kap')      await _loadKapBildirimleri();
 }
 
 // ─────────────────────────────────────────────
@@ -396,7 +416,6 @@ window.verileriGuncelle = async () => {
       veriler:     state.veriler,
     });
   } catch (e) {
-    // saveUserData zaten toast gösteriyor, sadece konsola yaz
     console.warn('verileriGuncelle: saveUserData başarısız', e?.code || e?.message);
   }
 
@@ -415,13 +434,6 @@ window.verileriGuncelle = async () => {
 // PİYASA VERİSİ
 // ─────────────────────────────────────────────
 
-// ══════════════════════════════════════════════
-// PATCH: app.js — _piyasaVerisiCek fonksiyonu
-//
-// Mevcut _piyasaVerisiCek fonksiyonunu BU KODLA DEĞİŞTİR.
-// Yeni semboller: ^XU030, EURUSD=X, GC=F
-// ══════════════════════════════════════════════
-
 async function _piyasaVerisiCek() {
   try {
     const data = await fetchPiyasaVerisi();
@@ -429,7 +441,6 @@ async function _piyasaVerisiCek() {
 
     const pv = { ...state.piyasaVerisi };
 
-    // ── BIST 100 ──────────────────────────────
     const xu100 = data['^XU100']?.chart?.result?.[0];
     if (xu100) {
       const f = xu100.meta.regularMarketPrice || 0;
@@ -439,7 +450,6 @@ async function _piyasaVerisiCek() {
       pv.yon   = d;
     }
 
-    // ── BIST 30 ───────────────────────────────
     const xu030 = data['^XU030']?.chart?.result?.[0];
     if (xu030) {
       const f = xu030.meta.regularMarketPrice || 0;
@@ -447,7 +457,6 @@ async function _piyasaVerisiCek() {
       pv.xu030 = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
 
-    // ── USD/TRY ───────────────────────────────
     const usdtry = data['USDTRY=X']?.chart?.result?.[0];
     if (usdtry) {
       const f = usdtry.meta.regularMarketPrice || 0;
@@ -455,7 +464,6 @@ async function _piyasaVerisiCek() {
       pv.usdtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
 
-    // ── EUR/TRY ───────────────────────────────
     const eurtry = data['EURTRY=X']?.chart?.result?.[0];
     if (eurtry) {
       const f = eurtry.meta.regularMarketPrice || 0;
@@ -463,7 +471,6 @@ async function _piyasaVerisiCek() {
       pv.eurtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
 
-    // ── EUR/USD ───────────────────────────────
     const eurusd = data['EURUSD=X']?.chart?.result?.[0];
     if (eurusd) {
       const f = eurusd.meta.regularMarketPrice || 0;
@@ -471,32 +478,18 @@ async function _piyasaVerisiCek() {
       pv.eurusd = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
     }
 
-    // ── ALTIN (ONS, USD) ─────────────────────
-    // GC=F = COMEX Gold Futures (ons, USD)
-    // Gram altın ≈ ons / 31.1035 * USD/TRY
-    // Çeyrek ≈ gram * 1.75g (Türkiye standardı 1.75gr)
-    // Tam     ≈ gram * 7.00g
     const altinOns = data['GC=F']?.chart?.result?.[0];
     if (altinOns) {
-      const onsUsd = altinOns.meta.regularMarketPrice || 0;
+      const onsUsd     = altinOns.meta.regularMarketPrice || 0;
       const onsUsdOnce = altinOns.meta.chartPreviousClose || 0;
-      const degisim = onsUsdOnce > 0
+      const degisim    = onsUsdOnce > 0
         ? +((onsUsd - onsUsdOnce) / onsUsdOnce * 100).toFixed(2)
         : 0;
-
-      // Gram TL hesabı (USD/TRY gerekli)
-      const kur = pv.usdtry?.fiyat || 0;
-      const gramTL  = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
+      const kur      = pv.usdtry?.fiyat || 0;
+      const gramTL   = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
       const ceyrekTL = gramTL > 0 ? +(gramTL * 1.75).toFixed(2) : 0;
       const tamTL    = gramTL > 0 ? +(gramTL * 7.00).toFixed(2)  : 0;
-
-      pv.altin = {
-        onsUsd,          // ons fiyatı (USD)
-        gramTL,          // gram TL
-        ceyrekTL,        // çeyrek altın TL (1.75g)
-        tamTL,           // tam altın TL (7g)
-        degisim,         // ons bazında % değişim
-      };
+      pv.altin = { onsUsd, gramTL, ceyrekTL, tamTL, degisim };
     }
 
     setState({ piyasaVerisi: pv });
@@ -505,6 +498,7 @@ async function _piyasaVerisiCek() {
     console.error('_piyasaVerisiCek hatası:', e);
   }
 }
+
 // ─────────────────────────────────────────────
 // SİNYAL DOĞRULAMA
 // ─────────────────────────────────────────────
@@ -785,6 +779,195 @@ async function pushTerimGonderById(id) {
   }
 }
 
+// ═══════════════════════════════════════════════
+// KAP BİLDİRİMLERİ
+// ═══════════════════════════════════════════════
+
+// ─────────────────────────────────────────────
+// Yardımcı: takip listesinde mi?
+// ─────────────────────────────────────────────
+function _kapTakipteMi(kodlar) {
+  return (kodlar || []).some(k => state.takipEdilen.has(k));
+}
+
+// ─────────────────────────────────────────────
+// Bildirimleri Firestore cache ile eşleştir
+// ─────────────────────────────────────────────
+async function _kapAnalizEslestir(bildirimler) {
+  return Promise.all(bildirimler.map(async (b) => {
+    try {
+      const hash  = kapHashOlustur(b);
+      const cache = await kapAnalizCache({ db, currentUser: state.currentUser, bildirimHash: hash });
+      return {
+        ...b,
+        _hash:      hash,
+        _analizVar: !!cache,
+        _analiz:    cache || null,
+        _onem:      cache?.onem || null,
+      };
+    } catch (_) {
+      return { ...b, _hash: kapHashOlustur(b), _analizVar: false, _analiz: null, _onem: null };
+    }
+  }));
+}
+
+// ─────────────────────────────────────────────
+// Render — filtreli listeyi çiz
+// ─────────────────────────────────────────────
+function _renderKap() {
+  const aramaMetni = el('kapSearch')?.value?.trim() || '';
+  renderKapListesi(_kapBildirimler, {
+    filtre:      _kapFiltre,
+    sadeceTakip: _kapSadeceTakip,
+    aramaMetni,
+  });
+}
+
+// ─────────────────────────────────────────────
+// KAP Bildirimleri Yükle (ilk yükleme)
+// ─────────────────────────────────────────────
+async function _loadKapBildirimleri() {
+  if (_kapYuklendi) return;
+
+  showLoading('KAP bildirimleri yükleniyor...');
+  try {
+    const bildirimler = await fetchKapBildirimleri(null);
+
+    if (bildirimler.length === 0) {
+      showToast('KAP verisi alınamadı. İnternet bağlantınızı kontrol edin.', 'error');
+      hideLoading();
+      return;
+    }
+
+    // Polling için en yüksek index'i kaydet
+    const maxIndex = Math.max(...bildirimler.map(b => b.index || 0));
+    kapSonIndexKaydet(maxIndex);
+
+    _kapBildirimler = await _kapAnalizEslestir(bildirimler);
+    _kapYuklendi    = true;
+    _renderKap();
+    _kapPollingBaslat();
+
+  } catch (e) {
+    showToast('KAP yüklenemedi: ' + (e?.message || 'Hata'), 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ─────────────────────────────────────────────
+// KAP Polling — 3 dakikada bir yeni bildirim kontrol
+// ─────────────────────────────────────────────
+function _kapPollingBaslat() {
+  if (_kapPollingTimer) clearInterval(_kapPollingTimer);
+
+  const dotEl = el('kapPollingDot');
+  if (dotEl) {
+    dotEl.style.background = 'var(--accent)';
+    dotEl.title = 'Otomatik yenileme aktif (3 dk)';
+  }
+
+  _kapPollingTimer = setInterval(async () => {
+    // Sadece KAP paneli görünürken çalış
+    if (!el('panel-kap')?.classList.contains('active')) return;
+
+    try {
+      const sonIndex = kapSonIndexAl();
+      if (!sonIndex) return;
+
+      const yeniler = await fetchKapBildirimleri(sonIndex);
+      if (yeniler.length === 0) return;
+
+      const maxIndex = Math.max(...yeniler.map(b => b.index || 0));
+      kapSonIndexKaydet(maxIndex);
+
+      const eslestirilmis = await _kapAnalizEslestir(yeniler);
+      _kapBildirimler = [...eslestirilmis, ..._kapBildirimler];
+      _renderKap();
+
+      // Takip listesindeki hisseler için toast
+      const takipBildirimleri = yeniler.filter(b => _kapTakipteMi(b.kodlar));
+      if (takipBildirimleri.length > 0) {
+        showToast(takipBildirimleri.length + ' yeni KAP bildirimi — takip listenizdeki hisseler');
+      }
+    } catch (_) {}
+  }, 3 * 60 * 1000);
+}
+
+// ─────────────────────────────────────────────
+// KAP Detay Modal Aç
+// ─────────────────────────────────────────────
+function _kapDetayAc(idx) {
+  const bildirim = _kapBildirimler[idx];
+  if (!bildirim) return;
+
+  _kapSeciliBildirim = bildirim;
+  renderKapDetay(bildirim);
+
+  const btn = el('kapDetayAiBtn');
+  if (bildirim._analiz) {
+    renderKapAnalizSonucu(bildirim._analiz);
+    if (btn) btn.textContent = '⟳ Yeniden Analiz Et';
+  } else {
+    if (btn) btn.textContent = '⬡ AI ile Analiz Et';
+  }
+
+  openModal('kapDetayModal');
+}
+
+// ─────────────────────────────────────────────
+// KAP AI Analiz — detay modalından tetiklenir
+// ─────────────────────────────────────────────
+async function _kapAiAnalizEt() {
+  const bildirim = _kapSeciliBildirim;
+  if (!bildirim) return;
+
+  const key = aktifKey();
+  if (!key) {
+    showToast('AI erişiminiz tanımlı değil. Yöneticinizle iletişime geçin.', 'error');
+    return;
+  }
+
+  const btn = el('kapDetayAiBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...'; }
+
+  try {
+    const analiz = await aiKapAnalizEt({
+      key,
+      bildirim,
+      takipEdilen: state.takipEdilen,
+      portfoy:     state.portfoy,
+    });
+
+    if (!analiz) throw new Error('Analiz boş döndü');
+
+    await kapAnalizKaydet({
+      db,
+      currentUser:  state.currentUser,
+      bildirimHash: bildirim._hash,
+      bildirim,
+      analiz,
+    });
+
+    // Local state güncelle
+    const idx = _kapBildirimler.findIndex(b => b._hash === bildirim._hash);
+    if (idx > -1) {
+      _kapBildirimler[idx]._analizVar = true;
+      _kapBildirimler[idx]._analiz    = analiz;
+      _kapBildirimler[idx]._onem      = analiz.onem;
+    }
+
+    renderKapAnalizSonucu(analiz);
+    _renderKap();
+    showToast('KAP analizi tamamlandı ✓');
+
+  } catch (e) {
+    showToast('Analiz yapılamadı: ' + (e?.message || 'Hata'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Yeniden Analiz Et'; }
+  }
+}
+
 // ─────────────────────────────────────────────
 // DOM EVENT BAĞLAMALARI
 // ─────────────────────────────────────────────
@@ -802,10 +985,8 @@ document.addEventListener('DOMContentLoaded', () => {
   el('mobileNav')?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-tab]');
     if (!btn) return;
-    // Mobil nav aktif item güncelle
     el('mobileNav').querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    // Desktop nav aktif item senkronize et
     el('mainNav').querySelectorAll('[data-tab]').forEach(b => {
       b.classList.toggle('active', b.dataset.tab === btn.dataset.tab);
     });
@@ -819,15 +1000,13 @@ document.addEventListener('DOMContentLoaded', () => {
     el('mobileMenuOverlay')?.classList.add('show');
     el('btnHamburger')?.classList.add('open');
     el('btnHamburger')?.setAttribute('aria-expanded', 'true');
-    // Kullanıcı bilgilerini mobil menüye senkronize et
     const name   = el('userName')?.textContent;
     const avatar = el('userAvatar')?.textContent;
-    if (el('mobileUserName'))  el('mobileUserName').textContent  = name  || '...';
+    if (el('mobileUserName'))   el('mobileUserName').textContent   = name   || '...';
     if (el('mobileUserAvatar')) el('mobileUserAvatar').textContent = avatar || '?';
-    // Status senkronize et
-    const dotCls = el('statusDot')?.className;
+    const dotCls    = el('statusDot')?.className;
     const statusTxt = el('statusText')?.textContent;
-    if (el('mobileStatusDot') && dotCls)   el('mobileStatusDot').className   = dotCls;
+    if (el('mobileStatusDot')  && dotCls)    el('mobileStatusDot').className   = dotCls;
     if (el('mobileStatusText') && statusTxt) el('mobileStatusText').textContent = statusTxt;
   }
   function _closeMobileMenu() {
@@ -844,11 +1023,9 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnMobileMenuClose')?.addEventListener('click', _closeMobileMenu);
   el('mobileMenuOverlay')?.addEventListener('click', _closeMobileMenu);
 
-  // Mobil güncelle butonu
+  // Mobil güncelle & çıkış
   el('btnGuncelleMobil')?.addEventListener('click', () => window.verileriGuncelle());
-
-  // Mobil çıkış
-  el('btnLogoutMobil')?.addEventListener('click', () => window.logout());
+  el('btnLogoutMobil')?.addEventListener('click',   () => window.logout());
 
   // Hisse filtre chip'leri
   document.querySelectorAll('.chip[data-filter]').forEach(btn => {
@@ -876,8 +1053,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Güncelle
   el('btnGuncelle')?.addEventListener('click', () => window.verileriGuncelle());
 
-  // Hisse arama — yazarken anlik suzme + Enter ile yeni hisse cekme
-  el('searchInput')?.addEventListener('input', () => renderHisseler());
+  // Hisse arama
+  el('searchInput')?.addEventListener('input',   () => renderHisseler());
   el('searchInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') window.hisseAra(e.target.value);
   });
@@ -900,26 +1077,51 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Push modal
-  el('btnPushGonder')?.addEventListener('click',        () => openModal('pushModal'));
-  el('btnPushGonderOnayla')?.addEventListener('click',  () => window.pushGonderOnay());
+  el('btnPushGonder')?.addEventListener('click',       () => openModal('pushModal'));
+  el('btnPushGonderOnayla')?.addEventListener('click', () => window.pushGonderOnay());
 
   // Portföy modal
   el('btnPortfoyKaydet')?.addEventListener('click', () => window.portfoyKaydet());
 
   // Hisse detay modal
-  el('detayAiBtn')?.addEventListener('click',        () => window.hisseAiAnalizEt());
-  el('detayTakipBtn')?.addEventListener('click',     () => window.detayTakipToggle());
+  el('detayAiBtn')?.addEventListener('click',          () => window.hisseAiAnalizEt());
+  el('detayTakipBtn')?.addEventListener('click',       () => window.detayTakipToggle());
   el('detayPortfoyEkleBtn')?.addEventListener('click', () => {
     if (state.detayKod) portfoyModalAc(state.detayKod, hisseAdi(state.detayKod));
   });
 
   // Admin
-  el('btnKullaniciEkle')?.addEventListener('click',        () => openModal('addUserModal'));
-  el('btnKullaniciEkleOnayla')?.addEventListener('click',  () => window.kullaniciEkle());
-  el('btnAdminKeyKaydet')?.addEventListener('click',       () => window.adminKendiKeyiKaydet());
-  el('btnMukerrerTemizle')?.addEventListener('click',      () => window.mukerrerTemizle());
-  el('btnTokenYenile')?.addEventListener('click',          () => window.loadTokenIstatistik());
-  el('btnGunSonuOzet')?.addEventListener('click',          () => window.gunSonuOzetOlustur());
+  el('btnKullaniciEkle')?.addEventListener('click',       () => openModal('addUserModal'));
+  el('btnKullaniciEkleOnayla')?.addEventListener('click', () => window.kullaniciEkle());
+  el('btnAdminKeyKaydet')?.addEventListener('click',      () => window.adminKendiKeyiKaydet());
+  el('btnMukerrerTemizle')?.addEventListener('click',     () => window.mukerrerTemizle());
+  el('btnTokenYenile')?.addEventListener('click',         () => window.loadTokenIstatistik());
+  el('btnGunSonuOzet')?.addEventListener('click',         () => window.gunSonuOzetOlustur());
+
+  // ── KAP event'leri ─────────────────────────
+  el('btnKapYenile')?.addEventListener('click', async () => {
+    _kapYuklendi = false;
+    await _loadKapBildirimleri();
+  });
+
+  el('btnKapFiltreTakip')?.addEventListener('click', (e) => {
+    _kapSadeceTakip = !_kapSadeceTakip;
+    e.target.classList.toggle('active', _kapSadeceTakip);
+    _renderKap();
+  });
+
+  document.querySelectorAll('[data-kap-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-kap-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _kapFiltre = btn.dataset.kapFilter;
+      _renderKap();
+    });
+  });
+
+  el('kapSearch')?.addEventListener('input', () => _renderKap());
+
+  el('kapDetayAiBtn')?.addEventListener('click', () => _kapAiAnalizEt());
 });
 
 // ─────────────────────────────────────────────
@@ -936,14 +1138,12 @@ async function loadAdminPanel() {
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     el('adminTotalUser') && (el('adminTotalUser').textContent = users.length);
 
-    // Admin kendi API key durumu
     const adminKeyEl = el('adminKendiKeyDurum');
     if (adminKeyEl) {
       adminKeyEl.textContent = aktifKey() ? '✓ Tanımlı' : '⚠ Tanımlı değil';
       adminKeyEl.style.color = aktifKey() ? 'var(--accent)' : 'var(--red)';
     }
 
-    // Kullanıcı listesi — event delegation ile onclick yok
     const kulListEl = el('kullaniciListesi');
     if (kulListEl) {
       kulListEl.innerHTML = '';
@@ -1023,19 +1223,12 @@ async function loadAdminPanel() {
   }
 }
 
-// Admin kendi key'ini kaydeder
 window.adminKendiKeyiKaydet = async () => {
   const key = el('adminKendiKey')?.value.trim();
   if (!key) { showToast('API anahtarı boş olamaz!', 'error'); return; }
   if (!key.startsWith('sk-ant-')) { showToast('Geçersiz Anthropic key formatı!', 'error'); return; }
-
   try {
-    await saveUserApiKey({
-      targetUid: state.currentUser.uid,
-      apiKey:    key,
-      isAdmin:   true,
-    });
-    // State'i güncelle — sayfayı yenilemeden key aktif olsun
+    await saveUserApiKey({ targetUid: state.currentUser.uid, apiKey: key, isAdmin: true });
     setState({ anthropicKey: key });
     el('adminKendiKey').value = '';
     el('adminKendiKey').type  = 'password';
@@ -1049,7 +1242,6 @@ window.adminKendiKeyiKaydet = async () => {
   }
 };
 
-// Admin bir kullanıcıya key tanımlar (modal)
 window.kullaniciKeyTanimla = (uid, ad) => {
   setState({ _keyTanimlaUid: uid });
   const baslik = el('keyTanimlaBaslik');
@@ -1063,15 +1255,13 @@ window.kullaniciKeyKaydet = async () => {
   const key = el('kullaniciKeyInput')?.value.trim();
   if (!uid || !key) { showToast('UID veya key eksik!', 'error'); return; }
   if (!key.startsWith('sk-ant-')) { showToast('Geçersiz Anthropic key formatı!', 'error'); return; }
-
   const btn = el('btnKullaniciKeyKaydet');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Kaydediliyor...'; }
-
   try {
     await saveUserApiKey({ targetUid: uid, apiKey: key, isAdmin: true });
     closeModal('keyTanimlaModal');
     showToast('API anahtarı tanımlandı ✓');
-    loadAdminPanel(); // listeyi yenile — 🔑 göstergesi güncellensin
+    loadAdminPanel();
   } catch (e) {
     showToast('Key kaydedilemedi: ' + (e?.message || 'Hata'), 'error');
   } finally {
@@ -1084,9 +1274,7 @@ window.kullaniciOnayla = async (uid) => {
     await updateDoc(doc(db, 'users', uid), { active: true });
     showToast('Kullanıcı onaylandı ✓');
     loadAdminPanel();
-  } catch (e) {
-    showToast('Hata: ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Hata: ' + e.message, 'error'); }
 };
 
 window.kullaniciDevreDisi = async (uid) => {
@@ -1095,9 +1283,7 @@ window.kullaniciDevreDisi = async (uid) => {
     await updateDoc(doc(db, 'users', uid), { active: false });
     showToast('Kullanıcı devre dışı bırakıldı');
     loadAdminPanel();
-  } catch (e) {
-    showToast('Hata: ' + e.message, 'error');
-  }
+  } catch (e) { showToast('Hata: ' + e.message, 'error'); }
 };
 
 window.showAddUser = () => openModal('addUserModal');
@@ -1146,11 +1332,10 @@ window.loadTokenIstatistik = async () => {
   const container = el('tokenIstatistik');
   if (!container) return;
   try {
-    const ay   = new Date().toISOString().slice(0, 7);
+    const ay = new Date().toISOString().slice(0, 7);
     el('tokenAySec') && (el('tokenAySec').textContent = ay);
     const snap = await getDocs(collection(db, 'tokenKullanim'));
     const buAy = snap.docs.map(d => d.data()).filter(d => d.ay === ay).sort((a, b) => b.toplamToken - a.toplamToken);
-
     if (buAy.length === 0) {
       container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Bu ay henüz AI kullanımı yok</div>';
       return;
@@ -1158,7 +1343,6 @@ window.loadTokenIstatistik = async () => {
     const toplamToken   = buAy.reduce((s, d) => s + d.toplamToken, 0);
     const toplamMaliyet = buAy.reduce((s, d) => s + d.maliyet, 0);
     const toplamIstek   = buAy.reduce((s, d) => s + d.istekSayisi, 0);
-
     container.innerHTML =
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem">' +
         '<div class="card" style="text-align:center"><div class="card-title">Toplam Token</div><div class="card-value mono" style="font-size:1.1rem">' + toplamToken.toLocaleString() + '</div></div>' +

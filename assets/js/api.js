@@ -305,6 +305,189 @@ export async function fetchHaberler() {
 }
 
 // ─────────────────────────────────────────────
+// KAP — BİLDİRİMLERİ ÇEK
+//
+// kap.org.tr/tr/api/disclosures endpoint'inden
+// bildirimleri proxy üzerinden çeker.
+//
+// @param {number|null} sonrasiIndex  — polling için
+//   son alınan disclosureIndex. null ise tüm son
+//   bildirimleri getirir.
+// @returns {Promise<Array>}  normalize edilmiş bildirim dizisi
+// ─────────────────────────────────────────────
+export async function fetchKapBildirimleri(sonrasiIndex = null) {
+  try {
+    const url = sonrasiIndex
+      ? PROXY + '?kap=1&sonrasi=' + sonrasiIndex
+      : PROXY + '?kap=1';
+
+    const res  = await fetch(url);
+    const json = await res.json();
+
+    if (json.error) {
+      console.warn('KAP API uyarısı:', json.error);
+      return [];
+    }
+
+    return Array.isArray(json.bildirimler) ? json.bildirimler : [];
+  } catch (e) {
+    console.error('fetchKapBildirimleri hatası:', e);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// KAP — BİLDİRİM DETAYINI ÇEK
+//
+// Tek bir bildirimin tam içeriğini getirir.
+// @param {string} disclosureId
+// ─────────────────────────────────────────────
+export async function fetchKapDetay(disclosureId) {
+  try {
+    const url = PROXY + '?kapdetay=' + encodeURIComponent(disclosureId);
+    const res  = await fetch(url);
+    return await res.json();
+  } catch (e) {
+    console.error('fetchKapDetay hatası:', e);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// KAP — FİRESTORE CACHE (hisse bazlı)
+//
+// Aynı bildirimi tekrar analiz ettirmemek için
+// Firestore'da kapAnalizleri/{hash} koleksiyonunda
+// saklıyoruz. Yapı haber analizleriyle aynı.
+// ─────────────────────────────────────────────
+export async function kapAnalizCache({ db, currentUser, bildirimHash }) {
+  if (!currentUser || !bildirimHash) return null;
+  try {
+    const ref  = doc(db, 'kapAnalizleri', bildirimHash);
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data() : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function kapAnalizKaydet({ db, currentUser, bildirimHash, bildirim, analiz }) {
+  if (!currentUser || !bildirimHash) return null;
+  try {
+    const kayit = {
+      bildirimHash,
+      bildirimBaslik:  bildirim.baslik || '',
+      bildirimTarih:   bildirim.tarih  || '',
+      sirket:          bildirim.sirket || '',
+      kodlar:          bildirim.kodlar || [],
+      tip:             bildirim.tip    || '',
+      yorum:           analiz.yorum    || '',
+      onem:            analiz.onem     || 'normal',  // 'kritik' | 'onemli' | 'normal'
+      hisseler:        analiz.hisseler || [],         // [{kod, etki: 'olumlu'|'olumsuz'|'nötr', aciklama}]
+      kullaniciUid:    currentUser.uid,
+      kullaniciAd:     currentUser.displayName || '',
+      tarih:           Date.now(),
+    };
+    await setDoc(doc(db, 'kapAnalizleri', bildirimHash), kayit);
+    return kayit;
+  } catch (e) {
+    console.error('kapAnalizKaydet hatası:', e);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// KAP — BİLDİRİM HASH OLUŞTUR
+// Bildirim index numarası + tarih → benzersiz hash
+// ─────────────────────────────────────────────
+export function kapHashOlustur(bildirim) {
+  const str = (bildirim.index || '') + '_' + (bildirim.tarih || '') + '_' + (bildirim.sirket || '');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return 'kap_' + Math.abs(hash).toString(36);
+}
+
+// ─────────────────────────────────────────────
+// CLAUDE AI — KAP BİLDİRİM ANALİZİ
+//
+// Tek bir KAP bildirimini AI ile analiz et.
+// Takip edilen hisselerle eşleştir, etki değerlendir.
+//
+// @param {object} p
+//   key          — Anthropic API key
+//   bildirim     — normalize KAP bildirimi
+//   takipEdilen  — Set<string> kullanıcının takip listesi
+//   portfoy      — {kod: {adet, alisFiyati}} portföy verisi
+// @returns {Promise<{yorum, onem, hisseler}|null>}
+// ─────────────────────────────────────────────
+export async function aiKapAnalizEt({ key, bildirim, takipEdilen = new Set(), portfoy = {} }) {
+  if (!key || !bildirim) return null;
+
+  // Takip edilen ve portföydeki hisselerin bildirimle ilişkisi
+  const takipKodlar   = [...takipEdilen];
+  const portfoyKodlar = Object.keys(portfoy);
+
+  // Bildirimin direkt ilgili olduğu hisseler
+  const ilgiliKodlar = bildirim.kodlar || [];
+
+  // Portföyde olan ilgili hisseler — AI'ya özellikle belirt
+  const portfoydekiIlgili = ilgiliKodlar.filter(k => portfoyKodlar.includes(k));
+  const takiptekiIlgili   = ilgiliKodlar.filter(k => takipKodlar.includes(k) && !portfoydekiIlgili.includes(k));
+
+  const portfoyBilgi = portfoydekiIlgili.length > 0
+    ? 'Kullanıcının portföyündeki ilgili hisseler: ' +
+      portfoydekiIlgili.map(k => k + ' (' + portfoy[k].adet + ' adet, alış: ' + portfoy[k].alisFiyati + '₺)').join(', ')
+    : '';
+
+  const prompt =
+    'KAP (Kamuyu Aydınlatma Platformu) bildirimi analizi yap.\n\n' +
+    'BİLDİRİM:\n' +
+    'Şirket: ' + bildirim.sirket + '\n' +
+    'Hisse Kodları: ' + (ilgiliKodlar.join(', ') || '—') + '\n' +
+    'Tür: ' + (bildirim.tip || '—') + ' / ' + (bildirim.tipAciklama || '—') + '\n' +
+    'Başlık: ' + bildirim.baslik + '\n' +
+    'Özet: ' + (bildirim.ozet || 'Özet yok, başlıktan çıkar.') + '\n\n' +
+    (portfoyBilgi ? portfoyBilgi + '\n\n' : '') +
+    'Kullanıcının takip ettiği diğer ilgili hisseler: ' + (takiptekiIlgili.join(', ') || 'yok') + '\n\n' +
+    'Lütfen şu formatta JSON ile yanıtla (başka hiçbir şey yazma):\n' +
+    '{\n' +
+    '  "yorum": "2-3 cümle Türkçe yorum — ne anlama geliyor, yatırımcı için önemi ne",\n' +
+    '  "onem": "kritik" veya "onemli" veya "normal",\n' +
+    '  "hisseler": [\n' +
+    '    {"kod": "XXXX", "etki": "olumlu" veya "olumsuz" veya "nötr", "aciklama": "kısa neden"}\n' +
+    '  ]\n' +
+    '}\n\n' +
+    'onem kriteri: "kritik" = özel durum/temettü/birleşme/halka arz gibi fiyatı doğrudan etkiler; ' +
+    '"onemli" = finansal rapor/yönetim değişikliği; "normal" = rutin bildirim.\n' +
+    'Sadece ilgili hisseleri hisseler dizisine ekle. Portföyde olan varsa önce ekle.';
+
+  try {
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    const temiz = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(temiz);
+  } catch (e) {
+    console.error('aiKapAnalizEt hatası:', e);
+    _notify(_apiHataYonet(e));
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// KAP — POLLING STATE
+//
+// Son alınan disclosureIndex'i tut.
+// Her çağrıda sadece yeni bildirimleri çek.
+// ─────────────────────────────────────────────
+let _kapSonIndex = null;
+
+export function kapSonIndexAl()        { return _kapSonIndex; }
+export function kapSonIndexKaydet(idx) { _kapSonIndex = idx; }
+// ─────────────────────────────────────────────
 // CLAUDE AI — PORTFÖY ANALİZİ
 // ─────────────────────────────────────────────
 

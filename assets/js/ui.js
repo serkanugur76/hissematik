@@ -972,3 +972,265 @@ export function switchTab(name, buttonEl) {
 
 window._uiCallbacks = {};
 window.hisseDetayAc = (kod) => window._uiCallbacks?.hisseDetayAc?.(kod);
+// ══════════════════════════════════════════════
+// HisseMatik — ui.js KAP PATCH
+//
+// Bu fonksiyonları ui.js'in SONUNA ekle.
+// Export listesine de eklemen gerekiyor:
+//   renderKapListesi, renderKapDetay,
+//   renderKapAnalizSonucu, renderKapOzetKartlar
+// ══════════════════════════════════════════════
+
+// ─────────────────────────────────────────────
+// YARDIMCI: KAP bildirim tipi rozeti
+// ─────────────────────────────────────────────
+function _kapTipRozeti(tip, tipAciklama) {
+  const renkler = {
+    'FR':  'var(--blue)',
+    'ODA': 'var(--red)',
+    'DG':  'var(--muted)',
+  };
+  const renk = renkler[tip] || 'var(--muted)';
+  const etiket = tipAciklama || tip || 'Bildirim';
+  return '<span style="font-size:0.68rem;padding:2px 8px;border-radius:4px;' +
+         'background:' + renk + '22;color:' + renk + ';font-weight:600;white-space:nowrap">' +
+         etiket + '</span>';
+}
+
+// ─────────────────────────────────────────────
+// YARDIMCI: Önem rozeti
+// ─────────────────────────────────────────────
+function _kapOnemRozeti(onem) {
+  if (onem === 'kritik')  return '<span class="sinyal-badge sinyal-guclu-sat" style="font-size:0.65rem">🔴 KRİTİK</span>';
+  if (onem === 'onemli') return '<span class="sinyal-badge sinyal-bekle" style="font-size:0.65rem">🟡 ÖNEMLİ</span>';
+  return '';
+}
+
+// ─────────────────────────────────────────────
+// YARDIMCI: Hisse kodu takipte mi?
+// ─────────────────────────────────────────────
+function _kapTakipteMi(kodlar) {
+  if (!kodlar?.length) return false;
+  return kodlar.some(k => state.takipEdilen.has(k));
+}
+
+function _kapPortfoydeMi(kodlar) {
+  if (!kodlar?.length) return false;
+  return kodlar.some(k => state.portfoy[k]);
+}
+
+// ─────────────────────────────────────────────
+// YARDIMCI: Tarih formatla
+// ─────────────────────────────────────────────
+function _kapTarihFmt(tarihStr) {
+  if (!tarihStr) return '—';
+  try {
+    const d = new Date(tarihStr);
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+           ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  } catch (_) {
+    return tarihStr;
+  }
+}
+
+// ─────────────────────────────────────────────
+// renderKapOzetKartlar
+// ─────────────────────────────────────────────
+export function renderKapOzetKartlar(bildirimler) {
+  const toplam = bildirimler.length;
+  const kritik = bildirimler.filter(b => b._onem === 'kritik').length;
+  const takip  = bildirimler.filter(b => _kapTakipteMi(b.kodlar)).length;
+
+  const topEl = el('kapTopToplam');
+  const kriEl = el('kapTopKritik');
+  const takEl = el('kapTopTakip');
+  const sonEl = el('kapSonGuncelleme');
+
+  if (topEl) topEl.textContent = toplam;
+  if (kriEl) kriEl.textContent = kritik || '—';
+  if (takEl) takEl.textContent = takip  || '—';
+  if (sonEl) sonEl.textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ─────────────────────────────────────────────
+// renderKapListesi
+// Ana KAP bildirim listesini çizer.
+// bildirimler: normalize edilmiş dizi (api.js'den)
+// filtre: 'tum' | 'FR' | 'ODA' | 'DG'
+// sadeceTakip: boolean
+// aramaMetni: string
+// ─────────────────────────────────────────────
+export function renderKapListesi(bildirimler, { filtre = 'tum', sadeceTakip = false, aramaMetni = '' } = {}) {
+  const konteyner = el('kapListesi');
+  if (!konteyner) return;
+
+  // Filtrele
+  let liste = bildirimler.filter(b => {
+    if (filtre !== 'tum' && b.tip !== filtre) return false;
+    if (sadeceTakip && !_kapTakipteMi(b.kodlar)) return false;
+    if (aramaMetni) {
+      const ara = aramaMetni.toLowerCase();
+      return (b.sirket?.toLowerCase().includes(ara)) ||
+             (b.baslik?.toLowerCase().includes(ara))  ||
+             (b.kodlar?.some(k => k.toLowerCase().includes(ara)));
+    }
+    return true;
+  });
+
+  renderKapOzetKartlar(bildirimler);
+
+  if (liste.length === 0) {
+    konteyner.innerHTML =
+      '<div class="empty-state">' +
+        '<div class="empty-icon">📋</div>' +
+        '<div class="empty-title">Bildirim bulunamadı</div>' +
+        '<div class="empty-sub">Filtre veya arama kriterini değiştir</div>' +
+      '</div>';
+    return;
+  }
+
+  konteyner.innerHTML = liste.map((b, idx) => {
+    const portfoyde = _kapPortfoydeMi(b.kodlar);
+    const takipte   = _kapTakipteMi(b.kodlar);
+    const onemRozet = _kapOnemRozeti(b._onem);
+    const tipRozet  = _kapTipRozeti(b.tip, b.tipAciklama);
+
+    // Arka plan: portföyde → hafif kırmızı/yeşil vurgu; takipte → hafif sarı
+    let bgVurgu = '';
+    if (portfoyde) bgVurgu = 'border-left:3px solid var(--accent);';
+    else if (takipte) bgVurgu = 'border-left:3px solid var(--yellow);';
+
+    const kodBadges = (b.kodlar || []).slice(0, 5).map(k => {
+      const renk = state.portfoy[k] ? 'var(--accent)' :
+                   state.takipEdilen.has(k) ? 'var(--yellow)' : 'var(--muted)';
+      return '<span style="font-size:0.65rem;font-family:var(--mono);padding:1px 6px;' +
+             'border-radius:4px;border:1px solid ' + renk + '44;color:' + renk + '">' + k + '</span>';
+    }).join(' ');
+
+    return '<div class="sinyal-satir" style="cursor:pointer;' + bgVurgu + '" ' +
+           'onclick="window._uiCallbacks.kapDetayAc(' + idx + ')">' +
+             '<div style="display:flex;align-items:flex-start;gap:0.75rem;flex:1;min-width:0">' +
+               '<div style="flex:1;min-width:0">' +
+                 '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.3rem">' +
+                   tipRozet +
+                   onemRozet +
+                   (portfoyde ? '<span style="font-size:0.62rem;color:var(--accent)">● Portföyde</span>' : '') +
+                   (takipte && !portfoyde ? '<span style="font-size:0.62rem;color:var(--yellow)">● Takipte</span>' : '') +
+                 '</div>' +
+                 '<div style="font-weight:600;font-size:0.85rem;margin-bottom:0.25rem;' +
+                      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+                   b.baslik +
+                 '</div>' +
+                 '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">' +
+                   b.sirket +
+                 '</div>' +
+                 '<div style="display:flex;gap:0.3rem;flex-wrap:wrap">' + kodBadges + '</div>' +
+               '</div>' +
+               '<div style="text-align:right;flex-shrink:0;font-size:0.72rem;color:var(--muted);white-space:nowrap">' +
+                 _kapTarihFmt(b.tarih) +
+                 (b._analizVar ? '<br><span style="color:var(--accent);font-size:0.65rem">✓ Analiz var</span>' : '') +
+               '</div>' +
+             '</div>' +
+           '</div>';
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// renderKapDetay
+// Seçili bildirimin detay modalını doldurur.
+// ─────────────────────────────────────────────
+export function renderKapDetay(bildirim) {
+  if (!bildirim) return;
+
+  const baslikEl  = el('kapDetayBaslik');
+  const sirketEl  = el('kapDetaySirket');
+  const metaEl    = el('kapDetayMeta');
+  const kodlarEl  = el('kapDetayKodlar');
+  const kapBtnEl  = el('kapDetayKapBtn');
+
+  if (baslikEl) baslikEl.textContent = bildirim.baslik || '—';
+  if (sirketEl) sirketEl.textContent = bildirim.sirket || '';
+
+  // Meta kartlar
+  if (metaEl) {
+    metaEl.innerHTML =
+      '<div class="micro-kart"><div class="micro-kart-label">Tarih</div>' +
+        '<div class="micro-kart-val">' + _kapTarihFmt(bildirim.tarih) + '</div></div>' +
+      '<div class="micro-kart"><div class="micro-kart-label">Tür</div>' +
+        '<div class="micro-kart-val">' + (bildirim.tipAciklama || bildirim.tip || '—') + '</div></div>' +
+      (bildirim.ozet
+        ? '<div class="micro-kart" style="grid-column:1/-1"><div class="micro-kart-label">Özet</div>' +
+            '<div class="micro-kart-val" style="font-size:0.8rem;white-space:normal;line-height:1.5">' + bildirim.ozet + '</div></div>'
+        : '');
+  }
+
+  // Hisse kodları
+  if (kodlarEl) {
+    const kodlar = bildirim.kodlar || [];
+    if (kodlar.length === 0) {
+      el('kapDetayKodlarBlok') && (el('kapDetayKodlarBlok').style.display = 'none');
+    } else {
+      el('kapDetayKodlarBlok') && (el('kapDetayKodlarBlok').style.display = '');
+      kodlarEl.innerHTML = kodlar.map(k => {
+        const portfoyde = !!state.portfoy[k];
+        const takipte   = state.takipEdilen.has(k);
+        const renk = portfoyde ? 'var(--accent)' : takipte ? 'var(--yellow)' : 'var(--muted)';
+        const etiket = portfoyde ? ' ●portföy' : takipte ? ' ●takip' : '';
+        return '<span style="font-family:var(--mono);font-size:0.78rem;padding:4px 10px;' +
+               'border-radius:6px;border:1px solid ' + renk + '55;color:' + renk + '">' +
+               k + etiket + '</span>';
+      }).join('');
+    }
+  }
+
+  // KAP linki butonu
+  if (kapBtnEl && bildirim.url) {
+    kapBtnEl.onclick = () => window.open(bildirim.url, '_blank');
+    kapBtnEl.style.display = '';
+  } else if (kapBtnEl) {
+    kapBtnEl.style.display = 'none';
+  }
+
+  // AI içeriğini sıfırla
+  const aiEl = el('kapDetayAiIcerik');
+  if (aiEl) aiEl.innerHTML = 'Bu bildirimin portföyünüze ve takip listenize etkisini öğrenmek için analiz et.';
+}
+
+// ─────────────────────────────────────────────
+// renderKapAnalizSonucu
+// AI analizini modal içinde göster.
+// ─────────────────────────────────────────────
+export function renderKapAnalizSonucu(analiz) {
+  const aiEl = el('kapDetayAiIcerik');
+  if (!aiEl || !analiz) return;
+
+  const onemRenk = analiz.onem === 'kritik' ? 'var(--red)' :
+                   analiz.onem === 'onemli'  ? 'var(--yellow)' : 'var(--accent)';
+
+  const hisseSatirlar = (analiz.hisseler || []).map(h => {
+    const etkiRenk = h.etki === 'olumlu' ? 'var(--accent)' :
+                     h.etki === 'olumsuz' ? 'var(--red)' : 'var(--muted)';
+    const etkiIcon = h.etki === 'olumlu' ? '▲' : h.etki === 'olumsuz' ? '▼' : '→';
+    return '<div style="display:flex;align-items:flex-start;gap:0.5rem;' +
+           'padding:0.4rem 0;border-bottom:1px solid var(--border)">' +
+             '<span style="font-family:var(--mono);font-size:0.75rem;min-width:50px;' +
+             'color:' + etkiRenk + '">' + h.kod + '</span>' +
+             '<span style="color:' + etkiRenk + ';font-size:0.75rem;min-width:20px">' + etkiIcon + '</span>' +
+             '<span style="font-size:0.78rem;color:var(--muted)">' + (h.aciklama || '') + '</span>' +
+           '</div>';
+  }).join('');
+
+  aiEl.innerHTML =
+    '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">' +
+      '<span style="font-size:0.72rem;font-weight:700;color:' + onemRenk + ';' +
+      'text-transform:uppercase;letter-spacing:0.06em">' +
+        (analiz.onem === 'kritik' ? '🔴 KRİTİK' : analiz.onem === 'onemli' ? '🟡 ÖNEMLİ' : '🟢 NORMAL') +
+      '</span>' +
+    '</div>' +
+    '<div style="font-size:0.85rem;line-height:1.7;margin-bottom:0.75rem">' + (analiz.yorum || '') + '</div>' +
+    (hisseSatirlar
+      ? '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.4rem;' +
+        'text-transform:uppercase;letter-spacing:0.06em">ETKİLENEN HİSSELER</div>' +
+        hisseSatirlar
+      : '');
+}
