@@ -80,6 +80,8 @@
       </span>
 
       <button class="btn primary" id="btnGuncelle">⟳ Güncelle</button>
+      <button class="btn" id="btnBildirimMerkezi" title="Bildirim Merkezi">🔔</button>
+      <button class="btn" id="btnAnalizGecmisi" title="Analiz Geçmişi">📋</button>
 
       <div class="user-pill">
         <div class="user-avatar" id="userAvatar">?</div>
@@ -636,6 +638,7 @@
           <div class="section-sub">Kullanıcıların yaptığı AI haber analizleri</div>
         </div>
         <button class="btn primary" id="btnGunSonuOzet">📊 Gün Sonu Özeti</button>
+        <button class="btn" id="btnGunSonuOzetleriGoster">📖 Özetleri Gör</button>
       </div>
       <div id="haberAnalizListesi">
         <div class="muted" style="font-size:0.8rem">Yükleniyor...</div>
@@ -852,6 +855,56 @@
     </div>
   </div>
 </div>
+<!-- Analiz Geçmişi Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="analizGecmisiModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📋 Analiz Geçmişi</div>
+        <div class="modal-sub">AI analizleriniz ve tutarlılık skorları</div>
+      </div>
+      <button class="modal-close" data-modal-close="analizGecmisiModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="analizGecmisiListesi">
+        <div style="text-align:center;padding:2rem;color:var(--muted)">Yükleniyor...</div>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<!-- Bildirim Merkezi Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="bildirimMerkeziModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📢 Bildirim Merkezi</div>
+        <div class="modal-sub">Son 24 saatteki bildirimler</div>
+      </div>
+      <button class="modal-close" data-modal-close="bildirimMerkeziModal">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="pushMesajListesi"></div>
+    </div>
+  </div>
+</div>
+ 
+<!-- Gün Sonu Özetleri Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="gunSonuOzetleriModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📊 Gün Sonu Özetleri</div>
+        <div class="modal-sub">Geçmiş BIST kapanış analizleri</div>
+      </div>
+      <button class="modal-close" data-modal-close="gunSonuOzetleriModal">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="gunSonuOzetListesi"></div>
+    </div>
+  </div>
+</div>
+ 
 
 <!-- ══════════════════════════════════════════
      GLOBAL UI ELEMANLAR

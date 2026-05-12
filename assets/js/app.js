@@ -62,6 +62,10 @@ import {
   kapSonIndexAl,
   kapSonIndexKaydet,
   aiGrafikAnalizEt,
+  analizArsivYukle,
+  analizTutarlilikGuncelle,
+  loadPushMesajlar,
+  loadGunSonuOzetleri,
 } from './api.js';
 
 import {
@@ -80,6 +84,9 @@ import {
   renderKapAnalizSonucu,
   renderKapOzetKartlar,
   renderGrafik,
+  renderAnalizGecmisi,
+  renderPushMesajlari,
+  renderGunSonuOzetleri,
 } from './ui.js';
 
 setApiToast(showToast);
@@ -1115,12 +1122,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Admin
-  el('btnKullaniciEkle')?.addEventListener('click',       () => openModal('addUserModal'));
-  el('btnKullaniciEkleOnayla')?.addEventListener('click', () => window.kullaniciEkle());
-  el('btnAdminKeyKaydet')?.addEventListener('click',      () => window.adminKendiKeyiKaydet());
-  el('btnMukerrerTemizle')?.addEventListener('click',     () => window.mukerrerTemizle());
-  el('btnTokenYenile')?.addEventListener('click',         () => window.loadTokenIstatistik());
-  el('btnGunSonuOzet')?.addEventListener('click',         () => window.gunSonuOzetOlustur());
+  el('btnKullaniciEkle')?.addEventListener('click',         () => openModal('addUserModal'));
+  el('btnKullaniciEkleOnayla')?.addEventListener('click',   () => window.kullaniciEkle());
+  el('btnAdminKeyKaydet')?.addEventListener('click',        () => window.adminKendiKeyiKaydet());
+  el('btnMukerrerTemizle')?.addEventListener('click',       () => window.mukerrerTemizle());
+  el('btnTokenYenile')?.addEventListener('click',           () => window.loadTokenIstatistik());
+  el('btnGunSonuOzet')?.addEventListener('click',           () => window.gunSonuOzetOlustur());
+  el('btnAnalizGecmisi')?.addEventListener('click',         () => window.analizGecmisiAc());
+  el('btnBildirimMerkezi')?.addEventListener('click',       () => window.bildirimMerkeziAc());
+  el('btnGunSonuOzetleriGoster')?.addEventListener('click', () => window.gunSonuOzetleriGoster());
+  el('btnAnalizPdfIndir')?.addEventListener('click',        () => window.analizPdfIndir());
 
   // ── KAP event'leri ─────────────────────────
   el('btnKapYenile')?.addEventListener('click', async () => {
@@ -1407,11 +1418,15 @@ window.gunSonuOzetOlustur = async () => {
   try {
     const snap      = await getDocs(query(collection(db, 'haberAnalizleri'), orderBy('tarih', 'desc'), limit(30)));
     const analizler = snap.docs.map(d => d.data());
-    const { text }  = await aiGunSonuOzeti({ key, analizler });
+    const { text }  = await aiGunSonuOzeti({
+      key, analizler,
+      currentUser: state.currentUser,
+      db,               // arşivlemek için
+    });
     hideLoading();
     if (text) {
       await pushMesajGonder({ db, currentUser: state.currentUser, baslik: '📊 Gün Sonu BIST Özeti', mesaj: text });
-      showToast('Gün sonu özeti push olarak gönderildi ✓');
+      showToast('Gün sonu özeti gönderildi ve arşivlendi ✓');
     } else {
       showToast('Özet oluşturulamadı', 'error');
     }
@@ -1470,5 +1485,42 @@ window.grafikAnalizEt = async () => {
     btn.textContent = '📈 Bu Grafiği AI ile Analiz Et';
   } finally {
     btn.disabled = false;
+  }
+};
+window.analizGecmisiAc = async () => {
+  const konteyner = el('analizGecmisiListesi');
+  if (konteyner) konteyner.innerHTML =
+    '<div style="text-align:center;padding:2rem;color:var(--muted)">Yükleniyor...</div>';
+ 
+  openModal('analizGecmisiModal');
+ 
+  try {
+    // Önce tutarlılık güncelle (sessizce)
+    analizTutarlilikGuncelle({ db, currentUser: state.currentUser, gunOncesi: 5 }).catch(() => {});
+ 
+    const analizler = await analizArsivYukle({
+      db, currentUser: state.currentUser, limitSayisi: 100,
+    });
+    renderAnalizGecmisi(analizler);
+  } catch (e) {
+    showToast('Analiz geçmişi yüklenemedi: ' + (e?.message || 'Hata'), 'error');
+  }
+};
+window.bildirimMerkeziAc = async () => {
+  openModal('bildirimMerkeziModal');
+  try {
+    const mesajlar = await loadPushMesajlar({ db });
+    renderPushMesajlari(mesajlar);
+  } catch (e) {
+    showToast('Bildirimler yüklenemedi', 'error');
+  }
+};
+window.gunSonuOzetleriGoster = async () => {
+  openModal('gunSonuOzetleriModal');
+  try {
+    const ozetler = await loadGunSonuOzetleri({ db, limitSayisi: 10 });
+    renderGunSonuOzetleri(ozetler);
+  } catch (e) {
+    showToast('Özetler yüklenemedi', 'error');
   }
 };
