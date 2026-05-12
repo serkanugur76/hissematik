@@ -16,7 +16,7 @@ import {
   db,
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, addDoc,
-  query, where, orderBy, limit, serverTimestamp, aiGrafikAnalizEt,
+  query, where, orderBy, limit, serverTimestamp,
 } from './firebase.js';
 
 import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
