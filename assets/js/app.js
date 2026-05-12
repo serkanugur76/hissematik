@@ -61,6 +61,7 @@ import {
   kapHashOlustur,
   kapSonIndexAl,
   kapSonIndexKaydet,
+  aiGrafikAnalizEt,
 } from './api.js';
 
 import {
@@ -78,6 +79,7 @@ import {
   renderKapDetay,
   renderKapAnalizSonucu,
   renderKapOzetKartlar,
+  renderGrafik,
 } from './ui.js';
 
 setApiToast(showToast);
