@@ -355,9 +355,12 @@ export async function aiKapAnalizEt({ key, bildirim, takipEdilen = new Set(), po
     'JSON ile yanıtla:\n{"yorum":"...","onem":"kritik|onemli|normal","hisseler":[{"kod":"XXXX","etki":"olumlu|olumsuz|nötr","aciklama":"..."}]}';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1200);
     try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
-    return JSON.parse(text.replace(/```json|```/g, '').trim());
+    const temiz = text.replace(/```json|```/g, '').trim();
+    const baslangic = temiz.indexOf('{');
+    const bitis     = temiz.lastIndexOf('}');
+    return JSON.parse(baslangic >= 0 && bitis > baslangic ? temiz.slice(baslangic, bitis + 1) : temiz);
   } catch (e) {
     console.error('aiKapAnalizEt hatası:', e);
     _notify(_apiHataYonet(e));
