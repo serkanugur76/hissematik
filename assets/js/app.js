@@ -444,6 +444,36 @@ window.verileriGuncelle = async () => {
 // PİYASA VERİSİ
 // ─────────────────────────────────────────────
 
+// ─── Yardımcı: Yahoo meta'dan güvenli fiyat ve önceki kapanış çıkarır ───────
+// Yahoo, endeks sembollerinde (^XU100, ^XU030) zaman zaman chartPreviousClose
+// yerine regularMarketPreviousClose veya previousClose döndürür; bazen de
+// sadece quote kapanış dizisinden türetmek gerekir.
+function _metaFiyatParse(result) {
+  if (!result) return { fiyat: 0, onceki: 0 };
+  const meta  = result.meta || {};
+  const quote = result.indicators?.quote?.[0] || {};
+
+  // Güncel fiyat: regularMarketPrice → son kapanış
+  const fiyat = meta.regularMarketPrice
+    || meta.regularMarketOpen
+    || (quote.close || []).filter(Boolean).at(-1)
+    || 0;
+
+  // Önceki kapanış: chartPreviousClose → regularMarketPreviousClose
+  //                → previousClose → quote dizisinin sondan ikinci elemanı
+  const onceki = meta.chartPreviousClose
+    || meta.regularMarketPreviousClose
+    || meta.previousClose
+    || (quote.close || []).filter(Boolean).at(-2)
+    || 0;
+
+  return { fiyat, onceki };
+}
+
+function _degisimHesapla(fiyat, onceki) {
+  return onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+}
+
 async function _piyasaVerisiCek() {
   try {
     const data = await fetchPiyasaVerisi();
@@ -451,50 +481,42 @@ async function _piyasaVerisiCek() {
 
     const pv = { ...state.piyasaVerisi };
 
-    const xu100 = data['^XU100']?.chart?.result?.[0];
-    if (xu100) {
-      const f = xu100.meta.regularMarketPrice || 0;
-      const o = xu100.meta.chartPreviousClose  || 0;
-      const d = o > 0 ? +((f - o) / o * 100).toFixed(2) : 0;
-      pv.xu100 = { fiyat: f, degisim: d };
+    const xu100Result = data['^XU100']?.chart?.result?.[0];
+    if (xu100Result) {
+      const { fiyat, onceki } = _metaFiyatParse(xu100Result);
+      const d = _degisimHesapla(fiyat, onceki);
+      pv.xu100 = { fiyat, degisim: d };
       pv.yon   = d;
     }
 
-    const xu030 = data['^XU030']?.chart?.result?.[0];
-    if (xu030) {
-      const f = xu030.meta.regularMarketPrice || 0;
-      const o = xu030.meta.chartPreviousClose  || 0;
-      pv.xu030 = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    const xu030Result = data['^XU030']?.chart?.result?.[0];
+    if (xu030Result) {
+      const { fiyat, onceki } = _metaFiyatParse(xu030Result);
+      pv.xu030 = { fiyat, degisim: _degisimHesapla(fiyat, onceki) };
     }
 
-    const usdtry = data['USDTRY=X']?.chart?.result?.[0];
-    if (usdtry) {
-      const f = usdtry.meta.regularMarketPrice || 0;
-      const o = usdtry.meta.chartPreviousClose  || 0;
-      pv.usdtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    const usdtryResult = data['USDTRY=X']?.chart?.result?.[0];
+    if (usdtryResult) {
+      const { fiyat, onceki } = _metaFiyatParse(usdtryResult);
+      pv.usdtry = { fiyat, degisim: _degisimHesapla(fiyat, onceki) };
     }
 
-    const eurtry = data['EURTRY=X']?.chart?.result?.[0];
-    if (eurtry) {
-      const f = eurtry.meta.regularMarketPrice || 0;
-      const o = eurtry.meta.chartPreviousClose  || 0;
-      pv.eurtry = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    const eurtryResult = data['EURTRY=X']?.chart?.result?.[0];
+    if (eurtryResult) {
+      const { fiyat, onceki } = _metaFiyatParse(eurtryResult);
+      pv.eurtry = { fiyat, degisim: _degisimHesapla(fiyat, onceki) };
     }
 
-    const eurusd = data['EURUSD=X']?.chart?.result?.[0];
-    if (eurusd) {
-      const f = eurusd.meta.regularMarketPrice || 0;
-      const o = eurusd.meta.chartPreviousClose  || 0;
-      pv.eurusd = { fiyat: f, degisim: o > 0 ? +((f - o) / o * 100).toFixed(2) : 0 };
+    const eurusdResult = data['EURUSD=X']?.chart?.result?.[0];
+    if (eurusdResult) {
+      const { fiyat, onceki } = _metaFiyatParse(eurusdResult);
+      pv.eurusd = { fiyat, degisim: _degisimHesapla(fiyat, onceki) };
     }
 
-    const altinOns = data['GC=F']?.chart?.result?.[0];
-    if (altinOns) {
-      const onsUsd     = altinOns.meta.regularMarketPrice || 0;
-      const onsUsdOnce = altinOns.meta.chartPreviousClose || 0;
-      const degisim    = onsUsdOnce > 0
-        ? +((onsUsd - onsUsdOnce) / onsUsdOnce * 100).toFixed(2)
-        : 0;
+    const altinResult = data['GC=F']?.chart?.result?.[0];
+    if (altinResult) {
+      const { fiyat: onsUsd, onceki: onsUsdOnce } = _metaFiyatParse(altinResult);
+      const degisim  = _degisimHesapla(onsUsd, onsUsdOnce);
       const kur      = pv.usdtry?.fiyat || 0;
       const gramTL   = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
       const ceyrekTL = gramTL > 0 ? +(gramTL * 1.75).toFixed(2) : 0;
