@@ -137,20 +137,20 @@ export function renderPiyasaKartlari() {
 export function renderPiyasaYonu() { renderPiyasaKartlari(); }
 
 // ─────────────────────────────────────────────
-// PİYASA ENDEKS + ALTIN KARTLARı (dashboard sabit alan)
+// PİYASA ENDEKS + ALTIN KARTLARI (dashboard sabit alan)
 // ─────────────────────────────────────────────
 
 function _sparklineSvg(kapanislar, pos) {
   const pts = (kapanislar || []).filter(Boolean);
-  if (pts.length < 2) return '';
+  if (pts.length < 2) return '<svg class="pk-sparkline" viewBox="0 0 200 40"></svg>';
   const W = 200; const H = 40;
-  const min = Math.min(...pts);
-  const max = Math.max(...pts);
+  const min = Math.min.apply(null, pts);
+  const max = Math.max.apply(null, pts);
   const range = max - min || 1;
   const xStep = W / (pts.length - 1);
   const coords = pts.map(function(v, i) {
     const x = +(i * xStep).toFixed(1);
-    const y = +(H - ((v - min) / range) * (H - 4) - 2).toFixed(1);
+    const y = +(H - ((v - min) / range) * (H - 6) - 3).toFixed(1);
     return x + ',' + y;
   });
   const polyline = coords.join(' ');
@@ -204,12 +204,13 @@ export function renderPiyasaKartlariSabit() {
       '<div class="pk-altin-item"><div class="pk-altin-sub">Çeyrek</div><div class="pk-altin-val">' + (altin && altin.ceyrekTL ? _fmt(altin.ceyrekTL, 0) + ' ₺' : '—') + '</div></div>' +
       '<div class="pk-altin-item"><div class="pk-altin-sub">Tam</div><div class="pk-altin-val">' + (altin && altin.tamTL ? _fmt(altin.tamTL, 0) + ' ₺' : '—') + '</div></div>' +
     '</div>' +
-    '<div class="pk-degisim ' + (altin ? _degCls(altin.degisim) : '') + '" style="margin-top:0.3rem">' + (altin ? _degStr(altin.degisim) : '—') + '</div>' +
+    '<div class="pk-degisim ' + (altin ? _degCls(altin.degisim) : '') + '" style="margin-top:0.4rem">' + (altin ? _degStr(altin.degisim) : '—') + '</div>' +
     '</div>';
 
   container.className = 'piyasa-kartlari-row';
   container.innerHTML = b100Html + b30Html + altinGrHtml + ceyrekHtml;
 }
+
 
 // ─────────────────────────────────────────────
 // ÖZET KARTLAR

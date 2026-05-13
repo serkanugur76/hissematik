@@ -187,6 +187,20 @@ export async function fetchPiyasaVerisi() {
   } catch (e) { console.error('fetchPiyasaVerisi hatası:', e); return null; }
 }
 
+// Endeks / emtia sembolü için son 30 günlük kapanış verisi çeker.
+// fetchYahoo'dan farklı olarak sembol sonuna .IS eklemez.
+export async function fetchEndeksGecmisi(sembol) {
+  try {
+    const url = PROXY + '?sembol=' + encodeURIComponent(sembol);
+    const res = await fetch(url);
+    const json = await res.json();
+    const raw = json?.chart?.result?.[0];
+    if (!raw) return [];
+    const close = (raw.indicators?.quote?.[0]?.close || []).filter(function(v) { return v != null && v > 0; });
+    return close.slice(-30);
+  } catch (e) { console.error('fetchEndeksGecmisi hatası:', sembol, e); return []; }
+}
+
 export async function fetchHaberler() {
   try {
     const res  = await fetch(PROXY + '?haberler=1');

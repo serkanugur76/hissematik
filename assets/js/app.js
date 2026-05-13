@@ -25,6 +25,7 @@ import {
   fetchTumHisseFiyatlari,
   fetchTopluYahoo,
   fetchPiyasaVerisi,
+  fetchEndeksGecmisi,
   fetchHaberler,
   fetchYahoo,
   aiPortfoyAnalizYap,
@@ -484,7 +485,14 @@ function _degisimHesapla(fiyat, onceki) {
 
 async function _piyasaVerisiCek() {
   try {
-    const data = await fetchPiyasaVerisi();
+    // Anlık fiyat + tarihsel kapanış verisi paralel çek
+    const [data, xu100Kapanis, xu030Kapanis, altinKapanis] = await Promise.all([
+      fetchPiyasaVerisi(),
+      fetchEndeksGecmisi('XU100.IS'),
+      fetchEndeksGecmisi('XU030.IS'),
+      fetchEndeksGecmisi('GC=F'),
+    ]);
+
     if (!data) return;
 
     const pv = { ...state.piyasaVerisi };
@@ -492,16 +500,14 @@ async function _piyasaVerisiCek() {
     const xu100Result = data['XU100.IS']?.chart?.result?.[0];
     if (xu100Result) {
       const { fiyat, degisim } = _metaFiyatParse(xu100Result);
-      const kapanis = (xu100Result.indicators?.quote?.[0]?.close || []).filter(Boolean).slice(-30);
-      pv.xu100 = { fiyat, degisim, kapanis };
+      pv.xu100 = { fiyat, degisim, kapanis: xu100Kapanis };
       pv.yon   = degisim;
     }
 
     const xu030Result = data['XU030.IS']?.chart?.result?.[0];
     if (xu030Result) {
       const { fiyat, degisim } = _metaFiyatParse(xu030Result);
-      const kapanis = (xu030Result.indicators?.quote?.[0]?.close || []).filter(Boolean).slice(-30);
-      pv.xu030 = { fiyat, degisim, kapanis };
+      pv.xu030 = { fiyat, degisim, kapanis: xu030Kapanis };
     }
 
     const usdtryResult = data['USDTRY=X']?.chart?.result?.[0];
@@ -529,8 +535,10 @@ async function _piyasaVerisiCek() {
       const gramTL   = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
       const ceyrekTL = gramTL > 0 ? +(gramTL * 1.75).toFixed(2) : 0;
       const tamTL    = gramTL > 0 ? +(gramTL * 7.00).toFixed(2)  : 0;
-      const rawKapanis = (altinResult.indicators?.quote?.[0]?.close || []).filter(Boolean).slice(-30);
-      const kapanis = kur > 0 ? rawKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); }) : rawKapanis;
+      // Altın kapanışlarını ons USD'den gram TL'ye çevir
+      const kapanis = kur > 0
+        ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
+        : altinKapanis;
       pv.altin = { onsUsd, gramTL, ceyrekTL, tamTL, degisim, kapanis };
     }
 
