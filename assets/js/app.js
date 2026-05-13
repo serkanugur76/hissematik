@@ -677,6 +677,9 @@ async function hisseDetayAc(kod) {
         }
       } catch (_) {}
     }
+    // Kullanıcı başka hisseye geçtiyse bu isteğin sonucunu render etme
+    if (state.detayKod !== kod) return;
+    renderDetayTeknik(kod, state.veriler[kod] || {});
     renderGrafik(kod, _grafikGun);
   });
 }
