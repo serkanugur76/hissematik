@@ -990,8 +990,8 @@ function _kapPollingBaslat() {
 // ─────────────────────────────────────────────
 // KAP Detay Modal Aç
 // ─────────────────────────────────────────────
-function _kapDetayAc(idx) {
-  const bildirim = _kapBildirimler[idx];
+function _kapDetayAc(disclosureIndex) {
+  const bildirim = _kapBildirimler.find(b => b.index === disclosureIndex);
   if (!bildirim) return;
 
   _kapSeciliBildirim = bildirim;

@@ -1002,7 +1002,7 @@ export function renderKapListesi(bildirimler, { filtre = 'tum', sadeceTakip = fa
       return '<span style="font-size:0.65rem;font-family:var(--mono);padding:1px 6px;border-radius:4px;border:1px solid ' + renk + '44;color:' + renk + '">' + k + '</span>';
     }).join(' ');
 
-    return '<div class="sinyal-satir" style="cursor:pointer;' + bgVurgu + '" onclick="window._uiCallbacks.kapDetayAc(' + idx + ')">' +
+    return '<div class="sinyal-satir" style="cursor:pointer;' + bgVurgu + '" onclick="window._uiCallbacks.kapDetayAc(' + b.index + ')">' +
       '<div style="display:flex;align-items:flex-start;gap:0.75rem;flex:1;min-width:0">' +
         '<div style="flex:1;min-width:0">' +
           '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.3rem">' +
