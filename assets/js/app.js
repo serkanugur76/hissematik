@@ -489,14 +489,14 @@ async function _piyasaVerisiCek() {
 
     const pv = { ...state.piyasaVerisi };
 
-    const xu100Result = data['^XU100']?.chart?.result?.[0];
+    const xu100Result = data['XU100.IS']?.chart?.result?.[0];
     if (xu100Result) {
       const { fiyat, degisim } = _metaFiyatParse(xu100Result);
       pv.xu100 = { fiyat, degisim };
       pv.yon   = degisim;
     }
 
-    const xu030Result = data['^XU030']?.chart?.result?.[0];
+    const xu030Result = data['XU030.IS']?.chart?.result?.[0];
     if (xu030Result) {
       const { fiyat, degisim } = _metaFiyatParse(xu030Result);
       pv.xu030 = { fiyat, degisim };
