@@ -17,6 +17,7 @@ import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
 // ─────────────────────────────────────────────
 
 const PROXY      = 'https://hissematik-proxy.ugurserkan.workers.dev';
+const KAP_PROXY  = 'https://hissematik.vercel.app/api/kap';
 const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_VER = '2023-06-01';
 const MODEL      = 'claude-sonnet-4-6';
@@ -265,7 +266,7 @@ export async function aiGrafikAnalizEt({ key, kod, veri, gun }) {
 
 export async function fetchKapBildirimleri(sonrasiIndex = null) {
   try {
-    const url  = sonrasiIndex ? PROXY + '?kap=1&sonrasi=' + sonrasiIndex : PROXY + '?kap=1';
+    const url  = sonrasiIndex ? KAP_PROXY + '?sonrasi=' + sonrasiIndex : KAP_PROXY;
     const res  = await fetch(url);
     const json = await res.json();
     if (json.error) { console.warn('KAP API uyarısı:', json.error); return []; }
