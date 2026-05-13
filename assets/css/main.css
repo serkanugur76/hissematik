@@ -705,17 +705,6 @@ tr:last-child td { border-bottom:none; }
 .sc-value.red    { color: var(--red); }
 .sc-value.yellow { color: var(--yellow); }
 
-/* ── PİYASA YÖN CHIP ── */
-.piyasa-yon-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-
 /* ── PİYASA ENDEKS KARTLARI ── */
 .piyasa-kartlari-row {
   display: grid;
@@ -737,75 +726,44 @@ tr:last-child td { border-bottom:none; }
 .piyasa-kart::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 2px;
+  bottom: 0; left: 0; right: 0; height: 2px;
   background: var(--pk-color, var(--border2));
   opacity: 0.7;
 }
 .piyasa-kart.pk-green { --pk-color: var(--accent); }
 .piyasa-kart.pk-red   { --pk-color: var(--red); }
 .piyasa-kart.pk-gold  { --pk-color: var(--yellow); }
-.pk-label {
-  font-size: 0.62rem;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.pk-fiyat {
-  font-family: var(--mono);
-  font-size: 1.3rem;
-  font-weight: 600;
-  line-height: 1.15;
-}
-.pk-degisim {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
+.pk-label  { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.pk-fiyat  { font-family: var(--mono); font-size: 1.3rem; font-weight: 600; line-height: 1.15; }
+.pk-degisim { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; }
 .pk-degisim.pos { color: var(--accent); }
 .pk-degisim.neg { color: var(--red); }
-.pk-sparkline {
-  margin-top: 0.4rem;
-  width: 100%;
-  height: 38px;
-  display: block;
-}
-.pk-spark-line {
-  fill: none;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.pk-spark-line.pos { stroke: var(--accent); }
-.pk-spark-line.neg { stroke: var(--red); }
-.pk-spark-fill { opacity: 0.08; }
-.pk-spark-fill.pos { fill: var(--accent); }
-.pk-spark-fill.neg { fill: var(--red); }
-.pk-altin-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  margin-top: 0.3rem;
-}
+.pk-sparkline   { margin-top: 0.4rem; width: 100%; height: 38px; display: block; }
+.pk-spark-line  { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.pk-spark-line.pos  { stroke: var(--accent); }
+.pk-spark-line.neg  { stroke: var(--red); }
+.pk-spark-fill      { opacity: 0.08; }
+.pk-spark-fill.pos  { fill: var(--accent); }
+.pk-spark-fill.neg  { fill: var(--red); }
+.pk-altin-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.3rem; }
 .pk-altin-item { display: flex; flex-direction: column; gap: 0.05rem; }
-.pk-altin-sub {
-  font-size: 0.58rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.pk-altin-val {
-  font-family: var(--mono);
-  font-size: 0.88rem;
-  color: var(--yellow);
+.pk-altin-sub  { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.pk-altin-val  { font-family: var(--mono); font-size: 0.88rem; color: var(--yellow); font-weight: 500; }
+@media (max-width: 900px) { .piyasa-kartlari-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px)  { .piyasa-kartlari-row { grid-template-columns: 1fr 1fr; } }
+
+/* ── PİYASA YÖN CHIP ── */
+.piyasa-yon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
   font-weight: 500;
 }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 900px) {
-  .piyasa-kartlari-row { grid-template-columns: repeat(2, 1fr); }
-}
-
 @media (max-width: 640px) {
   .ticker-item  { padding: 0.5rem 0.875rem; }
   .dash-row     { grid-template-columns: 70px 70px 60px; }
@@ -813,7 +771,6 @@ tr:last-child td { border-bottom:none; }
   .detay-micro-grid { grid-template-columns: 1fr 1fr; }
   .detay-teknik-grid-v2 { grid-template-columns: 1fr 1fr; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
-  .piyasa-kartlari-row { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── DETAY MODAL BÖLÜM BAŞLIKLARI ── */
