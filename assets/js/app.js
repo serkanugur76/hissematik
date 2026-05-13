@@ -1044,6 +1044,16 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnGuncelleMobil')?.addEventListener('click', () => window.verileriGuncelle());
   el('btnLogoutMobil')?.addEventListener('click',   () => window.logout());
 
+  // Mobil menü — topbar buton yansımaları
+  el('btnBildirimMerkeziMobil')?.addEventListener('click', () => {
+    _closeMobileMenu();
+    window.bildirimMerkeziAc();
+  });
+  el('btnAnalizGecmisiMobil')?.addEventListener('click', () => {
+    _closeMobileMenu();
+    window.analizGecmisiAc();
+  });
+
   // Hisse filtre chip'leri
   document.querySelectorAll('.chip[data-filter]').forEach(btn => {
     btn.addEventListener('click', () => {
