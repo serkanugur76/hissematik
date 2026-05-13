@@ -660,10 +660,25 @@ async function hisseDetayAc(kod) {
   if (_grafikAiEl) { _grafikAiEl.style.display = 'none'; _grafikAiEl.innerHTML = ''; }
   const _grafikBtn = el('btnGrafikAnaliz');
   if (_grafikBtn) { _grafikBtn.disabled = false; _grafikBtn.textContent = '📈 Bu Grafiği AI ile Analiz Et'; }
-  // ÖNEMLİ: openModal önce çağrılmalı, aksi takdirde canvas display:none içinde
-  // kalır ve offsetWidth=0 döndüğü için grafik doğru genişlikte render edilemez.
+
+  // Modal önce açılmalı — aksi hâlde canvas display:none içinde kalır,
+  // offsetWidth=0 döner ve grafik doğru çizilemez.
   openModal('hisseDetayModal');
-  requestAnimationFrame(() => renderGrafik(kod, _grafikGun));
+
+  // Kapanis verisi yoksa (takip dışı hisse veya ilk açılış) Yahoo'dan çek
+  requestAnimationFrame(async () => {
+    if (!state.veriler[kod]?.kapanis?.length) {
+      const wrap = el('grafikWrap');
+      if (wrap) wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:0.82rem">⏳ Grafik verisi yükleniyor...</div>';
+      try {
+        const yeniVeri = await fetchYahoo(kod, state.piyasaVerisi.yon);
+        if (yeniVeri) {
+          state.veriler[kod] = { ...state.veriler[kod], ...yeniVeri };
+        }
+      } catch (_) {}
+    }
+    renderGrafik(kod, _grafikGun);
+  });
 }
 window.detayTakipToggle = () => {
   const k = state.detayKod;
