@@ -137,6 +137,81 @@ export function renderPiyasaKartlari() {
 export function renderPiyasaYonu() { renderPiyasaKartlari(); }
 
 // ─────────────────────────────────────────────
+// PİYASA ENDEKS + ALTIN KARTLARı (dashboard sabit alan)
+// ─────────────────────────────────────────────
+
+function _sparklineSvg(kapanislar, pos) {
+  const pts = (kapanislar || []).filter(Boolean);
+  if (pts.length < 2) return '';
+  const W = 200; const H = 40;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const range = max - min || 1;
+  const xStep = W / (pts.length - 1);
+  const coords = pts.map(function(v, i) {
+    const x = +(i * xStep).toFixed(1);
+    const y = +(H - ((v - min) / range) * (H - 4) - 2).toFixed(1);
+    return x + ',' + y;
+  });
+  const polyline = coords.join(' ');
+  const cls = pos ? 'pos' : 'neg';
+  const lastX = coords[coords.length - 1].split(',')[0];
+  const fillPts = '0,' + H + ' ' + polyline + ' ' + lastX + ',' + H;
+  return '<svg class="pk-sparkline" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+    '<polygon class="pk-spark-fill ' + cls + '" points="' + fillPts + '"/>' +
+    '<polyline class="pk-spark-line ' + cls + '" points="' + polyline + '"/>' +
+    '</svg>';
+}
+
+export function renderPiyasaKartlariSabit() {
+  const container = el('piyasaKartlariRow');
+  if (!container) return;
+
+  const xu100 = state.piyasaVerisi.xu100;
+  const xu030 = state.piyasaVerisi.xu030;
+  const altin = state.piyasaVerisi.altin;
+
+  function _degCls(d) { return parseFloat(d) >= 0 ? 'pos' : 'neg'; }
+  function _degStr(d) { const n = parseFloat(d) || 0; return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
+
+  const b100pos = (xu100 ? xu100.degisim : 0) >= 0;
+  const b100Html = '<div class="piyasa-kart ' + (b100pos ? 'pk-green' : 'pk-red') + '">' +
+    '<div class="pk-label">BIST 100</div>' +
+    '<div class="pk-fiyat">' + (xu100 ? _fmt(xu100.fiyat, 0) : '—') + '</div>' +
+    '<div class="pk-degisim ' + (xu100 ? _degCls(xu100.degisim) : '') + '">' + (xu100 ? _degStr(xu100.degisim) : '—') + '</div>' +
+    _sparklineSvg(xu100 ? xu100.kapanis : null, b100pos) +
+    '</div>';
+
+  const b30pos = (xu030 ? xu030.degisim : 0) >= 0;
+  const b30Html = '<div class="piyasa-kart ' + (b30pos ? 'pk-green' : 'pk-red') + '">' +
+    '<div class="pk-label">BIST 30</div>' +
+    '<div class="pk-fiyat">' + (xu030 ? _fmt(xu030.fiyat, 0) : '—') + '</div>' +
+    '<div class="pk-degisim ' + (xu030 ? _degCls(xu030.degisim) : '') + '">' + (xu030 ? _degStr(xu030.degisim) : '—') + '</div>' +
+    _sparklineSvg(xu030 ? xu030.kapanis : null, b30pos) +
+    '</div>';
+
+  const altinPos = (altin ? altin.degisim : 0) >= 0;
+  const altinGrHtml = '<div class="piyasa-kart pk-gold">' +
+    '<div class="pk-label">Altın (Gram)</div>' +
+    '<div class="pk-fiyat" style="color:var(--yellow)">' + (altin && altin.gramTL ? _fmt(altin.gramTL) + ' ₺' : '—') + '</div>' +
+    '<div class="pk-degisim ' + (altin ? _degCls(altin.degisim) : '') + '">' + (altin ? _degStr(altin.degisim) : '—') + '</div>' +
+    _sparklineSvg(altin ? altin.kapanis : null, altinPos) +
+    '</div>';
+
+  const ceyrekHtml = '<div class="piyasa-kart pk-gold">' +
+    '<div class="pk-label">Altın Çeşitleri</div>' +
+    '<div class="pk-altin-row">' +
+      '<div class="pk-altin-item"><div class="pk-altin-sub">Çeyrek</div><div class="pk-altin-val">' + (altin && altin.ceyrekTL ? _fmt(altin.ceyrekTL, 0) + ' ₺' : '—') + '</div></div>' +
+      '<div class="pk-altin-item"><div class="pk-altin-sub">Tam</div><div class="pk-altin-val">' + (altin && altin.tamTL ? _fmt(altin.tamTL, 0) + ' ₺' : '—') + '</div></div>' +
+    '</div>' +
+    '<div class="pk-degisim ' + (altin ? _degCls(altin.degisim) : '') + '" style="margin-top:0.3rem">' + (altin ? _degStr(altin.degisim) : '—') + '</div>' +
+    '</div>';
+
+  container.className = 'piyasa-kartlari-row';
+  container.innerHTML = b100Html + b30Html + altinGrHtml + ceyrekHtml;
+}
+
+// ─────────────────────────────────────────────
 // ÖZET KARTLAR
 // ─────────────────────────────────────────────
 
