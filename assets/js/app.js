@@ -667,6 +667,8 @@ async function hisseDetayAc(kod) {
 
   // Kapanis verisi yoksa (takip dışı hisse veya ilk açılış) Yahoo'dan çek
   requestAnimationFrame(async () => {
+    // RAF tetiklendiğinde kullanıcı zaten başka hisseye geçtiyse hiç çalışma
+    if (state.detayKod !== kod) return;
     if (!state.veriler[kod]?.kapanis?.length) {
       const wrap = el('grafikWrap');
       if (wrap) wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:0.82rem">⏳ Grafik verisi yükleniyor...</div>';
@@ -677,7 +679,7 @@ async function hisseDetayAc(kod) {
         }
       } catch (_) {}
     }
-    // Kullanıcı başka hisseye geçtiyse bu isteğin sonucunu render etme
+    // Fetch sürerken başka hisseye geçildiyse render etme
     if (state.detayKod !== kod) return;
     renderDetayTeknik(kod, state.veriler[kod] || {});
     renderGrafik(kod, _grafikGun);
