@@ -250,7 +250,7 @@ export async function aiGrafikAnalizEt({ key, kod, veri, gun }) {
     '3. Önümüzdeki 1-2 hafta beklenti\n4. Sinyal değerlendirmesi\n\nTürkçe. Rakam bazlı. 5-6 cümle.';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);
     try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     return text;
   } catch (e) {
@@ -451,7 +451,7 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
     'Kısa ve net teknik analiz yap. Risk ve fırsatları belirt. Türkçe, max 4 madde.';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);
     try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     return { metin: text, tarih: Date.now(), sembol: kod, fiyat: veri.fiyat };
   } catch (e) {
@@ -473,9 +473,12 @@ export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
     'JSON: {"hisseler":[{"kod":"THYAO","etki":"olumlu|olumsuz|notr","tip":"direkt|dolayli"}],"yorum":"...","sure":"kısa|orta|uzun"}';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 500);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1000);
     try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
-    return JSON.parse(text.replace(/```json|```/g, '').trim());
+    const temiz = text.replace(/```json|```/g, '').trim();
+    const baslangic = temiz.indexOf('{');
+    const bitis     = temiz.lastIndexOf('}');
+    return JSON.parse(baslangic >= 0 && bitis > baslangic ? temiz.slice(baslangic, bitis + 1) : temiz);
   } catch (e) {
     console.error('aiHaberAnalizEt hatası:', e);
     _notify(_apiHataYonet(e));
@@ -518,7 +521,7 @@ export async function aiGunSonuOzeti({ key, analizler, currentUser = null, db: d
     'ANALİZLER:\n' + ozet + '\n\nKısa (max 150 kelime), Türkçe, push bildirim formatında.';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 400);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
     try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
 
     // Arşivle
