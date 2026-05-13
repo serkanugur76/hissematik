@@ -1228,10 +1228,22 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled    = true;
     btn.textContent = '⏳ Hazırlanıyor...';
 
-    const origMaxH = body.style.maxHeight;
-    const origOver = body.style.overflow;
-    body.style.maxHeight = 'none';
-    body.style.overflow  = 'visible';
+    const origBodyMaxH = body.style.maxHeight;
+    const origBodyOver = body.style.overflow;
+    const origBodyH    = body.style.height;
+    const origModalMaxH = modal.style.maxHeight;
+    const origModalOver = modal.style.overflow;
+    const origModalH    = modal.style.height;
+
+    body.style.maxHeight  = 'none';
+    body.style.overflow   = 'visible';
+    body.style.height     = 'auto';
+    modal.style.maxHeight = 'none';
+    modal.style.overflow  = 'visible';
+    modal.style.height    = 'auto';
+
+    // Boyutun DOM'a yansıması için kısa bekleme
+    await new Promise(r => setTimeout(r, 120));
 
     try {
       const canvas = await html2canvas(modal, {
@@ -1240,6 +1252,8 @@ document.addEventListener('DOMContentLoaded', () => {
         useCORS:         true,
         allowTaint:      true,
         logging:         false,
+        height:          modal.scrollHeight,
+        windowHeight:    modal.scrollHeight,
       });
       const link    = document.createElement('a');
       link.download = (state.detayKod || 'hisse') + '-analiz.png';
@@ -1248,10 +1262,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {
       showToast('PNG oluşturulamadı.', 'error');
     } finally {
-      body.style.maxHeight = origMaxH;
-      body.style.overflow  = origOver;
-      btn.disabled         = false;
-      btn.textContent      = '📸 Paylaş';
+      body.style.maxHeight  = origBodyMaxH;
+      body.style.overflow   = origBodyOver;
+      body.style.height     = origBodyH;
+      modal.style.maxHeight = origModalMaxH;
+      modal.style.overflow  = origModalOver;
+      modal.style.height    = origModalH;
+      btn.disabled          = false;
+      btn.textContent       = '📸 Paylaş';
     }
   });
 
