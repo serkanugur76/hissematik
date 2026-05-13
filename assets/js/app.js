@@ -656,12 +656,14 @@ async function hisseDetayAc(kod) {
   document.querySelectorAll('.grafik-btn').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.gun) === _grafikGun);
   });
-  renderGrafik(kod, _grafikGun);
   const _grafikAiEl = el('grafikAiSonuc');
   if (_grafikAiEl) { _grafikAiEl.style.display = 'none'; _grafikAiEl.innerHTML = ''; }
   const _grafikBtn = el('btnGrafikAnaliz');
   if (_grafikBtn) { _grafikBtn.disabled = false; _grafikBtn.textContent = '📈 Bu Grafiği AI ile Analiz Et'; }
+  // ÖNEMLİ: openModal önce çağrılmalı, aksi takdirde canvas display:none içinde
+  // kalır ve offsetWidth=0 döndüğü için grafik doğru genişlikte render edilemez.
   openModal('hisseDetayModal');
+  requestAnimationFrame(() => renderGrafik(kod, _grafikGun));
 }
 window.detayTakipToggle = () => {
   const k = state.detayKod;
