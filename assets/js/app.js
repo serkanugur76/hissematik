@@ -671,7 +671,16 @@ async function hisseDetayAc(kod) {
     if (state.detayKod !== kod) return;
     if (!state.veriler[kod]?.kapanis?.length) {
       const wrap = el('grafikWrap');
-      if (wrap) wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:0.82rem">⏳ Grafik verisi yükleniyor...</div>';
+      if (wrap) {
+        let loadingEl = wrap.querySelector('.grafik-loading');
+        if (!loadingEl) {
+          loadingEl = document.createElement('div');
+          loadingEl.className = 'grafik-loading';
+          loadingEl.style.cssText = 'text-align:center;padding:2rem;color:var(--muted);font-size:0.82rem';
+          wrap.appendChild(loadingEl);
+        }
+        loadingEl.textContent = '⏳ Grafik verisi yükleniyor...';
+      }
       try {
         const yeniVeri = await fetchYahoo(kod, state.piyasaVerisi.yon);
         if (yeniVeri) {

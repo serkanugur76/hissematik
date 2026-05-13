@@ -1099,8 +1099,21 @@ export function renderKapAnalizSonucu(analiz) {
 
 export function renderGrafik(kod, gun = 30) {
   const v      = state.veriler[kod];
-  const canvas = el('grafikCanvas');
   const wrap   = el('grafikWrap');
+  let   canvas = el('grafikCanvas');
+
+  // Canvas, loading mesajı tarafından silinmiş olabilir — yeniden oluştur
+  if (!canvas && wrap) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'grafikCanvas';
+    wrap.appendChild(canvas);
+  }
+
+  // Loading div'ini temizle
+  if (wrap) {
+    const loadingEl = wrap.querySelector('.grafik-loading');
+    if (loadingEl) loadingEl.remove();
+  }
 
   if (!canvas || !v?.kapanis?.length) {
     if (wrap) wrap.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);font-size:0.82rem">Grafik verisi yok — önce Güncelle\'ye bas</div>';
