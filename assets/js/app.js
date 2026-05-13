@@ -684,7 +684,12 @@ async function hisseDetayAc(kod) {
       try {
         const yeniVeri = await fetchYahoo(kod, state.piyasaVerisi.yon);
         if (yeniVeri) {
+          const mevcutFiyat   = state.veriler[kod]?.fiyat;
+          const mevcutDegisim = state.veriler[kod]?.degisim;
           state.veriler[kod] = { ...state.veriler[kod], ...yeniVeri };
+          // Proxy'den gelen anlık fiyat varsa Yahoo'nun üzerine yazmasına izin verme
+          if (mevcutFiyat)             state.veriler[kod].fiyat   = mevcutFiyat;
+          if (mevcutDegisim !== undefined) state.veriler[kod].degisim = mevcutDegisim;
         }
       } catch (_) {}
     }
