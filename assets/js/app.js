@@ -1219,6 +1219,42 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnGunSonuOzetleriGoster')?.addEventListener('click', () => window.gunSonuOzetleriGoster());
   el('btnAnalizPdfIndir')?.addEventListener('click',        () => window.analizPdfIndir());
 
+  el('detayPaylasBtn')?.addEventListener('click', async () => {
+    const btn     = el('detayPaylasBtn');
+    const modal   = document.querySelector('#hisseDetayModal .modal');
+    const body    = modal?.querySelector('.modal-body');
+    if (!modal || !body || typeof html2canvas === 'undefined') return;
+
+    btn.disabled    = true;
+    btn.textContent = '⏳ Hazırlanıyor...';
+
+    const origMaxH = body.style.maxHeight;
+    const origOver = body.style.overflow;
+    body.style.maxHeight = 'none';
+    body.style.overflow  = 'visible';
+
+    try {
+      const canvas = await html2canvas(modal, {
+        backgroundColor: '#0d1117',
+        scale:           2,
+        useCORS:         true,
+        allowTaint:      true,
+        logging:         false,
+      });
+      const link    = document.createElement('a');
+      link.download = (state.detayKod || 'hisse') + '-analiz.png';
+      link.href     = canvas.toDataURL('image/png');
+      link.click();
+    } catch (_) {
+      showToast('PNG oluşturulamadı.', 'error');
+    } finally {
+      body.style.maxHeight = origMaxH;
+      body.style.overflow  = origOver;
+      btn.disabled         = false;
+      btn.textContent      = '📸 Paylaş';
+    }
+  });
+
   // ── KAP event'leri ─────────────────────────
   el('btnKapYenile')?.addEventListener('click', async () => {
     _kapYuklendi = false;
