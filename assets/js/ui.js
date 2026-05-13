@@ -599,6 +599,51 @@ export function renderHisseDetay(kod) {
   if (modalBody) modalBody.scrollTop = 0;
 }
 
+export function renderDetayOzet(kod) {
+  const v      = state.veriler[kod];
+  const ozetEl = el('detayOzetKartlar');
+  if (!v || !ozetEl) return;
+  const degCls    = v.degisim >= 0 ? 'var(--accent)' : 'var(--red)';
+  const sinyalCls = sinyalClass(v.sinyal);
+  const guven     = v.guvenSkoru ?? 0;
+  const guvenCls  = guven >= 70 ? 'high' : guven >= 50 ? 'medium' : 'low';
+  const rsiVal    = v.rsi ?? null;
+  const rsiColor  = rsiVal === null ? 'var(--muted)' : rsiVal < 30 ? 'var(--accent)' : rsiVal > 70 ? 'var(--red)' : 'var(--yellow)';
+  const rsiEtiket = rsiVal === null ? '—' : rsiVal < 30 ? 'Aşırı Satım' : rsiVal > 70 ? 'Aşırı Alım' : 'Nötr';
+  const macdRenk  = (v.macdHist ?? 0) > 0 ? 'var(--accent)' : 'var(--red)';
+  const stochRenk = (v.stochRsi?.k ?? 50) < 20 ? 'var(--accent)' : (v.stochRsi?.k ?? 50) > 80 ? 'var(--red)' : 'var(--text)';
+  const stochSub  = (v.stochRsi?.k ?? 50) < 20 ? 'Aşırı Satım' : (v.stochRsi?.k ?? 50) > 80 ? 'Aşırı Alım' : 'Nötr';
+  ozetEl.innerHTML =
+    '<div class="detay-hero" style="grid-column:1/-1">' +
+      '<div>' +
+        '<div class="detay-hero-fiyat">' + v.fiyat + ' ₺</div>' +
+        '<div class="detay-hero-degisim" style="color:' + degCls + '">' + (v.degisim >= 0 ? '+' : '') + v.degisim + '%</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">' +
+        '<span class="sinyal-badge ' + sinyalCls + '">' + v.sinyal + '</span>' +
+        '<div class="guven-wrap" style="justify-content:flex-end;min-width:100px">' +
+          '<div class="guven-bar"><div class="guven-fill ' + guvenCls + '" style="width:' + guven + '%"></div></div>' +
+          '<span class="guven-pct">' + guven + '%</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="detay-micro-card ' + (rsiVal !== null && rsiVal < 30 ? 'accent' : rsiVal !== null && rsiVal > 70 ? 'danger' : '') + '">' +
+      '<div class="detay-mc-label">RSI (14)</div>' +
+      '<div class="detay-mc-value" style="color:' + rsiColor + '">' + (rsiVal !== null ? rsiVal : '—') + '</div>' +
+      '<div class="detay-mc-sub">' + rsiEtiket + '</div>' +
+    '</div>' +
+    '<div class="detay-micro-card ' + ((v.macdHist ?? 0) > 0 ? 'accent' : 'danger') + '">' +
+      '<div class="detay-mc-label">MACD Hist</div>' +
+      '<div class="detay-mc-value" style="color:' + macdRenk + '">' + (v.macdHist?.toFixed(3) ?? '—') + '</div>' +
+      '<div class="detay-mc-sub">' + ((v.macdHist ?? 0) > 0 ? 'Momentum +' : 'Momentum −') + '</div>' +
+    '</div>' +
+    '<div class="detay-micro-card">' +
+      '<div class="detay-mc-label">Stoch RSI K</div>' +
+      '<div class="detay-mc-value" style="color:' + stochRenk + '">' + (v.stochRsi ? v.stochRsi.k : '—') + '</div>' +
+      '<div class="detay-mc-sub">' + stochSub + '</div>' +
+    '</div>';
+}
+
 export function renderDetayTeknik(kod) {
   const v       = state.veriler[kod];
   const teknikEl = el('detayTeknik');

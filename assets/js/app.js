@@ -75,7 +75,7 @@ import {
   renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
   renderDashboard, renderHisseler, renderSinyalGecmisi,
   renderPortfoy, portfoyModalAc,
-  renderHisseDetay, renderDetayTeknik, renderHisseAnalizSonucu,
+  renderHisseDetay, renderDetayOzet, renderDetayTeknik, renderHisseAnalizSonucu,
   renderHaberler, renderHaberAnaliz,
   renderSozluk, renderPopularTerimler,
   showPushBildirim, switchTab,
@@ -681,7 +681,8 @@ async function hisseDetayAc(kod) {
     }
     // Fetch sürerken başka hisseye geçildiyse render etme
     if (state.detayKod !== kod) return;
-    renderDetayTeknik(kod, state.veriler[kod] || {});
+    renderDetayOzet(kod);
+    renderDetayTeknik(kod);
     renderGrafik(kod, _grafikGun);
   });
 }
