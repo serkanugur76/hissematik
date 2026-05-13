@@ -25,7 +25,6 @@ import {
   fetchTumHisseFiyatlari,
   fetchTopluYahoo,
   fetchPiyasaVerisi,
-  fetchEndeksGecmisi,
   fetchHaberler,
   fetchYahoo,
   aiPortfoyAnalizYap,
@@ -72,7 +71,7 @@ import {
 import {
   el, setStatus, showLoading, setLoadingMsg, hideLoading,
   showToast, closeModal, openModal,
-  renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
+  renderTopbar, renderPiyasaKartlari, renderSummary,
   renderDashboard, renderHisseler, renderSinyalGecmisi,
   renderPortfoy, portfoyModalAc,
   renderHisseDetay, renderDetayTeknik, renderHisseAnalizSonucu,
@@ -485,14 +484,7 @@ function _degisimHesapla(fiyat, onceki) {
 
 async function _piyasaVerisiCek() {
   try {
-    // Anlık fiyat + tarihsel kapanış verisi paralel çek
-    const [data, xu100Kapanis, xu030Kapanis, altinKapanis] = await Promise.all([
-      fetchPiyasaVerisi(),
-      fetchEndeksGecmisi('XU100.IS'),
-      fetchEndeksGecmisi('XU030.IS'),
-      fetchEndeksGecmisi('GC=F'),
-    ]);
-
+    const data = await fetchPiyasaVerisi();
     if (!data) return;
 
     const pv = { ...state.piyasaVerisi };
@@ -500,14 +492,14 @@ async function _piyasaVerisiCek() {
     const xu100Result = data['XU100.IS']?.chart?.result?.[0];
     if (xu100Result) {
       const { fiyat, degisim } = _metaFiyatParse(xu100Result);
-      pv.xu100 = { fiyat, degisim, kapanis: xu100Kapanis };
+      pv.xu100 = { fiyat, degisim };
       pv.yon   = degisim;
     }
 
     const xu030Result = data['XU030.IS']?.chart?.result?.[0];
     if (xu030Result) {
       const { fiyat, degisim } = _metaFiyatParse(xu030Result);
-      pv.xu030 = { fiyat, degisim, kapanis: xu030Kapanis };
+      pv.xu030 = { fiyat, degisim };
     }
 
     const usdtryResult = data['USDTRY=X']?.chart?.result?.[0];
@@ -535,16 +527,11 @@ async function _piyasaVerisiCek() {
       const gramTL   = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
       const ceyrekTL = gramTL > 0 ? +(gramTL * 1.75).toFixed(2) : 0;
       const tamTL    = gramTL > 0 ? +(gramTL * 7.00).toFixed(2)  : 0;
-      // Altın kapanışlarını ons USD'den gram TL'ye çevir
-      const kapanis = kur > 0
-        ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
-        : altinKapanis;
-      pv.altin = { onsUsd, gramTL, ceyrekTL, tamTL, degisim, kapanis };
+      pv.altin = { onsUsd, gramTL, ceyrekTL, tamTL, degisim };
     }
 
     setState({ piyasaVerisi: pv });
     renderPiyasaKartlari();
-    renderPiyasaKartlariSabit();
   } catch (e) {
     console.error('_piyasaVerisiCek hatası:', e);
   }
@@ -665,6 +652,26 @@ async function hisseDetayAc(kod) {
   const _grafikBtn = el('btnGrafikAnaliz');
   if (_grafikBtn) { _grafikBtn.disabled = false; _grafikBtn.textContent = '📈 Bu Grafiği AI ile Analiz Et'; }
   openModal('hisseDetayModal');
+
+  // kapanis Firestore'a kaydedilmez — modal açılınca her zaman taze çek
+  const grafikWrap = el('grafikWrap');
+  if (grafikWrap && (!veri.kapanis || veri.kapanis.length < 2)) {
+    grafikWrap.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);font-size:0.82rem">⏳ Grafik yükleniyor...</div>';
+  }
+  try {
+    const guncel = await fetchYahoo(kod, state.piyasaVerisi.yon || 0);
+    if (guncel && state.detayKod === kod) {
+      state.veriler[kod] = { ...state.veriler[kod], ...guncel };
+      renderHisseDetay(kod, state.veriler[kod]);
+      renderDetayTeknik(kod, state.veriler[kod]);
+      renderGrafik(kod, _grafikGun);
+    }
+  } catch (e) {
+    console.error('hisseDetayAc grafik çekme hatası:', e);
+    if (grafikWrap && (!state.veriler[kod]?.kapanis?.length)) {
+      grafikWrap.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);font-size:0.82rem">Grafik yüklenemedi — lütfen tekrar tıkla</div>';
+    }
+  }
 }
 window.detayTakipToggle = () => {
   const k = state.detayKod;

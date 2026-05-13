@@ -187,20 +187,6 @@ export async function fetchPiyasaVerisi() {
   } catch (e) { console.error('fetchPiyasaVerisi hatası:', e); return null; }
 }
 
-// Endeks / emtia sembolü için son 30 günlük kapanış verisi çeker.
-// fetchYahoo'dan farklı olarak sembol sonuna .IS eklemez.
-export async function fetchEndeksGecmisi(sembol) {
-  try {
-    const url = PROXY + '?sembol=' + encodeURIComponent(sembol);
-    const res = await fetch(url);
-    const json = await res.json();
-    const raw = json?.chart?.result?.[0];
-    if (!raw) return [];
-    const close = (raw.indicators?.quote?.[0]?.close || []).filter(function(v) { return v != null && v > 0; });
-    return close.slice(-30);
-  } catch (e) { console.error('fetchEndeksGecmisi hatası:', sembol, e); return []; }
-}
-
 export async function fetchHaberler() {
   try {
     const res  = await fetch(PROXY + '?haberler=1');
@@ -695,7 +681,34 @@ export async function mukerrerSinyalleriTemizle({ db }) {
 export async function saveUserData({ db, currentUser, takipEdilen, portfoy, veriler }) {
   if (!currentUser) return;
   try {
-    await updateDoc(doc(db, 'users', currentUser.uid), { takipEdilen: [...takipEdilen], portfoy, veriler });
+    // kapanis dizisi Firestore'a kaydedilmez:
+    //   1) Firestore nested array limitlerini zorlar
+    //   2) Her modal açılışında zaten fetchYahoo ile taze çekilir
+    //   3) Belge boyutunu gereksiz şişirir
+    // Kaydedilen: sinyal, fiyat, degisim, rsi, macd, guvenSkoru, ts — yani UI için gereken minimum set
+    const verilerKayit = {};
+    for (const [kod, v] of Object.entries(veriler)) {
+      if (!v) continue;
+      verilerKayit[kod] = {
+        fiyat:      v.fiyat      ?? null,
+        degisim:    v.degisim    ?? null,
+        sinyal:     v.sinyal     ?? 'BEKLE',
+        guvenSkoru: v.guvenSkoru ?? null,
+        rsi:        v.rsi        ?? null,
+        macd:       v.macd       ?? null,
+        macdHist:   v.macdHist   ?? null,
+        bollinger:  v.bollinger  ?? null,
+        hacim:      v.hacim      ?? null,
+        hacimFark:  v.hacimFark  ?? null,
+        ma20:       v.ma20       ?? null,
+        ma50:       v.ma50       ?? null,
+        hafta52H:   v.hafta52H   ?? null,
+        hafta52L:   v.hafta52L   ?? null,
+        ts:         v.ts         ?? null,
+        // kapanis: kasıtlı olarak YAZILMIYOR — modal açılınca fetchYahoo ile çekilir
+      };
+    }
+    await updateDoc(doc(db, 'users', currentUser.uid), { takipEdilen: [...takipEdilen], portfoy, veriler: verilerKayit });
   } catch (e) {
     console.error('saveUserData hatası:', e);
     _notify('Verileriniz kaydedilemedi: ' + firebaseHataYonet(e), 'error');
