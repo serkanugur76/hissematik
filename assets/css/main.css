@@ -78,6 +78,29 @@ body {
 .auth-note { font-size:0.75rem; color:var(--muted); line-height:1.6; }
 .auth-note a { color:var(--accent); text-decoration:none; }
 
+/* ── KAMPANYA AUTH INPUT ── */
+.kampanya-auth-wrap { margin: 1rem 0 0.5rem; }
+.kampanya-auth-divider {
+  display:flex; align-items:center; gap:0.75rem;
+  margin-bottom:0.75rem; color:var(--muted); font-size:0.72rem;
+}
+.kampanya-auth-divider::before,
+.kampanya-auth-divider::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+.kampanya-auth-input {
+  width:100%; box-sizing:border-box;
+  background:#0d1117; border:1px solid var(--border);
+  color:var(--text); border-radius:8px;
+  padding:0.6rem 0.9rem; font-size:0.95rem;
+  font-family:'JetBrains Mono', monospace;
+  letter-spacing:0.08em; text-align:center;
+  transition:border-color 0.2s;
+}
+.kampanya-auth-input:focus { outline:none; border-color:var(--accent); }
+.kampanya-auth-input::placeholder { color:var(--muted); letter-spacing:0.04em; }
+.kampanya-auth-hint { font-size:0.68rem; color:var(--muted); margin-top:0.4rem; line-height:1.5; text-align:center; }
+
 /* ── APP SHELL ── */
 #appShell { display:none; }
 

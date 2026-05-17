@@ -317,7 +317,7 @@
   window.hmKodUret = function() {
     var btn = document.getElementById('hmKodBtn');
     btn.disabled = true;
-    btn.textContent = '⏳ Üretiliyor...';
+    btn.innerHTML = 'Üretiliyor...';
 
     setTimeout(function() {
       var bitis   = Math.floor(Date.now() / 86400000) + 7;
@@ -327,9 +327,9 @@
       var kod     = 'HM-' + bitisB + imza.slice(0,2) + '-' + salt + imza.slice(2,5);
 
       document.getElementById('hmKodDeger').textContent = kod;
-      document.getElementById('hmKodSure').textContent  = '7 gün geçerli · Tek kullanımlık';
+      document.getElementById('hmKodSure').innerHTML  = '7 gün geçerli &nbsp;&middot;&nbsp; Tek kullan&#x131;ml&#x131;k';
       document.getElementById('hmKodSonuc').style.display = 'block';
-      btn.textContent = '✓ Kod Üretildi';
+      btn.innerHTML = '&#10003; Kod &Uuml;retildi';
     }, 600);
   };
 
@@ -338,8 +338,8 @@
     if (navigator.clipboard) {
       navigator.clipboard.writeText(kod).then(function() {
         var b = document.querySelector('.hm-kopyala-btn');
-        b.textContent = '✓ Kopyalandı!';
-        setTimeout(function() { b.textContent = '📋 Kodu Kopyala'; }, 2000);
+        b.innerHTML = '&#10003; Kopyalandı!';
+        setTimeout(function() { b.innerHTML = '&#128203; Kodu Kopyala'; }, 2000);
       });
     }
   };

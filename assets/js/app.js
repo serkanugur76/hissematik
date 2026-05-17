@@ -20,6 +20,7 @@ import {
 } from './state.js';
 
 import { parseYahooVeri } from './indicators.js';
+import { kampanyaKoduDogrula } from './kampanya.js';
 
 import {
   fetchTumHisseFiyatlari,
@@ -199,36 +200,91 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Kayıt yoksa otomatik oluştur — onay bekliyor
+  // Kampanya kodu auth ekranından alındıysa doğrula
+  const _authKampanyaKod = (el('authKampanyaKod')?.value || '').trim().toUpperCase();
+  let _kampanyaGecerli = false;
+  if (_authKampanyaKod) {
+    const dogrulamaS = kampanyaKoduDogrula(_authKampanyaKod);
+    if (dogrulamaS.gecerli) {
+      // Blacklist kontrolü
+      try {
+        const blackSnap = await getDoc(doc(db, 'kullanılanKodlar', _authKampanyaKod));
+        if (!blackSnap.exists()) {
+          _kampanyaGecerli = true;
+        } else {
+          showToast('Bu kampanya kodu daha önce kullanılmış.', 'error');
+        }
+      } catch (e) {
+        // Firebase hatası → yine de devam et, kod geçerli sayılır (fail-open)
+        _kampanyaGecerli = true;
+      }
+    } else {
+      showToast('Kampanya kodu geçersiz: ' + (dogrulamaS.sebep || 'Hatalı kod'), 'error');
+    }
+  }
+
+  // Kayıt yoksa otomatik oluştur
   if (!userSnap.exists() && !isAdmin) {
+    const yeniAktif = _kampanyaGecerli;
     try {
       await setDoc(userRef, {
         email:       user.email,
         name:        user.displayName || '',
-        plan:        'free',
-        active:      false,
+        plan:        yeniAktif ? 'full' : 'free',
+        active:      yeniAktif,
         isAdmin:     false,
         createdAt:   serverTimestamp(),
         takipEdilen: [],
         portfoy:     {},
         veriler:     {},
         apiKeySet:   false,
+        ...(yeniAktif && { kaynak: 'instagram', kampanyaKod: _authKampanyaKod }),
       });
     } catch (e) {
       showToast('Kayıt oluşturulamadı: ' + (e?.message || 'Hata'), 'error');
     }
-    showToast('Erişim talebiniz alındı. Admin onayı bekleniyor.', 'error');
-    await signOut(auth);
-    el('authScreen').style.display = 'flex';
-    return;
+
+    if (yeniAktif) {
+      // Kodu blacklist'e ekle
+      try {
+        await setDoc(doc(db, 'kullanılanKodlar', _authKampanyaKod), {
+          uid: user.uid, email: user.email, usedAt: serverTimestamp(),
+        });
+      } catch (_) {}
+      showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
+      // Devam et — aşağıdaki flow giriş yapacak
+    } else {
+      showToast('Erişim talebiniz alındı. Admin onayı bekleniyor.', 'error');
+      await signOut(auth);
+      el('authScreen').style.display = 'flex';
+      return;
+    }
   }
 
-  // Kayıt var ama onaysız
+  // Kayıt var ama onaysız — kampanya kodu ile aktive et
   if (!isAdmin && !userSnap.data()?.active) {
-    showToast('Hesabınız henüz onaylanmadı. Lütfen bekleyin.', 'error');
-    await signOut(auth);
-    el('authScreen').style.display = 'flex';
-    return;
+    if (_kampanyaGecerli) {
+      try {
+        await updateDoc(userRef, {
+          active: true, plan: 'full',
+          kaynak: 'instagram', kampanyaKod: _authKampanyaKod,
+        });
+        await setDoc(doc(db, 'kullanılanKodlar', _authKampanyaKod), {
+          uid: user.uid, email: user.email, usedAt: serverTimestamp(),
+        });
+        showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
+        // Yeniden yükle — userSnap güncel değil, sayfayı yenile
+        window.location.reload();
+        return;
+      } catch (e) {
+        showToast('Aktivasyon hatası: ' + e.message, 'error');
+      }
+    } else {
+      showToast('Hesabınız henüz onaylanmadı. Lütfen bekleyin.', 'error');
+      await signOut(auth);
+      el('authScreen').style.display = 'flex';
+      return;
+    }
   }
 
   const userDoc = userSnap.exists() ? userSnap.data() : {};
@@ -270,6 +326,16 @@ onAuthStateChanged(auth, async (user) => {
   el('authScreen').style.display = 'none';
   el('appShell').style.display   = 'block';
   renderTopbar();
+
+  // Kampanya kodu butonunu plan'a göre göster
+  // (plan 'full' değilse veya kampanya kodu henüz kullanılmamışsa göster)
+  if (!isAdmin) {
+    const userPlan = userDoc?.plan || 'free';
+    const kampanyaKullanildi = !!userDoc?.kampanyaKod;
+    if (userPlan !== 'full' && !kampanyaKullanildi) {
+      document.querySelectorAll('.kampanya-kod-btn').forEach(b => b.style.display = 'inline-flex');
+    }
+  }
 
   if (isAdmin) loadAdminPanel();
 
@@ -1215,7 +1281,12 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnTokenYenile')?.addEventListener('click',           () => window.loadTokenIstatistik());
   el('btnGunSonuOzet')?.addEventListener('click',           () => window.gunSonuOzetOlustur());
   el('btnAnalizGecmisi')?.addEventListener('click',         () => window.analizGecmisiAc());
+  el('btnAnalizGecmisiMobil')?.addEventListener('click',    () => { closeModal('mobileMenu'); window.analizGecmisiAc(); });
   el('btnBildirimMerkezi')?.addEventListener('click',       () => window.bildirimMerkeziAc());
+
+  // Kampanya kodu (topbar + mobil)
+  el('btnKampanya')?.addEventListener('click',      () => window.kampanyaModalAc());
+  el('btnKampanyaMobil')?.addEventListener('click', () => { closeModal('mobileMenu'); window.kampanyaModalAc(); });
   el('btnGunSonuOzetleriGoster')?.addEventListener('click', () => window.gunSonuOzetleriGoster());
   el('btnAnalizPdfIndir')?.addEventListener('click',        () => window.analizPdfIndir());
 
@@ -1662,5 +1733,77 @@ window.gunSonuOzetleriGoster = async () => {
     renderGunSonuOzetleri(ozetler);
   } catch (e) {
     showToast('Özetler yüklenemedi', 'error');
+  }
+};
+
+// ══════════════════════════════════════════════
+// KAMPANYA KODU — Giriş yapmış kullanıcı için
+// ══════════════════════════════════════════════
+
+window.kampanyaModalAc = () => {
+  const input = el('kampanyaKodInput');
+  const hata  = el('kampanyaHata');
+  const btn   = el('btnKampanyaAktif');
+  if (input) input.value = '';
+  if (hata)  { hata.textContent = ''; hata.style.display = 'none'; }
+  if (btn)   { btn.disabled = false; btn.textContent = 'Aktive Et'; }
+  openModal('kampanyaModal');
+};
+
+window.kampanyaKoduAktif = async () => {
+  const input = el('kampanyaKodInput');
+  const hata  = el('kampanyaHata');
+  const btn   = el('btnKampanyaAktif');
+  const kod   = (input?.value || '').trim().toUpperCase();
+
+  function _hataGoster(mesaj) {
+    if (hata) { hata.textContent = mesaj; hata.style.display = 'block'; }
+    showToast(mesaj, 'error');
+  }
+
+  if (!kod) { _hataGoster('Kod boş olamaz.'); return; }
+
+  // Algoritma doğrulama
+  const sonuc = kampanyaKoduDogrula(kod);
+  if (!sonuc.gecerli) {
+    _hataGoster(sonuc.sebep || 'Geçersiz kod.');
+    return;
+  }
+
+  // Kullanıcı giriş yapmış mı?
+  const user = state.currentUser;
+  if (!user) { _hataGoster('Önce giriş yapmalısın.'); return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Kontrol ediliyor...';
+
+  try {
+    // Blacklist kontrolü
+    const blackSnap = await getDoc(doc(db, 'kullanılanKodlar', kod));
+    if (blackSnap.exists()) {
+      _hataGoster('Bu kod daha önce kullanılmış.');
+      btn.disabled = false; btn.textContent = 'Aktive Et';
+      return;
+    }
+
+    // Kodu kullanılmış olarak işaretle
+    await setDoc(doc(db, 'kullanılanKodlar', kod), {
+      uid: user.uid, email: user.email, usedAt: serverTimestamp(),
+    });
+
+    // Kullanıcı dokümanını güncelle
+    await updateDoc(doc(db, 'users', user.uid), {
+      plan: 'full', active: true,
+      kaynak: 'instagram', kampanyaKod: kod,
+    });
+
+    // Butonu göster/gizle
+    document.querySelectorAll('.kampanya-kod-btn').forEach(b => b.style.display = 'none');
+
+    closeModal('kampanyaModal');
+    showToast('🎉 Kampanya kodu aktive edildi! Premium erişim açık.', 'success');
+  } catch (e) {
+    _hataGoster('Bir hata oluştu: ' + (e.message || 'Bilinmeyen hata'));
+    btn.disabled = false; btn.textContent = 'Aktive Et';
   }
 };

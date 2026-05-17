@@ -38,8 +38,17 @@
       Google ile Giriş Yap
     </button>
 
+    <!-- Kampanya kodu girişi -->
+    <div class="kampanya-auth-wrap">
+      <div class="kampanya-auth-divider"><span>veya kampanya kodun varsa</span></div>
+      <input type="text" id="authKampanyaKod" class="kampanya-auth-input"
+             placeholder="HM-XXXX-XXXXXX" maxlength="14" autocomplete="off"
+             oninput="this.value=this.value.toUpperCase()">
+      <div class="kampanya-auth-hint">Blogger kampanya sayfasından aldığın kodu gir, giriş yaptıktan sonra otomatik aktive edilir.</div>
+    </div>
+
     <p class="auth-note">
-      Sadece yetkili e-posta adresleri giriş yapabilir.<br>
+      Sadece yetkili e-posta adresleri veya kampanya kodu ile giriş yapılabilir.<br>
       Erişim için <a href="mailto:admin@hissematik.com">yöneticiye</a> başvurun.
     </p>
 
@@ -82,6 +91,7 @@
       <button class="btn primary" id="btnGuncelle">⟳ Güncelle</button>
       <button class="btn" id="btnBildirimMerkezi" title="Bildirim Merkezi">🔔</button>
       <button class="btn" id="btnAnalizGecmisi" title="Analiz Geçmişi">📋</button>
+      <button class="btn kampanya-kod-btn" id="btnKampanya" title="Kampanya Kodu Gir" style="display:none">🎟</button>
 
       <div class="user-pill">
         <div class="user-avatar" id="userAvatar">?</div>
@@ -160,6 +170,9 @@
         </button>
         <button class="btn mobile-action-btn" id="btnAnalizGecmisiMobil">
           📋 <span>Analiz Geçmişi</span>
+        </button>
+        <button class="btn mobile-action-btn kampanya-kod-btn" id="btnKampanyaMobil" style="display:none">
+          🎟 <span>Kampanya Kodu</span>
         </button>
       </div>
       <button class="btn danger" id="btnLogoutMobil">Çıkış Yap</button>
@@ -888,6 +901,35 @@
   </div>
 </div>
  
+<!-- Kampanya Kodu Modal -->
+<div class="modal-overlay" id="kampanyaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🎟 Kampanya Kodu</div>
+        <div class="modal-sub">Instagram kampanyasına özel ücretsiz erişim</div>
+      </div>
+      <button class="modal-close" data-modal-close="kampanyaModal">✕</button>
+    </div>
+    <div class="modal-body" style="padding:1.5rem">
+      <div id="kampanyaModalIcerik">
+        <div style="margin-bottom:1rem;font-size:0.85rem;color:var(--muted);line-height:1.6">
+          Blogger kampanya sayfasından aldığın kodu gir. Kod geçerliyse hesabın 7 gün <strong style="color:var(--accent)">Premium</strong> olarak aktive edilir.
+        </div>
+        <input type="text" id="kampanyaKodInput" class="input"
+               placeholder="HM-XXXX-XXXXXX" maxlength="14" autocomplete="off"
+               oninput="this.value=this.value.toUpperCase()"
+               style="width:100%;margin-bottom:0.75rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;font-size:1rem">
+        <div id="kampanyaHata" style="display:none;font-size:0.78rem;color:#ff4d4d;margin-bottom:0.75rem"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" data-modal-close="kampanyaModal">İptal</button>
+      <button class="btn primary" id="btnKampanyaAktif" onclick="window.kampanyaKoduAktif()">Aktive Et</button>
+    </div>
+  </div>
+</div>
+
 <!-- Gün Sonu Özetleri Modal -->
 <div class="modal-overlay modal-overlay--scroll" id="gunSonuOzetleriModal">
   <div class="modal modal--wide">
