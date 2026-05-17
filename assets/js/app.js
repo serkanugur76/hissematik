@@ -8,7 +8,7 @@ import {
   signInWithPopup, signOut, onAuthStateChanged,
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, addDoc,
-  query, where, orderBy, limit, serverTimestamp,
+  query, where, orderBy, limit, serverTimestamp, deleteField,
   enableNetwork, disableNetwork,
 } from './firebase.js';
 
@@ -1452,6 +1452,15 @@ async function loadAdminPanel() {
             btnKey.textContent = '🔑 Key';
             btnKey.addEventListener('click', () => window.kullaniciKeyTanimla(u.id, u.name || u.email));
 
+            if (u.apiKeySet) {
+              const btnKeySil = document.createElement('button');
+              btnKeySil.className = 'btn danger';
+              btnKeySil.style.cssText = 'font-size:0.65rem;padding:2px 6px';
+              btnKeySil.textContent = '🗑 Key';
+              btnKeySil.addEventListener('click', () => window.kullaniciKeySil(u.id));
+              satir.appendChild(btnKeySil);
+            }
+
             const btnBan = document.createElement('button');
             btnBan.className = 'btn danger';
             btnBan.style.cssText = 'font-size:0.65rem;padding:2px 7px';
@@ -1587,6 +1596,17 @@ window.kullaniciEkle = async () => {
     });
     closeModal('addUserModal');
     showToast(email + ' eklendi ✓');
+    loadAdminPanel();
+  } catch (e) { showToast('Hata: ' + e.message, 'error'); }
+};
+
+window.kullaniciKeySil = async (uid) => {
+  if (!confirm('Bu kullanıcının API key\'i silinsin mi?')) return;
+  try {
+    await updateDoc(doc(db, 'users', uid), {
+      encryptedApiKey: deleteField(), apiKeySet: false, apiKeyTarih: deleteField(),
+    });
+    showToast('API key silindi');
     loadAdminPanel();
   } catch (e) { showToast('Hata: ' + e.message, 'error'); }
 };

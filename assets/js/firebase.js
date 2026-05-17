@@ -31,6 +31,7 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  deleteField,
   // #5 — Offline destek için ağ kontrol fonksiyonları
   enableNetwork,
   disableNetwork,
@@ -80,6 +81,7 @@ export {
   orderBy,
   limit,
   serverTimestamp,
+  deleteField,
   // #5 — Offline banner için dışarıya aç
   enableNetwork,
   disableNetwork,
