@@ -208,7 +208,7 @@ onAuthStateChanged(auth, async (user) => {
     if (dogrulamaS.gecerli) {
       // Blacklist kontrolü
       try {
-        const blackSnap = await getDoc(doc(db, 'kullanılanKodlar', _authKampanyaKod));
+        const blackSnap = await getDoc(doc(db, 'kullanilanKodlar', _authKampanyaKod));
         if (!blackSnap.exists()) {
           _kampanyaGecerli = true;
         } else {
@@ -247,7 +247,7 @@ onAuthStateChanged(auth, async (user) => {
     if (yeniAktif) {
       // Kodu blacklist'e ekle
       try {
-        await setDoc(doc(db, 'kullanılanKodlar', _authKampanyaKod), {
+        await setDoc(doc(db, 'kullanilanKodlar', _authKampanyaKod), {
           uid: user.uid, email: user.email, usedAt: serverTimestamp(),
         });
       } catch (_) {}
@@ -269,7 +269,7 @@ onAuthStateChanged(auth, async (user) => {
           active: true, plan: 'full',
           kaynak: 'instagram', kampanyaKod: _authKampanyaKod,
         });
-        await setDoc(doc(db, 'kullanılanKodlar', _authKampanyaKod), {
+        await setDoc(doc(db, 'kullanilanKodlar', _authKampanyaKod), {
           uid: user.uid, email: user.email, usedAt: serverTimestamp(),
         });
         showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
@@ -1779,7 +1779,7 @@ window.kampanyaKoduAktif = async () => {
 
   try {
     // Blacklist kontrolü
-    const blackSnap = await getDoc(doc(db, 'kullanılanKodlar', kod));
+    const blackSnap = await getDoc(doc(db, 'kullanilanKodlar', kod));
     if (blackSnap.exists()) {
       _hataGoster('Bu kod daha önce kullanılmış.');
       btn.disabled = false; btn.textContent = 'Aktive Et';
@@ -1787,7 +1787,7 @@ window.kampanyaKoduAktif = async () => {
     }
 
     // Kodu kullanılmış olarak işaretle
-    await setDoc(doc(db, 'kullanılanKodlar', kod), {
+    await setDoc(doc(db, 'kullanilanKodlar', kod), {
       uid: user.uid, email: user.email, usedAt: serverTimestamp(),
     });
 
