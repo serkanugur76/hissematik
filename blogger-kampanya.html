@@ -1,0 +1,347 @@
+<!--
+  HisseMatik Kampanya Sayfası — Blogger Post HTML
+  Blogger editöründe HTML moduna geçip buraya yapıştırın.
+-->
+
+<style>
+.hm-wrap {
+  font-family: 'Syne', 'Nunito', sans-serif;
+  background: #07080b;
+  border-radius: 16px;
+  overflow: hidden;
+  margin: -20px -20px 20px;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+/* HERO */
+.hm-hero {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,229,160,0.12) 0%, transparent 70%),
+              linear-gradient(180deg, #0d1117 0%, #07080b 100%);
+  padding: 3rem 2rem 2.5rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.hm-badge {
+  display: inline-block;
+  background: rgba(0,229,160,0.1);
+  border: 1px solid rgba(0,229,160,0.25);
+  color: #00e5a0;
+  font-size: 0.7rem;
+  padding: 4px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.08em;
+  margin-bottom: 1.25rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.hm-hero h2 {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 800;
+  color: #dde0ea;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  border: none;
+  padding: 0;
+}
+.hm-hero h2 em {
+  color: #00e5a0;
+  font-style: normal;
+}
+.hm-hero p {
+  color: #616478;
+  font-size: 1rem;
+  max-width: 520px;
+  margin: 0 auto 2rem;
+  line-height: 1.75;
+}
+
+/* ÖZELLIKLER */
+.hm-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.hm-feat {
+  background: #0d0f14;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+.hm-feat-icon { font-size: 1.75rem; margin-bottom: 0.6rem; display: block; }
+.hm-feat-title { font-size: 0.85rem; font-weight: 700; color: #dde0ea; margin-bottom: 0.3rem; }
+.hm-feat-desc  { font-size: 0.75rem; color: #616478; line-height: 1.55; }
+
+/* AKIŞ */
+.hm-steps {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.hm-steps-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #616478;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+.hm-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.hm-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,229,160,0.1);
+  border: 1px solid rgba(0,229,160,0.25);
+  color: #00e5a0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.hm-step-text { color: #dde0ea; font-size: 0.88rem; line-height: 1.6; padding-top: 3px; }
+.hm-step-text strong { color: #00e5a0; }
+
+/* KOD ALANI */
+.hm-code-section {
+  padding: 2rem;
+  text-align: center;
+  background: #0d0f14;
+}
+.hm-code-section h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #dde0ea;
+  margin-bottom: 0.4rem;
+  border: none;
+  padding: 0;
+}
+.hm-code-section p {
+  color: #616478;
+  font-size: 0.82rem;
+  margin-bottom: 1.5rem;
+}
+#hmKodBtn {
+  background: #00e5a0;
+  color: #000;
+  border: none;
+  padding: 0.85rem 2.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  display: inline-block;
+}
+#hmKodBtn:hover { background: #00ffb8; transform: translateY(-2px); }
+#hmKodBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+#hmKodSonuc { margin-top: 1.5rem; display: none; }
+.hm-kod-kutu {
+  background: #07080b;
+  border: 1px solid rgba(0,229,160,0.3);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.hm-kod-label {
+  font-size: 0.65rem;
+  color: #616478;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.5rem;
+}
+.hm-kod-deger {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #00e5a0;
+  letter-spacing: 0.12em;
+  font-family: 'JetBrains Mono', monospace;
+}
+.hm-kod-sure {
+  font-size: 0.72rem;
+  color: #616478;
+  margin-top: 0.4rem;
+}
+.hm-kopyala-btn {
+  background: rgba(0,229,160,0.1);
+  border: 1px solid rgba(0,229,160,0.25);
+  color: #00e5a0;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  margin-bottom: 0.75rem;
+}
+.hm-kopyala-btn:hover { background: rgba(0,229,160,0.2); }
+.hm-git-btn {
+  display: inline-block;
+  background: #00e5a0;
+  color: #000;
+  padding: 0.7rem 2rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: all 0.2s;
+  margin-top: 0.25rem;
+}
+.hm-git-btn:hover { background: #00ffb8; color: #000; transform: translateY(-1px); }
+
+/* FOOTER */
+.hm-footer {
+  padding: 1.25rem 2rem;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.hm-footer p {
+  font-size: 0.72rem;
+  color: #616478;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .hm-wrap { margin: -10px -10px 10px; border-radius: 12px; }
+  .hm-hero { padding: 2rem 1.25rem; }
+  .hm-features, .hm-steps, .hm-code-section { padding: 1.25rem; }
+  .hm-kod-deger { font-size: 1.25rem; }
+}
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+
+<div class="hm-wrap">
+
+  <!-- HERO -->
+  <div class="hm-hero">
+    <div class="hm-badge">⬡ ÖZEL KAMPANYA</div>
+    <h2>BIST'i <em>Yapay Zeka</em> ile<br>Analiz Et</h2>
+    <p>HisseMATİK ile hisse senetlerinizi teknik göstergeler ve Claude AI ile gerçek zamanlı analiz edin. Instagram kampanyamıza özel ücretsiz erişim kodu aşağıda.</p>
+  </div>
+
+  <!-- ÖZELLIKLER -->
+  <div class="hm-features">
+    <div class="hm-feat">
+      <span class="hm-feat-icon">📊</span>
+      <div class="hm-feat-title">Teknik Analiz</div>
+      <div class="hm-feat-desc">RSI, MACD, Bollinger Bantları, Stochastic ve daha fazlası</div>
+    </div>
+    <div class="hm-feat">
+      <span class="hm-feat-icon">⬡</span>
+      <div class="hm-feat-title">AI Karar Desteği</div>
+      <div class="hm-feat-desc">Claude AI ile hisse bazlı al/sat/bekle analizi</div>
+    </div>
+    <div class="hm-feat">
+      <span class="hm-feat-icon">📋</span>
+      <div class="hm-feat-title">KAP Bildirimleri</div>
+      <div class="hm-feat-desc">Anlık kamuyu aydınlatma bildirimleri ve AI özeti</div>
+    </div>
+    <div class="hm-feat">
+      <span class="hm-feat-icon">💼</span>
+      <div class="hm-feat-title">Portföy Takibi</div>
+      <div class="hm-feat-desc">Kar/zarar hesabı, hisse bazlı performans görünümü</div>
+    </div>
+  </div>
+
+  <!-- ADIMLAR -->
+  <div class="hm-steps">
+    <div class="hm-steps-title">Nasıl kullanırsın?</div>
+    <div class="hm-step">
+      <div class="hm-step-num">1</div>
+      <div class="hm-step-text">Aşağıdaki <strong>Kodunu Al</strong> butonuna bas, <strong>tek kullanımlık</strong> özel kodunu kopyala</div>
+    </div>
+    <div class="hm-step">
+      <div class="hm-step-num">2</div>
+      <div class="hm-step-text"><strong>HisseMATİK'e</strong> git, Google ile kayıt ol veya giriş yap</div>
+    </div>
+    <div class="hm-step">
+      <div class="hm-step-num">3</div>
+      <div class="hm-step-text">Profil bölümündeki <strong>Kampanya Kodu</strong> alanına kodu gir, erişim anında açılır</div>
+    </div>
+  </div>
+
+  <!-- KOD ÜRETME -->
+  <div class="hm-code-section">
+    <h3>Özel Kodunu Al</h3>
+    <p>7 gün geçerli, tek kullanımlık kampanya kodun</p>
+    <button id="hmKodBtn" onclick="hmKodUret()">⬡ Kodumu Üret</button>
+
+    <div id="hmKodSonuc">
+      <div class="hm-kod-kutu">
+        <div class="hm-kod-label">Kampanya Kodun</div>
+        <div class="hm-kod-deger" id="hmKodDeger">—</div>
+        <div class="hm-kod-sure" id="hmKodSure"></div>
+      </div>
+      <br/>
+      <button class="hm-kopyala-btn" onclick="hmKopyala()">📋 Kodu Kopyala</button>
+      <br/>
+      <a class="hm-git-btn" href="https://serkanugur76.github.io/hissematik?utm_source=blogger&utm_campaign=instagram2026&ref=kampanya" target="_blank">
+        HisseMATİK'e Git →
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="hm-footer">
+    <p>Bu kod 7 gün geçerlidir ve yalnızca bir kez kullanılabilir.<br/>
+    Sorun yaşarsanız Instagram üzerinden ulaşabilirsiniz.</p>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var _S = 'HM2026BIST';
+
+  function _h(s) {
+    var h = 5381;
+    for (var i = 0; i < s.length; i++)
+      h = ((h << 5) + h) ^ s.charCodeAt(i);
+    return (h >>> 0);
+  }
+
+  window.hmKodUret = function() {
+    var btn = document.getElementById('hmKodBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Üretiliyor...';
+
+    setTimeout(function() {
+      var bitis   = Math.floor(Date.now() / 86400000) + 7;
+      var salt    = Math.floor(Math.random() * 46655).toString(36).toUpperCase().padStart(3, '0');
+      var bitisB  = bitis.toString(36).toUpperCase().padStart(4, '0');
+      var imza    = _h(_S + bitis).toString(36).toUpperCase().padStart(6, '0').slice(0, 5);
+      var kod     = 'HM-' + bitisB + imza.slice(0,2) + '-' + salt + imza.slice(2,5);
+
+      document.getElementById('hmKodDeger').textContent = kod;
+      document.getElementById('hmKodSure').textContent  = '7 gün geçerli · Tek kullanımlık';
+      document.getElementById('hmKodSonuc').style.display = 'block';
+      btn.textContent = '✓ Kod Üretildi';
+    }, 600);
+  };
+
+  window.hmKopyala = function() {
+    var kod = document.getElementById('hmKodDeger').textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(kod).then(function() {
+        var b = document.querySelector('.hm-kopyala-btn');
+        b.textContent = '✓ Kopyalandı!';
+        setTimeout(function() { b.textContent = '📋 Kodu Kopyala'; }, 2000);
+      });
+    }
+  };
+})();
+</script>
