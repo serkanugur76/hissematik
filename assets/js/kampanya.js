@@ -39,7 +39,7 @@ export function kampanyaKoduDogrula(kod) {
 
   const clean = kod.toUpperCase().replace(/[-\s]/g, '');
 
-  if (!clean.startsWith('HM') || clean.length !== 12)
+  if (!clean.startsWith('HM') || clean.length !== 14)
     return { gecerli: false, sebep: 'Kod formatı hatalı' };
 
   const payload = clean.slice(2);           // 10 karakter
