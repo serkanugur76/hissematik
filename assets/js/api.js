@@ -102,6 +102,26 @@ export async function loadUserApiKey({ uid, encryptedKey }) {
   return apiKeyDecrypt(encryptedKey, uid);
 }
 
+/**
+ * Kampanya kullanıcısına otomatik API key atar.
+ * config/kampanya dokümanındaki apiKey'i okur, kullanıcının UID'iyle şifreler.
+ */
+export async function kampanyaApiKeyAta({ uid }) {
+  if (!uid) return false;
+  try {
+    const konfig = await getDoc(doc(db, 'config', 'kampanya'));
+    if (!konfig.exists() || !konfig.data()?.apiKey) return false;
+    const encrypted = await apiKeyEncrypt(konfig.data().apiKey, uid);
+    await updateDoc(doc(db, 'users', uid), {
+      encryptedApiKey: encrypted, apiKeySet: true, apiKeyTarih: Date.now(),
+    });
+    return true;
+  } catch (e) {
+    console.error('kampanyaApiKeyAta hatası:', e);
+    return false;
+  }
+}
+
 // ─────────────────────────────────────────────
 // YARDIMCI
 // ─────────────────────────────────────────────

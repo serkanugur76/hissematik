@@ -68,6 +68,7 @@ import {
   analizTutarlilikGuncelle,
   loadPushMesajlar,
   loadGunSonuOzetleri,
+  kampanyaApiKeyAta,
 } from './api.js';
 
 import {
@@ -251,6 +252,8 @@ onAuthStateChanged(auth, async (user) => {
           uid: user.uid, email: user.email, usedAt: serverTimestamp(),
         });
       } catch (_) {}
+      // Kampanya API key'ini otomatik ata
+      await kampanyaApiKeyAta({ uid: user.uid });
       showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
       // Devam et — aşağıdaki flow giriş yapacak
     } else {
@@ -272,6 +275,7 @@ onAuthStateChanged(auth, async (user) => {
         await setDoc(doc(db, 'kullanilanKodlar', _authKampanyaKod), {
           uid: user.uid, email: user.email, usedAt: serverTimestamp(),
         });
+        await kampanyaApiKeyAta({ uid: user.uid });
         showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
         // Yeniden yükle — userSnap güncel değil, sayfayı yenile
         window.location.reload();
@@ -1390,6 +1394,17 @@ async function loadAdminPanel() {
       adminKeyEl.style.color = aktifKey() ? 'var(--accent)' : 'var(--red)';
     }
 
+    // Kampanya key durumu
+    try {
+      const kampanyaKonfig = await getDoc(doc(db, 'config', 'kampanya'));
+      const kampanyaKeyEl = el('kampanyaKeyDurum');
+      if (kampanyaKeyEl) {
+        const var_ = kampanyaKonfig.exists() && kampanyaKonfig.data()?.apiKey;
+        kampanyaKeyEl.textContent = var_ ? '✓ Tanımlı' : '⚠ Tanımlı değil';
+        kampanyaKeyEl.style.color = var_ ? 'var(--accent)' : 'var(--red)';
+      }
+    } catch (_) {}
+
     const kulListEl = el('kullaniciListesi');
     if (kulListEl) {
       kulListEl.innerHTML = '';
@@ -1420,7 +1435,14 @@ async function loadAdminPanel() {
         keyDurum.style.cssText = 'font-size:0.65rem;color:' + (u.apiKeySet ? 'var(--accent)' : 'var(--muted)');
         keyDurum.textContent = u.apiKeySet ? '🔑' : '○';
 
+        const kaynakBadge = document.createElement('span');
+        if (u.kaynak === 'instagram') {
+          kaynakBadge.style.cssText = 'font-size:0.6rem;background:rgba(225,48,108,0.15);color:#e1306c;border:1px solid rgba(225,48,108,0.3);border-radius:4px;padding:1px 5px';
+          kaynakBadge.textContent = '📸 IG';
+        }
+
         satir.append(avatar, bilgi, durum, plan, keyDurum);
+        if (u.kaynak === 'instagram') satir.appendChild(kaynakBadge);
 
         if (!u.isAdmin) {
           if (u.active) {
@@ -1485,6 +1507,22 @@ window.adminKendiKeyiKaydet = async () => {
     showToast('Admin API anahtarı kaydedildi ✓');
   } catch (e) {
     showToast('Key kaydedilemedi: ' + (e?.message || 'Hata'), 'error');
+  }
+};
+
+window.kampanyaKeySave = async () => {
+  const key = el('kampanyaApiKeyInput')?.value.trim();
+  if (!key) { showToast('API anahtarı boş olamaz!', 'error'); return; }
+  if (!key.startsWith('sk-ant-')) { showToast('Geçersiz Anthropic key formatı!', 'error'); return; }
+  try {
+    await setDoc(doc(db, 'config', 'kampanya'), { apiKey: key, guncellendi: serverTimestamp() });
+    el('kampanyaApiKeyInput').value = '';
+    el('kampanyaApiKeyInput').type  = 'password';
+    const durumEl = el('kampanyaKeyDurum');
+    if (durumEl) { durumEl.textContent = '✓ Tanımlı'; durumEl.style.color = 'var(--accent)'; }
+    showToast('Kampanya API key kaydedildi ✓');
+  } catch (e) {
+    showToast('Kaydedilemedi: ' + (e?.message || 'Hata'), 'error');
   }
 };
 
@@ -1796,6 +1834,9 @@ window.kampanyaKoduAktif = async () => {
       plan: 'full', active: true,
       kaynak: 'instagram', kampanyaKod: kod,
     });
+
+    // Kampanya API key'ini otomatik ata
+    await kampanyaApiKeyAta({ uid: user.uid });
 
     // Butonu göster/gizle
     document.querySelectorAll('.kampanya-kod-btn').forEach(b => b.style.display = 'none');

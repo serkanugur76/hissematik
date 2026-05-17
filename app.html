@@ -628,6 +628,32 @@
           <button class="btn primary" id="btnAdminKeyKaydet" style="width:100%">🔑 Kaydet</button>
         </div>
 
+        <!-- Kampanya API Key -->
+        <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+          <div class="section-title" style="margin-bottom:0.5rem;font-size:0.78rem">🎟 Kampanya Kullanıcı API Key</div>
+          <p class="muted" style="font-size:0.72rem;margin-bottom:0.75rem">
+            Kampanya koduyla giriş yapan kullanıcılara otomatik atanacak API key. <code>config/kampanya</code> dokümanına kaydedilir.
+          </p>
+          <div class="sistem-satir" style="margin-bottom:0.75rem">
+            <span class="muted" style="font-size:0.75rem">Durum</span>
+            <span id="kampanyaKeyDurum" class="muted" style="font-size:0.75rem">Kontrol ediliyor...</span>
+          </div>
+          <div class="form-group" style="position:relative">
+            <input
+              class="form-input"
+              id="kampanyaApiKeyInput"
+              type="password"
+              placeholder="sk-ant-api03-..."
+              autocomplete="off"
+            >
+            <button
+              onclick="const i=document.getElementById('kampanyaApiKeyInput');i.type=i.type==='password'?'text':'password'"
+              style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem"
+            >👁</button>
+          </div>
+          <button class="btn primary" id="btnKampanyaKeySave" onclick="window.kampanyaKeySave()" style="width:100%">🎟 Kampanya Key Kaydet</button>
+        </div>
+
     <!-- Token istatistikleri -->
     <div class="card" style="margin-top:1.5rem">
       <div class="section-header" style="margin-bottom:1rem">
