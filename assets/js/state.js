@@ -9,7 +9,7 @@
 
 export const ADMIN_EMAILS = ['ugurserkan@gmail.com'];
 
-export const DOGRULAMA_GUN_VARSAYILAN = 7;
+export const DOGRULAMA_GUN_VARSAYILAN = 3;
 
 export const BIST30 = Object.freeze(new Set([
   'AKBNK','ARCLK','ASELS','BIMAS','EREGL','FROTO','GARAN','GUBRF',

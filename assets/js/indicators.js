@@ -360,6 +360,62 @@ export function sinyalClass(sinyal) {
   return harita[sinyal] || 'bekle';
 }
 
+// ─────────────────────────────────────────────
+// HANGİ GÖSTERGELER TETİKLENDİ (İnsan okunur)
+// ─────────────────────────────────────────────
+export function gostergelerListele(v) {
+  const liste = [];
+  if (!v) return liste;
+
+  // RSI
+  if      (v.rsi < 25) liste.push({ etiket: 'RSI kritik satım', yon: 'al', deger: v.rsi?.toFixed(1) });
+  else if (v.rsi < 35) liste.push({ etiket: 'RSI aşırı satım',  yon: 'al', deger: v.rsi?.toFixed(1) });
+  else if (v.rsi > 75) liste.push({ etiket: 'RSI kritik alım',  yon: 'sat', deger: v.rsi?.toFixed(1) });
+  else if (v.rsi > 65) liste.push({ etiket: 'RSI aşırı alım',   yon: 'sat', deger: v.rsi?.toFixed(1) });
+
+  // StochRSI
+  if (v.stochRsi) {
+    const { k, d } = v.stochRsi;
+    if      (k < 20 && k > d) liste.push({ etiket: 'StochRSI dip dönüşü',   yon: 'al',  deger: k?.toFixed(0) });
+    else if (k < 20)          liste.push({ etiket: 'StochRSI aşırı satım',  yon: 'al',  deger: k?.toFixed(0) });
+    else if (k > 80 && k < d) liste.push({ etiket: 'StochRSI zirve dönüşü', yon: 'sat', deger: k?.toFixed(0) });
+    else if (k > 80)          liste.push({ etiket: 'StochRSI aşırı alım',   yon: 'sat', deger: k?.toFixed(0) });
+  }
+
+  // MACD
+  if      (v.macdHist > 0 && v.macd > v.macdSignal) liste.push({ etiket: 'MACD yukarı kesişim', yon: 'al',  deger: v.macdHist?.toFixed(3) });
+  else if (v.macdHist > 0)                           liste.push({ etiket: 'MACD pozitif',         yon: 'al',  deger: v.macdHist?.toFixed(3) });
+  else if (v.macdHist < 0 && v.macd < v.macdSignal) liste.push({ etiket: 'MACD aşağı kesişim',  yon: 'sat', deger: v.macdHist?.toFixed(3) });
+  else if (v.macdHist < 0)                           liste.push({ etiket: 'MACD negatif',         yon: 'sat', deger: v.macdHist?.toFixed(3) });
+
+  // Bollinger
+  if (v.bollinger) {
+    if      (v.bollinger.yuzde < 10) liste.push({ etiket: 'Bollinger alt band',   yon: 'al',  deger: v.bollinger.yuzde + '%' });
+    else if (v.bollinger.yuzde < 25) liste.push({ etiket: 'Bollinger alt bölge',  yon: 'al',  deger: v.bollinger.yuzde + '%' });
+    else if (v.bollinger.yuzde > 90) liste.push({ etiket: 'Bollinger üst band',   yon: 'sat', deger: v.bollinger.yuzde + '%' });
+    else if (v.bollinger.yuzde > 75) liste.push({ etiket: 'Bollinger üst bölge',  yon: 'sat', deger: v.bollinger.yuzde + '%' });
+  }
+
+  // MA Trend
+  if      (v.ma20 > v.ma50 * 1.005) liste.push({ etiket: 'MA20 > MA50 (trend yukarı)', yon: 'al',  deger: null });
+  else if (v.ma20 < v.ma50 * 0.995) liste.push({ etiket: 'MA20 < MA50 (trend aşağı)',  yon: 'sat', deger: null });
+
+  // Hacim
+  if      (v.hacimFark > 80 && v.macdHist > 0) liste.push({ etiket: 'Güçlü hacim patlaması',   yon: 'al',  deger: '+' + v.hacimFark + '%' });
+  else if (v.hacimFark > 50 && v.macdHist > 0) liste.push({ etiket: 'Hacim artışı',            yon: 'al',  deger: '+' + v.hacimFark + '%' });
+  else if (v.hacimFark > 50 && v.macdHist < 0) liste.push({ etiket: 'Satış hacim artışı',      yon: 'sat', deger: '+' + v.hacimFark + '%' });
+
+  // Williams %R
+  if      (v.williamsR !== undefined && v.williamsR < -80) liste.push({ etiket: 'Williams %R satım', yon: 'al',  deger: v.williamsR?.toFixed(0) });
+  else if (v.williamsR !== undefined && v.williamsR > -20) liste.push({ etiket: 'Williams %R alım',  yon: 'sat', deger: v.williamsR?.toFixed(0) });
+
+  // MFI
+  if      (v.mfi !== undefined && v.mfi < 20) liste.push({ etiket: 'MFI aşırı satım', yon: 'al',  deger: v.mfi?.toFixed(0) });
+  else if (v.mfi !== undefined && v.mfi > 80) liste.push({ etiket: 'MFI aşırı alım',  yon: 'sat', deger: v.mfi?.toFixed(0) });
+
+  return liste;
+}
+
 
 // ─────────────────────────────────────────────
 // YAHOO VERİSİNİ PARSE ET

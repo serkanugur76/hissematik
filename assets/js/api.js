@@ -10,7 +10,7 @@ import {
   query, where, orderBy, limit, serverTimestamp,
 } from './firebase.js';
 
-import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
+import { parseYahooVeri, genelSinyal, avg, gostergelerListele } from './indicators.js';
 
 // ─────────────────────────────────────────────
 // SABİTLER
@@ -702,27 +702,81 @@ export async function sinyalKaydet({ db, currentUser, veriler, takipEdilen, aiYo
 
   for (const [k, v] of Object.entries(veriler)) {
     if (!takipEdilen.has(k)) continue;
+
+    // BEKLE sinyalini kaydetme — gürültü, anlamsız
+    if (!v.sinyal || v.sinyal === 'BEKLE') continue;
+
+    const gostergeler = gostergelerListele(v).map(g => g.etiket);
+
     const item = {
-      uid: currentUser.uid, sembol: k, tarih: ts, gun: bugun,
-      fiyat: v.fiyat, rsi: v.rsi, macd: v.macdHist, hacimFark: v.hacimFark,
-      ma20: v.ma20, ma50: v.ma50, sinyal: v.sinyal, aiYorum,
-      sonuc: null, sonucFiyat: null, sonucYuzde: null, dogrulandi: null,
+      uid:            currentUser.uid,
+      sembol:         k,
+      tarih:          ts,
+      gun:            bugun,
+      fiyat:          v.fiyat,
+      // Teknik göstergeler
+      rsi:            v.rsi,
+      stochRsiK:      v.stochRsi?.k ?? null,
+      stochRsiD:      v.stochRsi?.d ?? null,
+      macd:           v.macd,
+      macdSignal:     v.macdSignal,
+      macdHist:       v.macdHist,
+      ma20:           v.ma20,
+      ma50:           v.ma50,
+      bollingerYuzde: v.bollinger?.yuzde ?? null,
+      williamsR:      v.williamsR ?? null,
+      mfi:            v.mfi ?? null,
+      hacimFark:      v.hacimFark,
+      // Sinyal kalitesi
+      sinyal:         v.sinyal,
+      guvenSkoru:     v.guvenSkoru ?? null,
+      alYuzde:        v.alYuzde   ?? null,
+      satYuzde:       v.satYuzde  ?? null,
+      gostergeler,
+      // Piyasa bağlamı
+      bist100Degisim: null, // piyasaVerisi.yon dışarıdan geçilmez, null bırak
+      aiYorum,
+      // Performans (dogrulama sonrası doldurulur)
+      sonuc:       null,
+      sonucFiyat:  null,
+      sonucYuzde:  null,
+      dogrulandi:  null,
     };
+
     try {
-      const mevcutQ = query(
+      // Önce bu hissenin SON sinyalini bul (günden bağımsız)
+      const sonQ = query(
         collection(db, 'sinyaller'),
-        where('uid', '==', item.uid), where('sembol', '==', item.sembol), where('gun', '==', bugun)
+        where('uid', '==', currentUser.uid),
+        where('sembol', '==', k),
+        orderBy('tarih', 'desc'),
+        limit(1)
       );
-      const snap = await getDocs(mevcutQ);
-      if (!snap.empty) {
-        await updateDoc(doc(db, 'sinyaller', snap.docs[0].id), {
-          fiyat: item.fiyat, rsi: item.rsi, macd: item.macd,
-          hacimFark: item.hacimFark, ma20: item.ma20, ma50: item.ma50,
-          sinyal: item.sinyal, tarih: item.tarih,
-        });
-      } else {
-        await addDoc(collection(db, 'sinyaller'), item);
+      const sonSnap = await getDocs(sonQ);
+
+      if (!sonSnap.empty) {
+        const sonDoc  = sonSnap.docs[0];
+        const sonData = sonDoc.data();
+
+        // Aynı gün, aynı sinyal → teknik verileri güncelle (yeni kayıt açma)
+        if (sonData.gun === bugun && sonData.sinyal === v.sinyal) {
+          await updateDoc(doc(db, 'sinyaller', sonDoc.id), {
+            fiyat: item.fiyat, rsi: item.rsi, macdHist: item.macdHist,
+            hacimFark: item.hacimFark, ma20: item.ma20, ma50: item.ma50,
+            guvenSkoru: item.guvenSkoru, alYuzde: item.alYuzde, satYuzde: item.satYuzde,
+            gostergeler: item.gostergeler, tarih: item.tarih,
+          });
+          continue;
+        }
+
+        // Farklı gün ama aynı sinyal → YENI kayıt açma (trend devam ediyor, gürültü)
+        // Sadece sinyal DEĞIŞMIŞSE yeni kayıt aç
+        if (sonData.sinyal === v.sinyal) continue;
       }
+
+      // Yeni sinyal olayı (sinyal değişti ya da ilk kayıt)
+      await addDoc(collection(db, 'sinyaller'), item);
+
     } catch (e) { console.error('sinyalKaydet hatası:', k, e); }
   }
 }

@@ -10,7 +10,7 @@ import {
   DOGRULAMA_GUN_VARSAYILAN,
 } from './state.js';
 
-import { sinyalClass } from './indicators.js';
+import { sinyalClass, gostergelerListele } from './indicators.js';
 
 // ─────────────────────────────────────────────
 // YARDIMCILAR
@@ -546,8 +546,8 @@ export function renderDashboard() {
       const bolRenk  = v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
       const degIsaret = v.degisim >= 0 ? '+' : '';
 
-      return '<tr>' +
-        '<td><span class="mono" style="font-weight:600;cursor:pointer;color:var(--accent)" onclick="hisseDetayAc(\'' + k + '\')">' + k + '</span></td>' +
+      return '<tr class="clickable-row" onclick="window._uiCallbacks?.hisseDetayAc(\'' + k + '\')" style="cursor:pointer">' +
+        '<td><span class="mono" style="font-weight:600;color:var(--accent)">' + k + '</span></td>' +
         '<td class="mono" style="font-weight:500">' + (v.fiyat ?? '—') + ' ₺</td>' +
         '<td class="mono ' + degCls + '">' + degIsaret + v.degisim + '%</td>' +
         '<td><div class="rsi-wrap"><div class="rsi-bar"><div class="rsi-fill" style="width:' + rsiPct + '%;background:' + rsiColor + '"></div></div><span class="mono" style="font-size:0.75rem;color:' + rsiColor + ';min-width:28px">' + v.rsi + '</span></div></td>' +
@@ -640,41 +640,171 @@ export function renderHisseler() {
 // ─────────────────────────────────────────────
 
 export function renderSinyalGecmisi() {
-  const { sinyalGecmisi, dogrulamaGun } = state;
+  const { sinyalGecmisi, dogrulamaGun, veriler, takipEdilen } = state;
   const listeEl = el('sinyalListesi');
+  if (!listeEl) return;
 
   if (sinyalGecmisi.length === 0) {
-    listeEl.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Henüz sinyal geçmişi yok.</div>';
+    listeEl.innerHTML =
+      '<div style="text-align:center;padding:3rem;color:var(--muted)">' +
+        '<div style="font-size:2rem;margin-bottom:0.5rem">📭</div>' +
+        '<div>Henüz sinyal geçmişi yok.</div>' +
+        '<div style="font-size:0.78rem;margin-top:0.5rem;opacity:0.6">Güncelle\'ye bastığında BEKLE dışı sinyal çıkan hisseler buraya kaydedilir.</div>' +
+      '</div>';
     return;
   }
 
-  listeEl.innerHTML = sinyalGecmisi.slice(0, 50).map(s => {
-    const tarih      = new Date(s.tarih).toLocaleDateString('tr-TR');
-    const saat       = new Date(s.tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    const sonucPill  = s.dogrulandi === null
-      ? '<span class="pill bekliyor">⏳ ' + dogrulamaGun + ' gün bekleniyor</span>'
-      : s.dogrulandi
-        ? '<span class="pill dogrulandi">✓ Doğrulandı</span>'
-        : '<span class="pill yanlis">✗ Yanlışlandı</span>';
-    const sonucYuzde = s.sonucYuzde !== null
-      ? '<span class="' + (s.sonucYuzde >= 0 ? 'pos' : 'neg') + ' mono">' + (s.sonucYuzde >= 0 ? '+' : '') + s.sonucYuzde + '%</span>'
-      : '<span class="muted">—</span>';
+  // ── Genel istatistik ──────────────────────────
+  const tamamlananlar = sinyalGecmisi.filter(s => s.dogrulandi !== null);
+  const dogru         = tamamlananlar.filter(s => s.dogrulandi === true).length;
+  const isabet        = tamamlananlar.length > 0 ? Math.round(dogru / tamamlananlar.length * 100) : null;
+  const ortGetiri     = tamamlananlar.length > 0
+    ? (tamamlananlar.reduce((acc, s) => acc + (s.sonucYuzde || 0), 0) / tamamlananlar.length).toFixed(1)
+    : null;
 
-    return '<div class="sinyal-item">' +
-      '<div class="sinyal-item-top">' +
-        '<span class="mono" style="font-weight:500">' + s.sembol + '</span>' +
-        '<span class="pill ' + sinyalClass(s.sinyal) + '">' + s.sinyal + '</span>' +
-        sonucPill + ' ' + sonucYuzde +
+  const isIsaretRenk = isabet === null ? 'var(--muted)' : isabet >= 60 ? 'var(--accent)' : isabet >= 45 ? 'var(--yellow)' : 'var(--red)';
+  const ortRenk      = ortGetiri === null ? 'var(--muted)' : +ortGetiri >= 0 ? 'var(--accent)' : 'var(--red)';
+
+  const ozet =
+    '<div class="sinyal-ozet-bar">' +
+      '<div class="sinyal-ozet-item">' +
+        '<span class="sinyal-ozet-label">Toplam Sinyal</span>' +
+        '<span class="sinyal-ozet-val">' + sinyalGecmisi.length + '</span>' +
       '</div>' +
-      '<div class="sinyal-item-meta">' +
-        '<span>📅 ' + tarih + ' ' + saat + '</span>' +
-        '<span>Fiyat: <span class="mono">' + s.fiyat + '₺</span></span>' +
-        '<span>RSI: <span class="mono">' + s.rsi?.toFixed(0) + '</span></span>' +
-        '<span>Hacim: <span class="mono ' + (s.hacimFark > 0 ? 'pos' : 'muted') + '">' + (s.hacimFark > 0 ? '+' : '') + s.hacimFark + '%</span></span>' +
-        (s.sonucFiyat ? '<span>Sonuç: <span class="mono">' + s.sonucFiyat + '₺</span></span>' : '') +
+      '<div class="sinyal-ozet-item">' +
+        '<span class="sinyal-ozet-label">Değerlendirilen</span>' +
+        '<span class="sinyal-ozet-val">' + tamamlananlar.length + '</span>' +
+      '</div>' +
+      '<div class="sinyal-ozet-item">' +
+        '<span class="sinyal-ozet-label">İsabet Oranı</span>' +
+        '<span class="sinyal-ozet-val" style="color:' + isIsaretRenk + '">' + (isabet !== null ? '%' + isabet : '—') + '</span>' +
+      '</div>' +
+      '<div class="sinyal-ozet-item">' +
+        '<span class="sinyal-ozet-label">Ort. Getiri</span>' +
+        '<span class="sinyal-ozet-val" style="color:' + ortRenk + '">' +
+          (ortGetiri !== null ? (ortGetiri >= 0 ? '+' : '') + ortGetiri + '%' : '—') +
+        '</span>' +
+      '</div>' +
+      '<div class="sinyal-ozet-item">' +
+        '<span class="sinyal-ozet-label">Doğrulama Süresi</span>' +
+        '<span class="sinyal-ozet-val">' + dogrulamaGun + ' gün</span>' +
       '</div>' +
     '</div>';
+
+  // ── Sinyalleri sembol bazında grupla ──────────
+  const gruplar = {};
+  sinyalGecmisi.forEach(s => {
+    if (!gruplar[s.sembol]) gruplar[s.sembol] = [];
+    gruplar[s.sembol].push(s);
+  });
+
+  // Her grup için son sinyali bul, gruba göre sırala (en son aktif önce)
+  const grupSirali = Object.entries(gruplar).sort((a, b) => {
+    const tsA = a[1][0]?.tarih || 0;
+    const tsB = b[1][0]?.tarih || 0;
+    return tsB - tsA;
+  });
+
+  const gruplariHTML = grupSirali.map(([sembol, sinyaller]) => {
+    const sonSinyal   = sinyaller[0];
+    const hisseTamaml = sinyaller.filter(s => s.dogrulandi !== null);
+    const hisseDogru  = hisseTamaml.filter(s => s.dogrulandi === true).length;
+    const hisseIsabet = hisseTamaml.length > 0 ? Math.round(hisseDogru / hisseTamaml.length * 100) : null;
+    const hisseCls    = sinyalClass(sonSinyal.sinyal);
+    const aktifVeri   = veriler[sembol];
+
+    // Başlık satırı
+    const baslik =
+      '<div class="sg-grup-baslik" onclick="this.parentElement.classList.toggle(\'sg-acik\')">' +
+        '<div class="sg-baslik-sol">' +
+          '<span class="sg-chevron">▶</span>' +
+          '<span class="sg-sembol mono" onclick="event.stopPropagation();window._uiCallbacks?.hisseDetayAc(\'' + sembol + '\')">' + sembol + '</span>' +
+          '<span class="sinyal-badge ' + hisseCls + ' sg-son-sinyal">' + sonSinyal.sinyal + '</span>' +
+          (aktifVeri?.guvenSkoru != null
+            ? '<span class="sg-guven-chip">' + aktifVeri.guvenSkoru + '% güven</span>'
+            : '') +
+        '</div>' +
+        '<div class="sg-baslik-sag">' +
+          '<span class="sg-sayac">' + sinyaller.length + ' sinyal</span>' +
+          (hisseIsabet !== null
+            ? '<span class="sg-isabet" style="color:' + (hisseIsabet >= 60 ? 'var(--accent)' : hisseIsabet >= 45 ? 'var(--yellow)' : 'var(--red)') + '">' +
+                '%' + hisseIsabet + ' isabet' +
+              '</span>'
+            : '') +
+        '</div>' +
+      '</div>';
+
+    // Sinyal kartları
+    const kartlar = sinyaller.slice(0, 10).map(s => {
+      const tarih     = new Date(s.tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: '2-digit' });
+      const saat      = new Date(s.tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      const cls       = sinyalClass(s.sinyal);
+      const guven     = s.guvenSkoru ?? null;
+      const guvenCls  = guven >= 70 ? 'high' : guven >= 50 ? 'medium' : 'low';
+      const goster    = Array.isArray(s.gostergeler) ? s.gostergeler : [];
+
+      // Performans sonucu
+      let performansHTML;
+      if (s.dogrulandi === null) {
+        const sonucTarih = new Date((s.tarih || 0) + dogrulamaGun * 86400000);
+        const kalanGun   = Math.max(0, Math.ceil((sonucTarih - Date.now()) / 86400000));
+        performansHTML = '<span class="sg-perf bekliyor">⏳ ' + (kalanGun > 0 ? kalanGun + ' gün' : 'yakında') + '</span>';
+      } else if (s.dogrulandi === true) {
+        performansHTML =
+          '<span class="sg-perf dogrulandi">✓ Doğrulandı</span>' +
+          (s.sonucYuzde != null
+            ? '<span class="sg-perf-yuzde ' + (s.sonucYuzde >= 0 ? 'pos' : 'neg') + '">' +
+                (s.sonucYuzde >= 0 ? '+' : '') + s.sonucYuzde + '%' +
+              '</span>'
+            : '');
+      } else {
+        performansHTML =
+          '<span class="sg-perf yanlis">✗ Yanlışlandı</span>' +
+          (s.sonucYuzde != null
+            ? '<span class="sg-perf-yuzde neg">' + s.sonucYuzde + '%</span>'
+            : '');
+      }
+
+      // Gösterge chip'leri
+      const gostergeChips = goster.slice(0, 4).map(g =>
+        '<span class="sg-chip">' + g + '</span>'
+      ).join('');
+
+      // Güven barı
+      const guvenBar = guven != null
+        ? '<div class="sg-guven-bar-wrap">' +
+            '<div class="sg-guven-bar"><div class="sg-guven-fill ' + guvenCls + '" style="width:' + guven + '%"></div></div>' +
+            '<span class="sg-guven-val">' + guven + '%</span>' +
+          '</div>'
+        : '';
+
+      return '<div class="sg-sinyal-kart ' + cls + '">' +
+        '<div class="sg-kart-ust">' +
+          '<div class="sg-kart-sol">' +
+            '<span class="sinyal-badge ' + cls + '">' + s.sinyal + '</span>' +
+            '<span class="sg-tarih mono">' + tarih + ' ' + saat + '</span>' +
+            '<span class="sg-fiyat mono">' + (s.fiyat ?? '—') + ' ₺</span>' +
+          '</div>' +
+          '<div class="sg-kart-sag">' +
+            performansHTML +
+          '</div>' +
+        '</div>' +
+        guvenBar +
+        (gostergeChips ? '<div class="sg-chip-satir">' + gostergeChips + '</div>' : '') +
+        '<div class="sg-kart-alt">' +
+          (s.rsi    != null ? '<span class="sg-meta">RSI <b>' + s.rsi?.toFixed(0) + '</b></span>' : '') +
+          (s.macdHist != null ? '<span class="sg-meta">MACD <b class="' + (s.macdHist >= 0 ? 'pos' : 'neg') + '">' + (s.macdHist >= 0 ? '+' : '') + s.macdHist?.toFixed(3) + '</b></span>' : '') +
+          (s.hacimFark != null ? '<span class="sg-meta">Hacim <b class="' + (s.hacimFark > 0 ? 'pos' : 'muted') + '">' + (s.hacimFark > 0 ? '+' : '') + s.hacimFark + '%</b></span>' : '') +
+          (s.bollingerYuzde != null ? '<span class="sg-meta">BB <b>' + s.bollingerYuzde + '%</b></span>' : '') +
+          (s.sonucFiyat != null ? '<span class="sg-meta">Sonuç fiyatı <b>' + s.sonucFiyat + ' ₺</b></span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="sg-grup">' + baslik + '<div class="sg-kartlar">' + kartlar + '</div></div>';
   }).join('');
+
+  listeEl.innerHTML = ozet + '<div class="sg-gruplar">' + gruplariHTML + '</div>';
 }
 
 // ─────────────────────────────────────────────
