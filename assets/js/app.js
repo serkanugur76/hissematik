@@ -1943,7 +1943,60 @@ window.portfoyAnalizModalAc = () => {
   openModal('portfoyAnalizModal');
 };
 
-window.makroAnalizYap = async () => {
+// ── Makro Analiz Cache ──────────────────────────
+const MAKRO_CACHE_KEY = 'hm_makro_analiz_v1';
+const MAKRO_CACHE_SURE = 6 * 60 * 60 * 1000; // 6 saat
+const MAKRO_DEGISIM_ESIK = 2.5; // %2.5'ten fazla fiyat farkı → yenile öner
+
+function _makroCacheOku() {
+  try { return JSON.parse(localStorage.getItem(MAKRO_CACHE_KEY) || 'null'); } catch { return null; }
+}
+function _makroCacheYaz(yorum, fiyatlar) {
+  try { localStorage.setItem(MAKRO_CACHE_KEY, JSON.stringify({ yorum, fiyatlar, tarih: Date.now() })); } catch {}
+}
+function _makroFiyatlarCikart(pv) {
+  return {
+    bist: pv.xu100?.fiyat || 0,
+    sp500: pv.sp500?.fiyat || 0,
+    altin: pv.altin?.onsUsd || 0,
+    brent: pv.brent?.fiyat || 0,
+    usd: pv.usdtry?.fiyat || 0,
+  };
+}
+function _makroCacheGecerlimi(cache) {
+  if (!cache?.yorum || !cache?.tarih) return false;
+  return (Date.now() - cache.tarih) < MAKRO_CACHE_SURE;
+}
+function _onemliDegisimVarMi(eskiFiyatlar, yeniFiyatlar) {
+  return Object.keys(yeniFiyatlar).some(k => {
+    const e = eskiFiyatlar[k], y = yeniFiyatlar[k];
+    if (!e || !y) return false;
+    return Math.abs((y - e) / e * 100) >= MAKRO_DEGISIM_ESIK;
+  });
+}
+
+function _makroIcerikGoster(yorum, tarih, icerikEl, zamanEl, yenilemeBtnEkle) {
+  if (!icerikEl) return;
+  const html = yorum
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  icerikEl.innerHTML = html;
+  if (zamanEl) {
+    const tarihStr = new Date(tarih).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
+    zamanEl.innerHTML = 'Analiz tarihi: ' + tarihStr +
+      (yenilemeBtnEkle
+        ? ' &nbsp;<button onclick="window.makroAnalizYenile()" class="btn btn-xs" style="font-size:0.65rem;padding:0.15rem 0.5rem">⟳ Yenile</button>'
+        : '');
+  }
+}
+
+window.makroAnalizYenile = () => {
+  localStorage.removeItem(MAKRO_CACHE_KEY);
+  window.makroAnalizYap(true);
+};
+
+window.makroAnalizYap = async (zorlaYenile = false) => {
   const key = aktifKey();
   if (!key) { showToast('AI analizi için API key gerekli.', 'error'); return; }
 
@@ -1983,27 +2036,42 @@ window.makroAnalizYap = async () => {
 
   const icerikEl = el('makroAnalizIcerik');
   const zamanEl  = el('makroAnalizZaman');
+  openModal('makroAnalizModal');
+
+  // ── Cache kontrolü ──
+  if (!zorlaYenile) {
+    const cache = _makroCacheOku();
+    if (cache?.yorum) {
+      const guncelFiyatlar = _makroFiyatlarCikart(pv);
+      const degisimVar = cache.fiyatlar ? _onemliDegisimVarMi(cache.fiyatlar, guncelFiyatlar) : false;
+      if (!degisimVar) {
+        // Cache geçerli, göster
+        _makroIcerikGoster(cache.yorum, cache.tarih, icerikEl, zamanEl, true);
+        return;
+      }
+      // Önemli değişim var — cache'i göster ama uyar
+      _makroIcerikGoster(cache.yorum, cache.tarih, icerikEl, zamanEl, false);
+      if (zamanEl) zamanEl.innerHTML += ' &nbsp;<span style="color:var(--yellow);font-size:0.65rem">⚠ Piyasada önemli değişim var</span>' +
+        ' &nbsp;<button onclick="window.makroAnalizYenile()" class="btn btn-xs" style="font-size:0.65rem;padding:0.15rem 0.5rem">⟳ Yenile</button>';
+      return;
+    }
+  }
+
+  // ── Yeni analiz iste ──
   if (icerikEl) icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">&#9685; AI analiz hazırlanıyor...</div>';
   if (zamanEl)  zamanEl.textContent = '';
-  openModal('makroAnalizModal');
 
   const btn = el('btnMakroAnaliz');
   if (btn) { btn.disabled = true; btn.textContent = 'Analiz yapılıyor...'; }
 
   try {
     const yorum = await aiMakroKorelasyonAnalizEt({ key, piyasaVerisi: pv });
-    if (icerikEl) {
-      if (yorum) {
-        const html = yorum
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n/g, '<br>');
-        icerikEl.innerHTML = html;
-      } else {
-        icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Analiz alınamadı. Tekrar dene.</div>';
-      }
+    if (yorum) {
+      _makroCacheYaz(yorum, _makroFiyatlarCikart(pv));
+      _makroIcerikGoster(yorum, Date.now(), icerikEl, zamanEl, true);
+    } else {
+      if (icerikEl) icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Analiz alınamadı. Tekrar dene.</div>';
     }
-    if (zamanEl) zamanEl.textContent = 'Güncellendi: ' + new Date().toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
   } catch (e) {
     const mesaj = e?.message === 'API_TIMEOUT'
       ? 'Yanıt süresi aşıldı. Tekrar dene.'
