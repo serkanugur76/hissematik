@@ -2000,12 +2000,17 @@ window.makroAnalizYap = async () => {
           .replace(/\n/g, '<br>');
         icerikEl.innerHTML = html;
       } else {
-        icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Analiz alınamadı.</div>';
+        icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Analiz alınamadı. Tekrar dene.</div>';
       }
     }
     if (zamanEl) zamanEl.textContent = 'Güncellendi: ' + new Date().toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
   } catch (e) {
-    if (icerikEl) icerikEl.innerHTML = '<div style="color:var(--red);padding:1rem">Hata: ' + (e?.message || 'Bağlantı sorunu') + '</div>';
+    const mesaj = e?.message === 'API_TIMEOUT'
+      ? 'Yanıt süresi aşıldı. Tekrar dene.'
+      : e?.message === 'API_KEY_INVALID'
+      ? 'Geçersiz API key.'
+      : 'Hata: ' + (e?.message || 'Bağlantı sorunu');
+    if (icerikEl) icerikEl.innerHTML = '<div style="color:var(--red);padding:1rem">' + mesaj + '</div>';
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '⬡ Makro Korelasyon Analizi'; }
   }

@@ -635,7 +635,7 @@ export async function aiMakroKorelasyonAnalizEt({ key, piyasaVerisi = {} }) {
     'Verilerden somut sayılar kullan. Spekülatif değil, veri odaklı ol.';
 
   try {
-    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1200);
+    const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1200, 50000);
     try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
     return text;
   } catch (e) {
