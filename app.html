@@ -74,7 +74,6 @@
     <nav class="topbar-center" id="mainNav">
       <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="nav-tab" data-tab="hisseler">Hisseler</button>
-      <button class="nav-tab" data-tab="sinyaller">Sinyal Geçmişi</button>
       <button class="nav-tab" data-tab="portfoy">Portföy</button>
       <button class="nav-tab" data-tab="haberler">📰 Haberler</button>
       <button class="nav-tab" data-tab="kap">📋 KAP</button>
@@ -136,10 +135,6 @@
       <button class="mobile-nav-item" data-tab="hisseler">
         <span class="mobile-nav-icon">📈</span>
         <span>Hisseler</span>
-      </button>
-      <button class="mobile-nav-item" data-tab="sinyaller">
-        <span class="mobile-nav-icon">🎯</span>
-        <span>Sinyal Geçmişi</span>
       </button>
       <button class="mobile-nav-item" data-tab="portfoy">
         <span class="mobile-nav-icon">💼</span>
@@ -271,12 +266,41 @@
             </thead>
             <tbody id="dashTableBody">
               <tr>
-                <td colspan="10" class="empty-state">
+                <td colspan="9" class="empty-state">
                   Henüz veri yok. Aşağıdan hisse seç → Güncelle'ye bas.
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Sinyal Geçmişi (Hisseler sekmesine taşındı) -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Sinyal Geçmişi & Doğrulama</div>
+            <div class="section-sub">Sinyaller gerçek piyasa sonuçlarıyla karşılaştırılır — isabeti izle</div>
+          </div>
+          <div class="sinyal-controls">
+            <label class="sinyal-sure-label">
+              Süre:
+              <select id="dogrulamaSuresi" class="form-input sinyal-sure-select">
+                <option value="1">1 Gün</option>
+                <option value="3" selected>3 Gün</option>
+                <option value="7">7 Gün</option>
+              </select>
+            </label>
+            <button class="btn primary" id="btnSinyalleriGuncelle"
+              data-tooltip="Geçmiş sinyallerin fiyatlarla karşılaştırarak doğru/yanlış sonuçlarını hesapla">
+              Sonuçları Kontrol Et
+            </button>
+          </div>
+        </div>
+        <div id="sinyalListesi">
+          <div class="empty-state" style="padding:2rem;text-align:center;color:var(--muted)">
+            Henüz sinyal geçmişi yok. Güncelle'ye basıldığında sinyaller burada birikir.
+          </div>
         </div>
       </div>
     </div>
@@ -305,61 +329,6 @@
     </div>
 
     <div class="hisse-grid" id="hisseGrid"></div>
-
-  </main>
-
-
-  <!-- ════════════════════════════════════════
-       PANEL: SİNYAL GEÇMİŞİ
-  ════════════════════════════════════════ -->
-  <main class="panel" id="panel-sinyaller">
-    <div class="ticker-bar"></div>
-
-    <div class="section-header">
-      <div>
-        <div class="section-title">Sinyal Geçmişi & Doğrulama</div>
-        <div class="section-sub">AI kararları gerçek piyasa sonuçlarıyla karşılaştırır ve öğrenir</div>
-      </div>
-      <div class="sinyal-controls">
-        <label class="sinyal-sure-label">
-          Doğrulama süresi:
-          <select id="dogrulamaSuresi" class="form-input sinyal-sure-select">
-            <option value="1">1 Gün</option>
-            <option value="3" selected>3 Gün</option>
-            <option value="7">7 Gün</option>
-          </select>
-        </label>
-        <button class="btn primary" id="btnSinyalleriGuncelle" data-tooltip="Geçmiş sinyallerin fiyatlarla karşılaştırarak doğru/yanlış sonuçlarını hesapla">Sonuçları Kontrol Et</button>
-      </div>
-    </div>
-
-    <!-- Sinyal özet sayaçlar -->
-    <div class="grid-4">
-      <div class="card">
-        <div class="card-title">Toplam Sinyal</div>
-        <div class="card-value mono" id="sinTopToplam">—</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Doğrulanan</div>
-        <div class="card-value green mono" id="sinTopDogru">—</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Yanlışlanan</div>
-        <div class="card-value red mono" id="sinTopYanlis">—</div>
-      </div>
-      <div class="card">
-        <div class="card-title">İsabet Oranı</div>
-        <div class="card-value yellow mono" id="sinTopIsabet">—</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="sinyal-row" id="sinyalListesi">
-        <div class="empty-state">
-          Henüz sinyal geçmişi yok. Veri güncellendiğinde sinyaller burada birikir.
-        </div>
-      </div>
-    </div>
 
   </main>
 

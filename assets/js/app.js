@@ -397,10 +397,10 @@ async function _switchTab(name, btn) {
   switchTab(name, btn);
   if (name === 'haberler')  await _loadHaberler();
   if (name === 'sozluk')    await _loadSozluk();
-  if (name === 'sinyaller') renderSinyalGecmisi();
+  // sinyaller sekmesi kaldırıldı — içerik hisseler sekmesinde
   if (name === 'portfoy')   renderPortfoy();
   if (name === 'kap')       await _loadKapBildirimleri();
-  if (name === 'hisseler')  { renderDashboard(); renderSummary(); }
+  if (name === 'hisseler')  { renderDashboard(); renderSummary(); renderSinyalGecmisi(); }
 }
 
 // ─────────────────────────────────────────────
@@ -509,6 +509,7 @@ window.verileriGuncelle = async () => {
   renderPortfoy();
   renderHisseler();
   renderSummary();
+  renderSinyalGecmisi();
   setState({ haberlerYuklendi: false });
   const guncellenenSayisi = Object.keys(state.veriler).filter(k => state.veriler[k].fiyat).length;
   showToast(guncellenenSayisi + ' hisse güncellendi ✓');
