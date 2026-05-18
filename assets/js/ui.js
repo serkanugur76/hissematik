@@ -298,6 +298,166 @@ export function renderPiyasaKartlariSabit() {
 
 
 // ─────────────────────────────────────────────
+// KORELASYON MATRİSİ
+// ─────────────────────────────────────────────
+
+function _pearson(a, b) {
+  const n = Math.min(a.length, b.length);
+  if (n < 5) return null;
+  const xa = a.slice(-n), xb = b.slice(-n);
+  const ma = xa.reduce((s, v) => s + v, 0) / n;
+  const mb = xb.reduce((s, v) => s + v, 0) / n;
+  let cov = 0, sa = 0, sb = 0;
+  for (let i = 0; i < n; i++) {
+    const da = xa[i] - ma, db = xb[i] - mb;
+    cov += da * db; sa += da * da; sb += db * db;
+  }
+  const denom = Math.sqrt(sa * sb);
+  return denom < 1e-10 ? null : +(cov / denom).toFixed(2);
+}
+
+function _korRenk(r) {
+  if (r === null) return '#2a2f3e';
+  if (r >= 0.7)  return 'rgba(0,229,160,0.75)';
+  if (r >= 0.4)  return 'rgba(0,229,160,0.38)';
+  if (r >= 0.15) return 'rgba(0,229,160,0.15)';
+  if (r >= -0.15) return 'rgba(120,120,140,0.18)';
+  if (r >= -0.4) return 'rgba(255,85,85,0.18)';
+  if (r >= -0.7) return 'rgba(255,85,85,0.42)';
+  return 'rgba(255,85,85,0.75)';
+}
+
+function _korAcikla(r, adA, adB) {
+  if (r === null) return 'Yeterli veri yok';
+  const guc   = Math.abs(r) >= 0.7 ? 'Güçlü' : Math.abs(r) >= 0.4 ? 'Orta' : Math.abs(r) >= 0.15 ? 'Zayıf' : 'Neredeyse yok';
+  const yon   = r >= 0.15 ? 'pozitif (aynı yön)' : r <= -0.15 ? 'negatif (zıt yön)' : 'korelasyon yok';
+  return guc + ' ' + yon + ' — ' + adA + ' yükselince ' + adB + (r >= 0.15 ? ' de yükselme eğiliminde' : r <= -0.15 ? ' düşme eğiliminde' : ' genellikle bağımsız hareket ediyor');
+}
+
+export function renderKorelasyonMatrisi() {
+  const container = el('korelasyonKartContainer');
+  if (!container) return;
+
+  const pv = state.piyasaVerisi;
+  const varliklar = [
+    { ad: 'BIST 100', k: pv.xu100?.kapanis },
+    { ad: 'S&P 500',  k: pv.sp500?.kapanis },
+    { ad: 'NASDAQ',   k: pv.nasdaq?.kapanis },
+    { ad: 'DAX',      k: pv.dax?.kapanis },
+    { ad: 'Altın $',  k: pv.altin?.onsKapanis },
+    { ad: 'Brent',    k: pv.brent?.kapanis },
+    { ad: 'WTI',      k: pv.wti?.kapanis },
+    { ad: 'USD/TRY',  k: pv.usdtry?.kapanis },
+    { ad: 'EUR/USD',  k: pv.eurusd?.kapanis },
+  ].filter(v => v.k && v.k.length >= 5);
+
+  if (varliklar.length < 3) { container.innerHTML = ''; return; }
+
+  // Matris verisi
+  const matris = varliklar.map(a =>
+    varliklar.map(b => a === b ? 1 : _pearson(a.k, b.k))
+  );
+
+  // Kompakt kart (tıklanınca modal açılır)
+  // Önemli çiftleri özet satır olarak göster
+  const onemliCiftler = [];
+  for (let i = 0; i < varliklar.length; i++) {
+    for (let j = i + 1; j < varliklar.length; j++) {
+      const r = matris[i][j];
+      if (r !== null && Math.abs(r) >= 0.4) {
+        onemliCiftler.push({ adA: varliklar[i].ad, adB: varliklar[j].ad, r });
+      }
+    }
+  }
+  onemliCiftler.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+
+  const ozetHtml = onemliCiftler.slice(0, 4).map(c => {
+    const renk  = c.r >= 0.4 ? 'var(--accent)' : 'var(--red)';
+    const sembol = c.r >= 0 ? '↑↑' : '↑↓';
+    return '<span class="kor-ozet-chip" style="color:' + renk + '">' +
+      sembol + ' ' + c.adA + ' / ' + c.adB + ' (' + c.r.toFixed(2) + ')' +
+    '</span>';
+  }).join('');
+
+  container.innerHTML =
+    '<div class="kor-kart" onclick="window.korelasyonModalAc()" data-tooltip="30 günlük veri ile hesaplanmış Pearson korelasyonu — detaylar için tıkla">' +
+      '<div class="kor-kart-sol">' +
+        '<div class="kor-kart-icon">&#128200;</div>' +
+        '<div>' +
+          '<div class="kor-kart-baslik">Varlık Korelasyonu</div>' +
+          '<div class="kor-kart-ozet">' + (ozetHtml || '<span style="color:var(--muted)">Hesaplanıyor...</span>') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<span class="ai-ozet-chip">Matris →</span>' +
+    '</div>';
+
+  // Modal içeriğini de hazırla (dolu hali)
+  _korelasyonModalIcerikOlustur(varliklar, matris);
+}
+
+function _korelasyonModalIcerikOlustur(varliklar, matris) {
+  const hedef = el('korelasyonModalIcerik');
+  if (!hedef) return;
+
+  const n = varliklar.length;
+
+  // Heatmap tablosu
+  let tablo = '<div class="kor-tablo-wrap"><table class="kor-tablo"><thead><tr><th></th>';
+  varliklar.forEach(v => { tablo += '<th>' + v.ad + '</th>'; });
+  tablo += '</tr></thead><tbody>';
+
+  for (let i = 0; i < n; i++) {
+    tablo += '<tr><th>' + varliklar[i].ad + '</th>';
+    for (let j = 0; j < n; j++) {
+      const r    = matris[i][j];
+      const bg   = _korRenk(r);
+      const metin = i === j ? '—' : (r !== null ? r.toFixed(2) : '?');
+      const tip  = i === j ? varliklar[i].ad : _korAcikla(r, varliklar[i].ad, varliklar[j].ad);
+      tablo += '<td style="background:' + bg + '" data-tooltip="' + tip + '">' + metin + '</td>';
+    }
+    tablo += '</tr>';
+  }
+  tablo += '</tbody></table></div>';
+
+  // Renk açıklama
+  const legend =
+    '<div class="kor-legend">' +
+      '<span class="kor-leg-item"><span class="kor-leg-dot" style="background:rgba(0,229,160,0.75)"></span>Güçlü pozitif (+0.7→+1)</span>' +
+      '<span class="kor-leg-item"><span class="kor-leg-dot" style="background:rgba(0,229,160,0.38)"></span>Orta pozitif (+0.4→+0.7)</span>' +
+      '<span class="kor-leg-item"><span class="kor-leg-dot" style="background:rgba(120,120,140,0.25)"></span>Bağımsız</span>' +
+      '<span class="kor-leg-item"><span class="kor-leg-dot" style="background:rgba(255,85,85,0.42)"></span>Orta negatif</span>' +
+      '<span class="kor-leg-item"><span class="kor-leg-dot" style="background:rgba(255,85,85,0.75)"></span>Güçlü negatif</span>' +
+    '</div>';
+
+  // Önemli ilişkiler listesi
+  const onemliCiftler = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const r = matris[i][j];
+      if (r !== null) onemliCiftler.push({ adA: varliklar[i].ad, adB: varliklar[j].ad, r });
+    }
+  }
+  onemliCiftler.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+
+  let listHtml = '<div class="kor-liste">';
+  onemliCiftler.slice(0, 12).forEach(c => {
+    const renk = c.r >= 0.4 ? 'var(--accent)' : c.r <= -0.4 ? 'var(--red)' : 'var(--muted)';
+    const sembol = c.r >= 0.15 ? '↑↑' : c.r <= -0.15 ? '↑↓' : '→←';
+    listHtml +=
+      '<div class="kor-liste-satir">' +
+        '<span class="kor-cift" style="color:' + renk + '">' + sembol + ' ' + c.adA + ' / ' + c.adB + '</span>' +
+        '<span class="kor-r" style="color:' + renk + '">' + c.r.toFixed(2) + '</span>' +
+        '<span class="kor-aciklama">' + _korAcikla(c.r, c.adA, c.adB) + '</span>' +
+      '</div>';
+  });
+  listHtml += '</div>';
+
+  hedef.innerHTML =
+    '<p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem">Son 30 günlük günlük kapanış fiyatları kullanılmıştır. Korelasyon katsayısı −1 ile +1 arasındadır.</p>' +
+    legend + tablo + '<div style="margin-top:1.25rem;font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">Öne Çıkan İlişkiler</div>' + listHtml;
+}
+
+// ─────────────────────────────────────────────
 // ÖZET KARTLAR
 // ─────────────────────────────────────────────
 

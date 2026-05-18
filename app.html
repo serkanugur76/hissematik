@@ -220,6 +220,9 @@
     <!-- Piyasa endeks + altın kartları -->
     <div id="piyasaKartlariRow"></div>
 
+    <!-- Korelasyon Matrisi kartı (JS tarafından doldurulur) -->
+    <div id="korelasyonKartContainer"></div>
+
     <!-- Makro korelasyon analiz butonu -->
     <div id="makroAnalizSatiri" style="display:none;margin-bottom:0.75rem">
       <button class="btn btn-makro-analiz" id="btnMakroAnaliz" onclick="window.makroAnalizYap()"
@@ -969,6 +972,22 @@
       <div id="makroAnalizSnapshot" class="makro-snapshot"></div>
       <!-- AI analiz içeriği -->
       <div id="makroAnalizIcerik" style="font-size:0.88rem;line-height:1.85;color:var(--text);margin-top:1rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Korelasyon Detay Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="korelasyonModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">&#128200; Varlık Korelasyon Matrisi</div>
+        <div class="modal-sub">30 günlük kapanış verilerinden hesaplandı</div>
+      </div>
+      <button class="modal-close" data-modal-close="korelasyonModal">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div id="korelasyonModalIcerik"></div>
     </div>
   </div>
 </div>

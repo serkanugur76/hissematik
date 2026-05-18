@@ -766,6 +766,101 @@ tr:last-child td { border-bottom:none; }
   font-family: var(--mono);
 }
 
+/* ── KORELASYON KART (dashboard kompakt) ── */
+.kor-kart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, rgba(96,165,250,0.06) 0%, rgba(124,58,237,0.05) 100%);
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: var(--radius-lg);
+  padding: 0.8rem 1.1rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+.kor-kart:hover { border-color: rgba(96,165,250,0.45); }
+.kor-kart-sol { display: flex; align-items: flex-start; gap: 0.7rem; min-width: 0; flex: 1; }
+.kor-kart-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(96,165,250,0.15);
+  border: 1px solid rgba(96,165,250,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; flex-shrink: 0; color: #60a5fa;
+}
+.kor-kart-baslik { font-size: 0.75rem; font-weight: 600; color: #60a5fa; letter-spacing: 0.04em; }
+.kor-kart-ozet { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.3rem; }
+.kor-ozet-chip {
+  font-size: 0.64rem; font-family: var(--mono);
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px; padding: 0.15rem 0.45rem;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ── KORELASYON MODALİ ── */
+.kor-legend {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.kor-leg-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.65rem; color: var(--muted); }
+.kor-leg-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+.kor-tablo-wrap { overflow-x: auto; margin-bottom: 1.25rem; }
+.kor-tablo {
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  min-width: 100%;
+}
+.kor-tablo th {
+  padding: 0.45rem 0.5rem;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.62rem;
+  text-align: center;
+  white-space: nowrap;
+  background: var(--bg3);
+}
+.kor-tablo thead th:first-child { text-align: left; }
+.kor-tablo tbody th {
+  text-align: left; padding: 0.45rem 0.5rem;
+  color: var(--text); white-space: nowrap;
+  background: var(--bg3);
+}
+.kor-tablo td {
+  text-align: center;
+  padding: 0.45rem 0.5rem;
+  font-weight: 600;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.04);
+  cursor: default;
+  min-width: 52px;
+  transition: filter 0.12s;
+}
+.kor-tablo td:hover { filter: brightness(1.3); }
+
+.kor-liste { display: flex; flex-direction: column; gap: 0.5rem; }
+.kor-liste-satir {
+  display: grid;
+  grid-template-columns: 160px 48px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.kor-cift { font-weight: 600; font-family: var(--mono); white-space: nowrap; }
+.kor-r    { font-family: var(--mono); font-size: 0.8rem; font-weight: 700; text-align: center; }
+.kor-aciklama { color: var(--muted); font-size: 0.7rem; line-height: 1.4; }
+@media (max-width: 600px) {
+  .kor-liste-satir { grid-template-columns: 1fr 42px; }
+  .kor-aciklama { display: none; }
+}
+
 /* ── AI ÖZET KART (collapsed, clickable) ── */
 .ai-ozet-kart {
   display: flex;

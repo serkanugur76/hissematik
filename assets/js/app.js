@@ -77,7 +77,7 @@ import {
   el, setStatus, showLoading, setLoadingMsg, hideLoading,
   showToast, closeModal, openModal,
   renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
-  renderDashboard, renderHisseler, renderSinyalGecmisi,
+  renderDashboard, renderHisseler, renderSinyalGecmisi, renderKorelasyonMatrisi,
   renderPortfoy, portfoyModalAc,
   renderHisseDetay, renderDetayOzet, renderDetayTeknik, renderHisseAnalizSonucu,
   renderHaberler, renderHaberAnaliz,
@@ -684,6 +684,7 @@ async function _piyasaVerisiCek() {
     setState({ piyasaVerisi: pv });
     renderPiyasaKartlari();
     renderPiyasaKartlariSabit();
+    renderKorelasyonMatrisi();
 
     // Makro analiz butonu: piyasa verisi hazırsa göster
     const makroBtnSatir = el('makroAnalizSatiri');
@@ -1906,6 +1907,8 @@ window.gunSonuOzetleriGoster = async () => {
 // ══════════════════════════════════════════════
 // KAMPANYA KODU — Giriş yapmış kullanıcı için
 // ══════════════════════════════════════════════
+
+window.korelasyonModalAc = () => { openModal('korelasyonModal'); };
 
 window.portfoyAnalizModalAc = () => {
   const son = state.sinyalGecmisi?.[0];
