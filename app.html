@@ -217,6 +217,13 @@
     <!-- Piyasa endeks + altın kartları -->
     <div id="piyasaKartlariRow"></div>
 
+    <!-- Makro korelasyon analiz butonu -->
+    <div id="makroAnalizSatiri" style="display:none;margin-bottom:0.75rem">
+      <button class="btn btn-makro-analiz" id="btnMakroAnaliz" onclick="window.makroAnalizYap()">
+        &#9685; Makro Korelasyon Analizi
+      </button>
+    </div>
+
     <!-- AI analiz kutusu (js tarafından doldurulur) -->
     <div id="aiBoxContainer"></div>
 
@@ -939,6 +946,25 @@
     </div>
     <div class="modal-body">
       <div id="portfoyAnalizIcerik" style="font-size:0.88rem;line-height:1.8;color:var(--text)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Makro Korelasyon Analizi Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="makroAnalizModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">&#9685; Makro Korelasyon Analizi</div>
+        <div class="modal-sub" id="makroAnalizZaman"></div>
+      </div>
+      <button class="modal-close" data-modal-close="makroAnalizModal">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Anlık piyasa özeti -->
+      <div id="makroAnalizSnapshot" class="makro-snapshot"></div>
+      <!-- AI analiz içeriği -->
+      <div id="makroAnalizIcerik" style="font-size:0.88rem;line-height:1.85;color:var(--text);margin-top:1rem"></div>
     </div>
   </div>
 </div>

@@ -70,6 +70,7 @@ import {
   loadGunSonuOzetleri,
   kampanyaApiKeyAta,
   fetchAltinFiyatlari,
+  aiMakroKorelasyonAnalizEt,
 } from './api.js';
 
 import {
@@ -556,11 +557,13 @@ function _degisimHesapla(fiyat, onceki) {
 
 async function _piyasaVerisiCek() {
   try {
-    const [data, xu100Kapanis, xu030Kapanis, altinKapanis] = await Promise.all([
+    const [data, xu100Kapanis, xu030Kapanis, altinKapanis, brentKapanis, wtiKapanis] = await Promise.all([
       fetchPiyasaVerisi(),
       fetchEndeksGecmisi('XU100.IS'),
       fetchEndeksGecmisi('XU030.IS'),
       fetchEndeksGecmisi('GC=F'),
+      fetchEndeksGecmisi('BZ=F'),
+      fetchEndeksGecmisi('CL=F'),
     ]);
     if (!data) return;
 
@@ -630,9 +633,26 @@ async function _piyasaVerisiCek() {
       }
     }
 
+    // Petrol: Brent (BZ=F) ve WTI (CL=F)
+    function _petrolParse(kapanis) {
+      if (!kapanis || kapanis.length < 2) return null;
+      const fiyat    = kapanis.at(-1) || 0;
+      const onceki   = kapanis.at(-2) || fiyat;
+      const degisim  = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+      return { fiyat: +fiyat.toFixed(2), degisim, kapanis };
+    }
+    const brentData = _petrolParse(brentKapanis);
+    const wtiData   = _petrolParse(wtiKapanis);
+    if (brentData) pv.brent = brentData;
+    if (wtiData)   pv.wti   = wtiData;
+
     setState({ piyasaVerisi: pv });
     renderPiyasaKartlari();
     renderPiyasaKartlariSabit();
+
+    // Makro analiz butonu: piyasa verisi hazırsa göster
+    const makroBtnSatir = el('makroAnalizSatiri');
+    if (makroBtnSatir && aktifKey()) makroBtnSatir.style.display = 'block';
   } catch (e) {
     console.error('_piyasaVerisiCek hatası:', e);
   }
@@ -1850,6 +1870,66 @@ window.portfoyAnalizModalAc = () => {
   }
 
   openModal('portfoyAnalizModal');
+};
+
+window.makroAnalizYap = async () => {
+  const key = aktifKey();
+  if (!key) { showToast('AI analizi için API key gerekli.', 'error'); return; }
+
+  const pv = state.piyasaVerisi;
+
+  // Snapshot tablosu
+  const snapshotEl = el('makroAnalizSnapshot');
+  if (snapshotEl) {
+    function _snap(ad, fiyat, degisim, birim) {
+      const d   = parseFloat(degisim) || 0;
+      const cls = d >= 0 ? 'pos' : 'neg';
+      const isk = d >= 0 ? '+' : '';
+      return '<div class="makro-snap-item">' +
+        '<span class="makro-snap-ad">' + ad + '</span>' +
+        '<span class="makro-snap-fiyat">' + (fiyat || '—') + (birim ? ' ' + birim : '') + '</span>' +
+        '<span class="makro-snap-deg ' + cls + '">' + (degisim !== undefined ? isk + d.toFixed(2) + '%' : '') + '</span>' +
+      '</div>';
+    }
+    snapshotEl.innerHTML =
+      _snap('BIST 100',    pv.xu100?.fiyat?.toLocaleString('tr-TR'), pv.xu100?.degisim) +
+      _snap('USD/TRY',     pv.usdtry?.fiyat?.toFixed(2), pv.usdtry?.degisim, '₺') +
+      _snap('EUR/TRY',     pv.eurtry?.fiyat?.toFixed(2), pv.eurtry?.degisim, '₺') +
+      _snap('EUR/USD',     pv.eurusd?.fiyat?.toFixed(4), pv.eurusd?.degisim) +
+      _snap('Altın Gram',  pv.altin?.gramTL?.toFixed(0), pv.altin?.degisim, '₺') +
+      _snap('Altın ONS',   pv.altin?.onsUsd?.toFixed(2), pv.altin?.degisim, '$') +
+      _snap('Brent',       pv.brent?.fiyat?.toFixed(2),  pv.brent?.degisim, '$') +
+      _snap('WTI',         pv.wti?.fiyat?.toFixed(2),    pv.wti?.degisim,   '$');
+  }
+
+  const icerikEl = el('makroAnalizIcerik');
+  const zamanEl  = el('makroAnalizZaman');
+  if (icerikEl) icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">&#9685; AI analiz hazırlanıyor...</div>';
+  if (zamanEl)  zamanEl.textContent = '';
+  openModal('makroAnalizModal');
+
+  const btn = el('btnMakroAnaliz');
+  if (btn) { btn.disabled = true; btn.textContent = 'Analiz yapılıyor...'; }
+
+  try {
+    const yorum = await aiMakroKorelasyonAnalizEt({ key, piyasaVerisi: pv });
+    if (icerikEl) {
+      if (yorum) {
+        const html = yorum
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+        icerikEl.innerHTML = html;
+      } else {
+        icerikEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Analiz alınamadı.</div>';
+      }
+    }
+    if (zamanEl) zamanEl.textContent = 'Güncellendi: ' + new Date().toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
+  } catch (e) {
+    if (icerikEl) icerikEl.innerHTML = '<div style="color:var(--red);padding:1rem">Hata: ' + (e?.message || 'Bağlantı sorunu') + '</div>';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬡ Makro Korelasyon Analizi'; }
+  }
 };
 
 window.kampanyaModalAc = () => {

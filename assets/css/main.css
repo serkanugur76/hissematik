@@ -631,6 +631,67 @@ tr:last-child td { border-bottom:none; }
   white-space: pre-wrap;
 }
 
+/* ── PETROL KART ── */
+:root { --petrol-renk: #60a5fa; }
+.pk-petrol { border-color: rgba(96,165,250,0.25) !important; }
+.pk-petrol .pk-label { color: #60a5fa; }
+
+/* ── MAKRO ANALİZ BUTONU ── */
+.btn-makro-analiz {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(96,165,250,0.1) 0%, rgba(124,58,237,0.08) 100%);
+  border: 1px solid rgba(96,165,250,0.3);
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+  font-family: var(--mono);
+}
+.btn-makro-analiz:hover {
+  border-color: rgba(96,165,250,0.6);
+  background: linear-gradient(135deg, rgba(96,165,250,0.18) 0%, rgba(124,58,237,0.14) 100%);
+}
+.btn-makro-analiz:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+
+/* ── MAKRO SNAPSHOT TABLOSU ── */
+.makro-snapshot {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.makro-snap-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.makro-snap-ad {
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
+}
+.makro-snap-fiyat {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text);
+}
+.makro-snap-deg {
+  font-size: 0.7rem;
+  font-family: var(--mono);
+}
+
 /* ── AI ÖZET KART (collapsed, clickable) ── */
 .ai-ozet-kart {
   display: flex;

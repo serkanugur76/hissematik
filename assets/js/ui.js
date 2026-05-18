@@ -96,7 +96,7 @@ function _tickerItem(label, deger, degisim, tersCls = false) {
 }
 
 export function renderPiyasaKartlari() {
-  const { xu100, xu030, usdtry, eurtry, eurusd, altin } = state.piyasaVerisi;
+  const { xu100, xu030, usdtry, eurtry, eurusd, altin, brent, wti } = state.piyasaVerisi;
 
   const bist100Html = xu100 ? (() => {
     const { etiket, cls } = _piyasaYonBilgi(xu100.degisim);
@@ -124,7 +124,10 @@ export function renderPiyasaKartlari() {
     if (altin.tamTL)    altinHtml += '<div class="ticker-item"><span class="ticker-label">TAM ALTIN</span><span class="ticker-value">' + _fmt(altin.tamTL, 0) + ' ₺</span><span class="ticker-change ' + cls + '">' + isk + d + '%</span></div>';
   }
 
-  const icerik = bist100Html + bist30Html + usdHtml + eurHtml + euusdHtml + altinHtml;
+  const brentHtml = _tickerItem('BRENT', brent ? brent.fiyat?.toFixed(2) + ' $' : null, brent?.degisim);
+  const wtiHtml   = _tickerItem('WTI',   wti   ? wti.fiyat?.toFixed(2)   + ' $' : null, wti?.degisim);
+
+  const icerik = bist100Html + bist30Html + usdHtml + eurHtml + euusdHtml + altinHtml + brentHtml + wtiHtml;
   document.querySelectorAll('.ticker-bar').forEach(container => {
     container.innerHTML =
       '<div class="ticker-track">' +
@@ -167,6 +170,8 @@ export function renderPiyasaKartlariSabit() {
   const xu100 = state.piyasaVerisi.xu100;
   const xu030 = state.piyasaVerisi.xu030;
   const altin = state.piyasaVerisi.altin;
+  const brent = state.piyasaVerisi.brent;
+  const wti   = state.piyasaVerisi.wti;
 
   function degCls(d) { return parseFloat(d) >= 0 ? 'pos' : 'neg'; }
   function degStr(d) { const n = parseFloat(d) || 0; return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
@@ -203,8 +208,22 @@ export function renderPiyasaKartlariSabit() {
     '<div class="pk-degisim ' + (altin ? degCls(altin.degisim) : '') + '" style="margin-top:0.4rem">' + (altin ? degStr(altin.degisim) : '—') + '</div>' +
     '</div>';
 
+  function _petrolKart(ad, veri) {
+    if (!veri) return '<div class="piyasa-kart pk-petrol"><div class="pk-label">' + ad + '</div><div class="pk-fiyat">—</div><div class="pk-degisim">—</div></div>';
+    const pos  = veri.degisim >= 0;
+    return '<div class="piyasa-kart pk-petrol">' +
+      '<div class="pk-label">' + ad + '</div>' +
+      '<div class="pk-fiyat" style="color:var(--petrol-renk)">' + veri.fiyat?.toFixed(2) + ' $</div>' +
+      '<div class="pk-degisim ' + degCls(veri.degisim) + '">' + degStr(veri.degisim) + '</div>' +
+      _sparklineSvg(veri.kapanis, pos) +
+    '</div>';
+  }
+
+  const brentHtml = _petrolKart('Brent Petrol', brent);
+  const wtiHtml   = _petrolKart('WTI Petrol',   wti);
+
   container.className  = 'piyasa-kartlari-row';
-  container.innerHTML  = b100html + b30html + agrhtml + achtml;
+  container.innerHTML  = b100html + b30html + agrhtml + achtml + brentHtml + wtiHtml;
 }
 
 
