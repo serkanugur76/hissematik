@@ -256,16 +256,25 @@ export function renderDashboard() {
 
   const lastSinyal = sinyalGecmisi[0];
   const aiBox = el('aiBoxContainer');
-  if (aiBox && lastSinyal?.aiYorum) {
-    aiBox.innerHTML =
-      '<div class="ai-glass">' +
-        '<div class="ai-glass-header">' +
-          '<div class="ai-glass-icon">⬡</div>' +
-          '<span class="ai-glass-title">Claude AI Portföy Analizi</span>' +
-          '<span class="ai-glass-time">' + new Date(lastSinyal.tarih).toLocaleString('tr-TR') + '</span>' +
-        '</div>' +
-        '<div class="ai-glass-content">' + lastSinyal.aiYorum + '</div>' +
-      '</div>';
+  if (aiBox) {
+    if (lastSinyal?.aiYorum) {
+      const tarih = new Date(lastSinyal.tarih).toLocaleString('tr-TR');
+      aiBox.innerHTML =
+        '<div class="ai-ozet-kart" onclick="window.portfoyAnalizModalAc()" title="Detayı gör">' +
+          '<div class="ai-ozet-sol">' +
+            '<div class="ai-ozet-icon">⬡</div>' +
+            '<div>' +
+              '<div class="ai-ozet-baslik">Claude AI Portföy Analizi</div>' +
+              '<div class="ai-ozet-zaman">' + tarih + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ai-ozet-sag">' +
+            '<span class="ai-ozet-chip">Detay →</span>' +
+          '</div>' +
+        '</div>';
+    } else {
+      aiBox.innerHTML = '';
+    }
   }
 
   if (container) {

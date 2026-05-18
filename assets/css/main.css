@@ -631,6 +631,77 @@ tr:last-child td { border-bottom:none; }
   white-space: pre-wrap;
 }
 
+/* ── AI ÖZET KART (collapsed, clickable) ── */
+.ai-ozet-kart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: linear-gradient(135deg,
+    rgba(0,229,160,0.06) 0%,
+    rgba(76,201,240,0.04) 50%,
+    rgba(124,58,237,0.04) 100%
+  );
+  border: 1px solid rgba(0,229,160,0.2);
+  border-radius: var(--radius-lg);
+  padding: 0.875rem 1.125rem;
+  margin-bottom: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+.ai-ozet-kart:hover {
+  border-color: rgba(0,229,160,0.45);
+  background: linear-gradient(135deg,
+    rgba(0,229,160,0.1) 0%,
+    rgba(76,201,240,0.07) 50%,
+    rgba(124,58,237,0.06) 100%
+  );
+}
+.ai-ozet-sol {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.ai-ozet-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(0,229,160,0.15);
+  border: 1px solid rgba(0,229,160,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.ai-ozet-baslik {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ai-ozet-zaman {
+  font-size: 0.63rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+  font-family: var(--mono);
+}
+.ai-ozet-sag { flex-shrink: 0; }
+.ai-ozet-chip {
+  font-size: 0.68rem;
+  color: var(--accent);
+  background: rgba(0,229,160,0.1);
+  border: 1px solid rgba(0,229,160,0.25);
+  border-radius: 20px;
+  padding: 0.25rem 0.65rem;
+  font-family: var(--mono);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.ai-ozet-kart:hover .ai-ozet-chip {
+  background: rgba(0,229,160,0.2);
+}
+
 /* ── DETAY MODALİ — yeniden tasarım ── */
 .detay-hero {
   display: grid;

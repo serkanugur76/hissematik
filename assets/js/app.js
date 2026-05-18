@@ -1819,6 +1819,39 @@ window.gunSonuOzetleriGoster = async () => {
 // KAMPANYA KODU — Giriş yapmış kullanıcı için
 // ══════════════════════════════════════════════
 
+window.portfoyAnalizModalAc = () => {
+  const son = state.sinyalGecmisi?.[0];
+  if (!son?.aiYorum) {
+    showToast('Henüz AI analizi mevcut değil.', 'info');
+    return;
+  }
+
+  // Zaman damgası
+  const zEl = el('portfoyAnalizZaman');
+  if (zEl) {
+    let zamanStr = '';
+    if (son.tarih?.toDate) {
+      zamanStr = son.tarih.toDate().toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
+    } else if (son.tarih) {
+      zamanStr = new Date(son.tarih).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+    zEl.textContent = zamanStr ? 'Son güncelleme: ' + zamanStr : '';
+  }
+
+  // İçerik
+  const icerikEl = el('portfoyAnalizIcerik');
+  if (icerikEl) {
+    // Markdown-benzeri basit biçimlendirme: **kalın**, satır başı boşlukları
+    const html = son.aiYorum
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    icerikEl.innerHTML = html;
+  }
+
+  openModal('portfoyAnalizModal');
+};
+
 window.kampanyaModalAc = () => {
   const input = el('kampanyaKodInput');
   const hata  = el('kampanyaHata');
