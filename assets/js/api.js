@@ -744,38 +744,44 @@ export async function sinyalKaydet({ db, currentUser, veriler, takipEdilen, aiYo
     };
 
     try {
-      // Önce bu hissenin SON sinyalini bul (günden bağımsız)
-      const sonQ = query(
+      // ── 1. Bugünkü kaydı bul (uid+sembol+gun → mevcut composite index)
+      const bugunQ = query(
         collection(db, 'sinyaller'),
-        where('uid', '==', currentUser.uid),
+        where('uid',    '==', currentUser.uid),
         where('sembol', '==', k),
-        orderBy('tarih', 'desc'),
-        limit(1)
+        where('gun',    '==', bugun)
       );
-      const sonSnap = await getDocs(sonQ);
+      const bugunSnap = await getDocs(bugunQ);
 
-      if (!sonSnap.empty) {
-        const sonDoc  = sonSnap.docs[0];
-        const sonData = sonDoc.data();
+      if (!bugunSnap.empty) {
+        // Bugün zaten kayıt var
+        const bugunDoc  = bugunSnap.docs[0];
+        const bugunData = bugunDoc.data();
 
-        // Aynı gün, aynı sinyal → teknik verileri güncelle (yeni kayıt açma)
-        if (sonData.gun === bugun && sonData.sinyal === v.sinyal) {
-          await updateDoc(doc(db, 'sinyaller', sonDoc.id), {
+        if (bugunData.sinyal === v.sinyal) {
+          // Aynı sinyal → sadece teknik verileri güncelle, yeni kayıt açma
+          await updateDoc(doc(db, 'sinyaller', bugunDoc.id), {
             fiyat: item.fiyat, rsi: item.rsi, macdHist: item.macdHist,
             hacimFark: item.hacimFark, ma20: item.ma20, ma50: item.ma50,
             guvenSkoru: item.guvenSkoru, alYuzde: item.alYuzde, satYuzde: item.satYuzde,
             gostergeler: item.gostergeler, tarih: item.tarih,
           });
-          continue;
+        } else {
+          // Sinyal bugün değişti → mevcut kaydı güncelle (yönü değişti, yeni doc istemez)
+          await updateDoc(doc(db, 'sinyaller', bugunDoc.id), item);
         }
-
-        // Farklı gün ama aynı sinyal → YENI kayıt açma (trend devam ediyor, gürültü)
-        // Sadece sinyal DEĞIŞMIŞSE yeni kayıt aç
-        if (sonData.sinyal === v.sinyal) continue;
+        continue;
       }
 
-      // Yeni sinyal olayı (sinyal değişti ya da ilk kayıt)
+      // ── 2. Bugün kayıt yok — önceki sinyali localStorage'dan kontrol et
+      //      Aynı sinyal sürüyorsa (farklı gün ama değişmemiş) tekrar kaydetme
+      const oncekiKey    = 'hm_son_sinyal_' + currentUser.uid + '_' + k;
+      const oncekiSinyal = localStorage.getItem(oncekiKey);
+      if (oncekiSinyal === v.sinyal) continue; // Sinyal değişmedi, yeni kayıt gereksiz
+
+      // ── 3. Sinyal değişti (ya da ilk kez) → yeni kayıt
       await addDoc(collection(db, 'sinyaller'), item);
+      localStorage.setItem(oncekiKey, v.sinyal);
 
     } catch (e) { console.error('sinyalKaydet hatası:', k, e); }
   }
