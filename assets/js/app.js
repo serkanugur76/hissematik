@@ -1286,6 +1286,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ── Floating Tooltip ──
+  (function() {
+    const tip = document.getElementById('floatingTooltip');
+    if (!tip) return;
+    let _active = null;
+
+    document.addEventListener('mouseover', e => {
+      const target = e.target.closest('[data-tooltip]');
+      if (!target || target === _active) return;
+      _active = target;
+      tip.textContent = target.dataset.tooltip;
+      tip.classList.add('ft-visible');
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!_active) return;
+      const x = e.clientX + 14;
+      const y = e.clientY - 38;
+      // Ekran sağına taşmasın
+      const maxX = window.innerWidth - tip.offsetWidth - 8;
+      tip.style.left = Math.min(x, maxX) + 'px';
+      tip.style.top  = Math.max(y, 6) + 'px';
+    });
+
+    document.addEventListener('mouseout', e => {
+      if (!_active) return;
+      const to = e.relatedTarget;
+      if (to && _active.contains(to)) return;
+      tip.classList.remove('ft-visible');
+      _active = null;
+    });
+  })();
+
   // Modal kapat
   document.addEventListener('click', (e) => {
     const id = e.target.dataset.modalClose;

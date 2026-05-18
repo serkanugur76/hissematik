@@ -3,53 +3,29 @@
    assets/css/main.css
    ══════════════════════════════════════════════ */
 
-/* ── TOOLTIP ── */
-[data-tooltip] { position: relative; }
-[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+/* ── FLOATING TOOLTIP (JS tabanlı, overflow:hidden sorununu aşar) ── */
+.floating-tooltip {
+  position: fixed;
   background: #1a1f2e;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.13);
   color: #c9d1d9;
-  font-size: 0.68rem;
-  line-height: 1.4;
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
-  white-space: nowrap;
-  max-width: 280px;
-  white-space: normal;
-  text-align: center;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  padding: 0.35rem 0.7rem;
+  border-radius: 7px;
   pointer-events: none;
+  z-index: 99999;
   opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 9999;
+  max-width: 260px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  transition: opacity 0.12s;
+  white-space: normal;
   font-family: var(--sans, sans-serif);
   font-weight: 400;
   letter-spacing: 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
-[data-tooltip]:hover::after { opacity: 1; }
-/* Sağ kenara yakın butonlar için sola hizala */
-[data-tooltip-left]::after { left: auto; right: 0; transform: none; }
-/* Ok */
-[data-tooltip]::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 3px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: rgba(255,255,255,0.12);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 9999;
-}
-[data-tooltip]:hover::before { opacity: 1; }
-[data-tooltip-left]::before { left: auto; right: 12px; transform: none; }
+.floating-tooltip.ft-visible { opacity: 1; }
 
 /* ── DESIGN TOKENS ── */
 :root {
