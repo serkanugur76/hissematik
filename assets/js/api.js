@@ -18,6 +18,7 @@ import { parseYahooVeri, genelSinyal, avg } from './indicators.js';
 
 const PROXY      = 'https://hissematik-proxy.ugurserkan.workers.dev';
 const KAP_PROXY  = 'https://hissematik.vercel.app/api/kap';
+const ALTIN_API  = 'https://hissematik.vercel.app/api/altin';
 const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_VER = '2023-06-01';
 const MODEL      = 'claude-sonnet-4-6';
@@ -206,6 +207,14 @@ export async function fetchPiyasaVerisi() {
     const res = await fetch(PROXY + '?piyasa=1');
     return await res.json();
   } catch (e) { console.error('fetchPiyasaVerisi hatası:', e); return null; }
+}
+
+export async function fetchAltinFiyatlari() {
+  try {
+    const res = await fetch(ALTIN_API);
+    if (!res.ok) throw new Error(res.status);
+    return await res.json();
+  } catch (e) { console.error('fetchAltinFiyatlari hatası:', e); return null; }
 }
 
 // Son 30 günlük günlük kapanış verisi — sembolü OLDUĞU GİBİ alır (.IS eklemez)

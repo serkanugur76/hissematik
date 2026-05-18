@@ -69,6 +69,7 @@ import {
   loadPushMesajlar,
   loadGunSonuOzetleri,
   kampanyaApiKeyAta,
+  fetchAltinFiyatlari,
 } from './api.js';
 
 import {
@@ -596,19 +597,37 @@ async function _piyasaVerisiCek() {
       pv.eurusd = { fiyat, degisim };
     }
 
-    const altinResult = data['GC=F']?.chart?.result?.[0];
-    if (altinResult) {
-      const { fiyat: onsUsd, degisim } = _metaFiyatParse(altinResult);
-      const kur      = pv.usdtry?.fiyat || 0;
-      const gramTL   = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
-      // Çeyrek: 1.752g × 22/24 ayar = 1.606g saf altın
-      // Tam: 7.016g × 22/24 ayar = 6.431g saf altın
-      const ceyrekTL = gramTL > 0 ? +(gramTL * 1.606).toFixed(2) : 0;
-      const tamTL    = gramTL > 0 ? +(gramTL * 6.431).toFixed(2)  : 0;
-      const kapanis  = kur > 0
+    // Altın fiyatlarını anlık Türk kaynağından çek
+    const altinData = await fetchAltinFiyatlari();
+    if (altinData && altinData.gramTL) {
+      const kur     = pv.usdtry?.fiyat || 0;
+      const kapanis = kur > 0
         ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
         : altinKapanis;
-      pv.altin = { onsUsd, gramTL, ceyrekTL, tamTL, degisim, kapanis };
+      pv.altin = {
+        onsUsd:   altinData.onsUsd,
+        gramTL:   altinData.gramTL,
+        ceyrekTL: altinData.ceyrekTL,
+        tamTL:    altinData.tamTL,
+        degisim:  altinData.degisim,
+        kapanis,
+      };
+    } else {
+      // Fallback: spot fiyattan hesapla
+      const altinResult = data['GC=F']?.chart?.result?.[0];
+      if (altinResult) {
+        const { fiyat: onsUsd, degisim } = _metaFiyatParse(altinResult);
+        const kur    = pv.usdtry?.fiyat || 0;
+        const gramTL = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
+        const kapanis = kur > 0
+          ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
+          : altinKapanis;
+        pv.altin = {
+          onsUsd, gramTL, degisim, kapanis,
+          ceyrekTL: gramTL > 0 ? +(gramTL * 1.606).toFixed(2) : 0,
+          tamTL:    gramTL > 0 ? +(gramTL * 6.431).toFixed(2)  : 0,
+        };
+      }
     }
 
     setState({ piyasaVerisi: pv });
