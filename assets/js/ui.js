@@ -497,9 +497,13 @@ export function renderDashboard() {
   const container = el('dashTableBody');
   const rows = Object.entries(veriler).filter(([k]) => takipEdilen.has(k));
 
+  // takipOzetContainer: takip varsa göster, yoksa gizle
+  const takipOzet = el('takipOzetContainer');
+  if (takipOzet) takipOzet.style.display = rows.length === 0 ? 'none' : '';
+
   if (rows.length === 0) {
     if (container) container.innerHTML =
-      '<tr><td colspan="9" class="empty-state" style="padding:3rem">Henüz veri yok — Hisseler sekmesinden hisse seç, ardından Güncelle düğmesine bas.</td></tr>';
+      '<tr><td colspan="10" class="empty-state" style="padding:3rem">Henüz takip edilen hisse yok — aşağıdan hisse seç, ardından Güncelle düğmesine bas.</td></tr>';
     return;
   }
 

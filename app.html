@@ -197,26 +197,6 @@
     <!-- Piyasa ticker bandi — js tarafından doldurulur -->
     <div class="ticker-bar"></div>
 
-    <!-- Özet sayaçlar -->
-    <div class="summary-grid" id="summaryCards">
-      <div class="card">
-        <div class="card-title">Takip Edilen</div>
-        <div class="card-value" id="sumTakip">—</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Güçlü AL</div>
-        <div class="card-value green" id="sumAl">—</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Güçlü SAT</div>
-        <div class="card-value red" id="sumSat">—</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Sinyal İsabeti</div>
-        <div class="card-value yellow" id="sumIsabet">—</div>
-      </div>
-    </div>
-
     <!-- Piyasa endeks + altın kartları -->
     <div id="piyasaKartlariRow"></div>
 
@@ -234,40 +214,6 @@
     <!-- AI analiz kutusu (js tarafından doldurulur) -->
     <div id="aiBoxContainer"></div>
 
-    <!-- Takip edilen hisseler tablosu -->
-    <div class="card">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Takip Edilen Hisseler</div>
-          <div class="section-sub">Sinyaller ve teknik göstergeler</div>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="dashTable">
-          <thead>
-            <tr>
-              <th>Hisse</th>
-              <th>Fiyat</th>
-              <th>Değişim</th>
-              <th>RSI</th>
-              <th>Sinyal</th>
-              <th>Güven</th>
-              <th>MACD Hist</th>
-              <th>Hacim</th>
-              <th>Bollinger %</th>
-            </tr>
-          </thead>
-          <tbody id="dashTableBody">
-            <tr>
-              <td colspan="9" class="empty-state">
-                Henüz veri yok. Hisseler sekmesinden hisse seç → Güncelle'ye bas.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </main>
 
 
@@ -277,6 +223,65 @@
   <main class="panel" id="panel-hisseler">
     <div class="ticker-bar"></div>
 
+    <!-- Takip edilen hisseler özet + tablo -->
+    <div id="takipOzetContainer">
+      <!-- Özet sayaçlar -->
+      <div class="summary-grid" id="summaryCards">
+        <div class="card">
+          <div class="card-title">Takip Edilen</div>
+          <div class="card-value" id="sumTakip">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Güçlü AL</div>
+          <div class="card-value green" id="sumAl">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Güçlü SAT</div>
+          <div class="card-value red" id="sumSat">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Sinyal İsabeti</div>
+          <div class="card-value yellow" id="sumIsabet">—</div>
+        </div>
+      </div>
+
+      <!-- Takip edilen hisseler tablosu -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Takip Edilen Hisseler</div>
+            <div class="section-sub">Sinyaller ve teknik göstergeler</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="dashTable">
+            <thead>
+              <tr>
+                <th>Hisse</th>
+                <th>Fiyat</th>
+                <th>Değişim</th>
+                <th>RSI</th>
+                <th>Sinyal</th>
+                <th>MA20</th>
+                <th>MA50</th>
+                <th>MACD Hist</th>
+                <th>Hacim</th>
+                <th>Bollinger %</th>
+              </tr>
+            </thead>
+            <tbody id="dashTableBody">
+              <tr>
+                <td colspan="10" class="empty-state">
+                  Henüz veri yok. Aşağıdan hisse seç → Güncelle'ye bas.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tüm BIST Hisseleri -->
     <div class="section-header">
       <div>
         <div class="section-title">Tüm BIST Hisseleri</div>

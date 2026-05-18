@@ -395,11 +395,12 @@ function _apiKeyDurumGoster() {
 
 async function _switchTab(name, btn) {
   switchTab(name, btn);
-  if (name === 'haberler') await _loadHaberler();
-  if (name === 'sozluk')   await _loadSozluk();
+  if (name === 'haberler')  await _loadHaberler();
+  if (name === 'sozluk')    await _loadSozluk();
   if (name === 'sinyaller') renderSinyalGecmisi();
-  if (name === 'portfoy')  renderPortfoy();
-  if (name === 'kap')      await _loadKapBildirimleri();
+  if (name === 'portfoy')   renderPortfoy();
+  if (name === 'kap')       await _loadKapBildirimleri();
+  if (name === 'hisseler')  { renderDashboard(); renderSummary(); }
 }
 
 // ─────────────────────────────────────────────
