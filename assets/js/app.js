@@ -601,8 +601,10 @@ async function _piyasaVerisiCek() {
       const { fiyat: onsUsd, degisim } = _metaFiyatParse(altinResult);
       const kur      = pv.usdtry?.fiyat || 0;
       const gramTL   = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
-      const ceyrekTL = gramTL > 0 ? +(gramTL * 1.75).toFixed(2) : 0;
-      const tamTL    = gramTL > 0 ? +(gramTL * 7.00).toFixed(2)  : 0;
+      // Çeyrek: 1.752g × 22/24 ayar = 1.606g saf altın
+      // Tam: 7.016g × 22/24 ayar = 6.431g saf altın
+      const ceyrekTL = gramTL > 0 ? +(gramTL * 1.606).toFixed(2) : 0;
+      const tamTL    = gramTL > 0 ? +(gramTL * 6.431).toFixed(2)  : 0;
       const kapanis  = kur > 0
         ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
         : altinKapanis;
