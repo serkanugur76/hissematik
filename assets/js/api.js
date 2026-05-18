@@ -859,10 +859,41 @@ export async function mukerrerSinyalleriTemizle({ db }) {
 // FİRESTORE — KULLANICI VERİSİ
 // ─────────────────────────────────────────────
 
+// Firestore NaN/Infinity kabul etmez. Kaydetmeden önce veriler temizlenir.
+// kapanis/pivot/fib/obv gibi büyük türetilmiş alanlar da atılır (her Güncelle'de yeniden hesaplanır).
+function _verilerTemizle(veriler) {
+  const ATILAN = new Set(['kapanis', 'pivot', 'fib', 'stochRsi', 'williamsR', 'mfi', 'obv']);
+  const temiz  = {};
+  for (const [k, v] of Object.entries(veriler || {})) {
+    if (!v) { temiz[k] = v; continue; }
+    const t = {};
+    for (const [alan, deger] of Object.entries(v)) {
+      if (ATILAN.has(alan)) continue;                        // büyük/türetilmiş → at
+      if (typeof deger === 'number') {
+        t[alan] = Number.isFinite(deger) ? deger : null;    // NaN/Infinity → null
+      } else if (deger && typeof deger === 'object' && !Array.isArray(deger)) {
+        // Nested object (bollinger gibi) → her alanını da temizle
+        const sub = {};
+        for (const [sk, sv] of Object.entries(deger)) {
+          sub[sk] = (typeof sv === 'number' && !Number.isFinite(sv)) ? null : sv;
+        }
+        t[alan] = sub;
+      } else if (Array.isArray(deger)) {
+        continue;                                            // array → at
+      } else {
+        t[alan] = deger;
+      }
+    }
+    temiz[k] = t;
+  }
+  return temiz;
+}
+
 export async function saveUserData({ db, currentUser, takipEdilen, portfoy, veriler }) {
   if (!currentUser) return;
   try {
-    await updateDoc(doc(db, 'users', currentUser.uid), { takipEdilen: [...takipEdilen], portfoy, veriler });
+    const temizVeriler = _verilerTemizle(veriler);
+    await updateDoc(doc(db, 'users', currentUser.uid), { takipEdilen: [...takipEdilen], portfoy, veriler: temizVeriler });
   } catch (e) {
     console.error('saveUserData hatası:', e);
     _notify('Verileriniz kaydedilemedi: ' + firebaseHataYonet(e), 'error');

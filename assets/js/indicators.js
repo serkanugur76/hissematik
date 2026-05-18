@@ -92,12 +92,16 @@ export function calcBollinger(kapanis, periyot = 20) {
   const alt     = orta - 2 * std;
   const sonFiyat = kapanis.at(-1);
 
+  const bantGenislik = ust - alt;
+  const rawYuzde    = bantGenislik < 0.0001 ? 50 : (sonFiyat - alt) / bantGenislik * 100;
+  const yuzde       = Number.isFinite(rawYuzde) ? +Math.max(-50, Math.min(150, rawYuzde)).toFixed(1) : 50;
+
   return {
     ust:   +ust.toFixed(2),
     orta:  +orta.toFixed(2),
     alt:   +alt.toFixed(2),
-    bw:    +((ust - alt) / orta * 100).toFixed(2),
-    yuzde: ust === alt ? 50 : +((sonFiyat - alt) / (ust - alt) * 100).toFixed(1),
+    bw:    Number.isFinite((ust - alt) / orta) ? +((ust - alt) / orta * 100).toFixed(2) : 0,
+    yuzde,
   };
 }
 
