@@ -1289,36 +1289,54 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Floating Tooltip ──
+  // 500ms gecikme: hızlı tıklarda tooltip hiç açılmaz
+  // Tıklamada anında kapanır → buton üstünde donup kalmaz
   (function() {
     const tip = document.getElementById('floatingTooltip');
     if (!tip) return;
-    let _active = null;
+    let _active  = null;
+    let _timer   = null;
+
+    function _goster(target) {
+      tip.textContent = target.dataset.tooltip;
+      tip.classList.add('ft-visible');
+    }
+    function _gizle() {
+      clearTimeout(_timer);
+      _timer = null;
+      tip.classList.remove('ft-visible');
+      _active = null;
+    }
 
     document.addEventListener('mouseover', e => {
       const target = e.target.closest('[data-tooltip]');
-      if (!target || target === _active) return;
+      if (!target) { _gizle(); return; }
+      if (target === _active) return;
+      clearTimeout(_timer);
       _active = target;
-      tip.textContent = target.dataset.tooltip;
-      tip.classList.add('ft-visible');
+      // 500ms bekle — hızlı tıkta tooltip çıkmaz
+      _timer = setTimeout(() => _goster(target), 500);
     });
 
     document.addEventListener('mousemove', e => {
       if (!_active) return;
-      const x = e.clientX + 14;
-      const y = e.clientY - 38;
-      // Ekran sağına taşmasın
-      const maxX = window.innerWidth - tip.offsetWidth - 8;
+      const x    = e.clientX + 14;
+      const y    = e.clientY - 44;
+      const maxX = window.innerWidth  - tip.offsetWidth  - 8;
+      const maxY = window.innerHeight - tip.offsetHeight - 8;
       tip.style.left = Math.min(x, maxX) + 'px';
-      tip.style.top  = Math.max(y, 6) + 'px';
+      tip.style.top  = Math.min(Math.max(y, 6), maxY) + 'px';
     });
 
     document.addEventListener('mouseout', e => {
       if (!_active) return;
       const to = e.relatedTarget;
       if (to && _active.contains(to)) return;
-      tip.classList.remove('ft-visible');
-      _active = null;
+      _gizle();
     });
+
+    // Tıklamada ANINDA kapat — buton üstünde donup kalmasın
+    document.addEventListener('mousedown', _gizle);
   })();
 
   // Modal kapat
