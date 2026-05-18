@@ -1419,9 +1419,26 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnSinyalleriGuncelle')?.addEventListener('click', async () => {
     const btn = el('btnSinyalleriGuncelle');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Kontrol ediliyor...'; }
-    try { await _sinyalleriDogrula(); renderSinyalGecmisi(); renderSummary(); }
-    catch (e) { showToast('Doğrulama sırasında hata: ' + (e?.message || ''), 'error'); }
-    finally {
+    try {
+      const once    = (state.sinyalGecmisi || []).filter(s => s.dogrulandi !== null).length;
+      await _sinyalleriDogrula();
+      renderSinyalGecmisi();
+      renderSummary();
+      const sonra   = (state.sinyalGecmisi || []).filter(s => s.dogrulandi !== null).length;
+      const yeni    = sonra - once;
+      const bekleyen = (state.sinyalGecmisi || []).filter(s => s.dogrulandi === null).length;
+      if (state.sinyalGecmisi.length === 0) {
+        showToast('Henüz kayıtlı sinyal yok — önce "Güncelle"ye bas.', 'info');
+      } else if (yeni > 0) {
+        showToast(yeni + ' sinyal sonuçlandı ✓', 'success');
+      } else if (bekleyen > 0) {
+        showToast(bekleyen + ' sinyal ' + state.dogrulamaGun + ' günlük bekleme süresinde.', 'info');
+      } else {
+        showToast('Tüm sinyaller zaten değerlendirilmiş.', 'info');
+      }
+    } catch (e) {
+      showToast('Doğrulama sırasında hata: ' + (e?.message || ''), 'error');
+    } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Sonuçları Kontrol Et'; }
     }
   });
