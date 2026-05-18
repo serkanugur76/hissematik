@@ -211,9 +211,6 @@
       </button>
     </div>
 
-    <!-- AI analiz kutusu (js tarafından doldurulur) -->
-    <div id="aiBoxContainer"></div>
-
   </main>
 
 
@@ -225,6 +222,10 @@
 
     <!-- Takip edilen hisseler özet + tablo -->
     <div id="takipOzetContainer">
+
+      <!-- AI analiz kutusu (takip listesindeki tüm hisseler analiz edilir) -->
+      <div id="aiBoxContainer"
+        data-tooltip="Takip listenizdeki TÜM hisseleri analiz eder (portföyde olsun ya da olmasın). RSI, MACD, sinyal geçmişi ve piyasa bağlamı dikkate alınır."></div>
       <!-- Özet sayaçlar -->
       <div class="summary-grid" id="summaryCards">
         <div class="card">

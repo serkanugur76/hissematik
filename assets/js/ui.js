@@ -513,11 +513,11 @@ export function renderDashboard() {
     if (lastSinyal?.aiYorum) {
       const tarih = new Date(lastSinyal.tarih).toLocaleString('tr-TR');
       aiBox.innerHTML =
-        '<div class="ai-ozet-kart" onclick="window.portfoyAnalizModalAc()" title="Detayı gör">' +
+        '<div class="ai-ozet-kart" onclick="window.portfoyAnalizModalAc()">' +
           '<div class="ai-ozet-sol">' +
             '<div class="ai-ozet-icon">⬡</div>' +
             '<div>' +
-              '<div class="ai-ozet-baslik">Claude AI Portföy Analizi</div>' +
+              '<div class="ai-ozet-baslik">Claude AI — Takip Listesi Analizi</div>' +
               '<div class="ai-ozet-zaman">' + tarih + '</div>' +
             '</div>' +
           '</div>' +
