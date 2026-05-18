@@ -88,10 +88,10 @@
         <span id="statusText">Bekleniyor</span>
       </span>
 
-      <button class="btn primary" id="btnGuncelle">⟳ Güncelle</button>
-      <button class="btn" id="btnBildirimMerkezi" title="Bildirim Merkezi">🔔</button>
-      <button class="btn" id="btnAnalizGecmisi" title="Analiz Geçmişi">📋</button>
-      <button class="btn kampanya-kod-btn" id="btnKampanya" title="Kampanya Kodu Gir" style="display:none">🎟</button>
+      <button class="btn primary" id="btnGuncelle" data-tooltip="Hisse fiyatlarını, sinyalleri ve AI analizini güncelle">⟳ Güncelle</button>
+      <button class="btn" id="btnBildirimMerkezi" data-tooltip="Push bildirimleri ve duyurular" data-tooltip-left>🔔</button>
+      <button class="btn" id="btnAnalizGecmisi" data-tooltip="Geçmiş AI analizleri ve tutarlılık skorları" data-tooltip-left>📋</button>
+      <button class="btn kampanya-kod-btn" id="btnKampanya" data-tooltip="Kampanya kodunu gir — ücretsiz AI erişimi kazan" data-tooltip-left style="display:none">🎟</button>
 
       <div class="user-pill">
         <div class="user-avatar" id="userAvatar">?</div>
@@ -219,7 +219,8 @@
 
     <!-- Makro korelasyon analiz butonu -->
     <div id="makroAnalizSatiri" style="display:none;margin-bottom:0.75rem">
-      <button class="btn btn-makro-analiz" id="btnMakroAnaliz" onclick="window.makroAnalizYap()">
+      <button class="btn btn-makro-analiz" id="btnMakroAnaliz" onclick="window.makroAnalizYap()"
+        data-tooltip="Petrol, altın, dolar/euro ve BIST arasındaki ilişkiyi AI ile analiz et">
         &#9685; Makro Korelasyon Analizi
       </button>
     </div>
@@ -275,7 +276,7 @@
         <div class="section-title">Tüm BIST Hisseleri</div>
         <div class="section-sub">Tıkla → takibe al &nbsp;|&nbsp; Sağ tıkla → portföye ekle</div>
       </div>
-      <button class="btn" id="btnTakibiKaldir">Seçimi Temizle</button>
+      <button class="btn" id="btnTakibiKaldir" data-tooltip="Seçili hisseleri takip listesinden çıkar">Seçimi Temizle</button>
     </div>
 
     <div class="search-row">
@@ -317,7 +318,7 @@
             <option value="7" selected>7 Gün</option>
           </select>
         </label>
-        <button class="btn primary" id="btnSinyalleriGuncelle">Sonuçları Kontrol Et</button>
+        <button class="btn primary" id="btnSinyalleriGuncelle" data-tooltip="Geçmiş sinyallerin fiyatlarla karşılaştırarak doğru/yanlış sonuçlarını hesapla">Sonuçları Kontrol Et</button>
       </div>
     </div>
 
@@ -373,7 +374,7 @@
         <div class="section-title">📰 Piyasa Haberleri</div>
         <div class="section-sub">Finans dünyasından son dakika haberleri</div>
       </div>
-      <button class="btn primary" id="btnHaberleriYenile">⟳ Yenile</button>
+      <button class="btn primary" id="btnHaberleriYenile" data-tooltip="Güncel finans haberlerini yükle">⟳ Yenile</button>
     </div>
 
     <div id="haberListesi">
@@ -401,8 +402,8 @@
     <div style="display:flex;gap:0.5rem;align-items:center">
       <!-- Otomatik yenileme göstergesi -->
       <span id="kapPollingDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block" title="Otomatik yenileme kapalı"></span>
-      <button class="btn" id="btnKapFiltreTakip">Sadece Takip</button>
-      <button class="btn primary" id="btnKapYenile">⟳ Yenile</button>
+      <button class="btn" id="btnKapFiltreTakip" data-tooltip="Sadece takip ettiğin hisselerin KAP bildirimleri">Sadece Takip</button>
+      <button class="btn primary" id="btnKapYenile" data-tooltip="KAP bildirimlerini yeniden yükle">⟳ Yenile</button>
     </div>
   </div>
 
@@ -831,10 +832,10 @@
 
     <!-- Sabit footer: aksiyon butonları -->
     <div class="detay-aksiyonlar">
-      <button class="btn primary" id="detayAiBtn" style="flex:1">⬡ AI ile Analiz Et</button>
-      <button class="btn" id="detayPortfoyEkleBtn">+ Portföye Ekle</button>
-      <button class="btn" id="detayTakipBtn">☆ Takibe Al</button>
-      <button class="btn" id="detayPaylasBtn">📸 Paylaş</button>
+      <button class="btn primary" id="detayAiBtn" style="flex:1" data-tooltip="Claude AI ile bu hisseyi teknik ve temel açıdan analiz et">⬡ AI ile Analiz Et</button>
+      <button class="btn" id="detayPortfoyEkleBtn" data-tooltip="Hisseyi portföyüne ekle, alış fiyatı ve miktarını gir">+ Portföye Ekle</button>
+      <button class="btn" id="detayTakipBtn" data-tooltip="Bu hisseyi dashboard takip listene ekle/çıkar">☆ Takibe Al</button>
+      <button class="btn" id="detayPaylasBtn" data-tooltip="Analiz sonucunu görsel olarak kaydet/paylaş">📸 Paylaş</button>
     </div>
 
   </div>

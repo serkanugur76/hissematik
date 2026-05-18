@@ -219,11 +219,42 @@ export function renderPiyasaKartlariSabit() {
     '</div>';
   }
 
-  const brentHtml = _petrolKart('Brent Petrol', brent);
-  const wtiHtml   = _petrolKart('WTI Petrol',   wti);
+  const brentHtml = _petrolKart('Brent Ham Petrol', brent);
+  const wtiHtml   = _petrolKart('WTI Ham Petrol',   wti);
 
-  container.className  = 'piyasa-kartlari-row';
-  container.innerHTML  = b100html + b30html + agrhtml + achtml + brentHtml + wtiHtml;
+  // EUR/USD parite kartı (makro grubuna ekle)
+  const usdtry = state.piyasaVerisi.usdtry;
+  const eurtry = state.piyasaVerisi.eurtry;
+  const eurusd = state.piyasaVerisi.eurusd;
+
+  function _dovizKart(ad, veri, birim) {
+    if (!veri) return '<div class="piyasa-kart pk-doviz"><div class="pk-label">' + ad + '</div><div class="pk-fiyat">—</div><div class="pk-degisim">—</div></div>';
+    const pos = veri.degisim >= 0;
+    const fiyatStr = birim === 'TL' ? _fmt(veri.fiyat) + ' ₺' : _fmt(veri.fiyat, 4);
+    return '<div class="piyasa-kart pk-doviz">' +
+      '<div class="pk-label">' + ad + '</div>' +
+      '<div class="pk-fiyat">' + fiyatStr + '</div>' +
+      '<div class="pk-degisim ' + degCls(veri.degisim) + '">' + degStr(veri.degisim) + '</div>' +
+    '</div>';
+  }
+
+  const usdHtml2  = _dovizKart('USD / TRY', usdtry, 'TL');
+  const eurHtml2  = _dovizKart('EUR / TRY', eurtry, 'TL');
+  const euusdHtml2 = _dovizKart('EUR / USD', eurusd, 'USD');
+
+  // ─── İKİ GRUP: Türk Piyasası | Makro / Global ───
+  container.className = 'piyasa-kartlari-wrap';
+  container.innerHTML =
+    // Grup 1: Borsa
+    '<div class="pk-grup">' +
+      '<div class="pk-grup-baslik">📈 Borsa</div>' +
+      '<div class="pk-grup-kartlar">' + b100html + b30html + '</div>' +
+    '</div>' +
+    // Grup 2: Makro / Global (birbirleriyle korelasyonu yüksek varlıklar)
+    '<div class="pk-grup">' +
+      '<div class="pk-grup-baslik">🌐 Makro &amp; Global <span class="pk-grup-aciklama">— USD bazlı, aralarında korelasyon var</span></div>' +
+      '<div class="pk-grup-kartlar">' + euusdHtml2 + usdHtml2 + eurHtml2 + agrhtml + achtml + brentHtml + wtiHtml + '</div>' +
+    '</div>';
 }
 
 
