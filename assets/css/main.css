@@ -19,6 +19,9 @@
   padding: 0.35rem 0.65rem;
   border-radius: 6px;
   white-space: nowrap;
+  max-width: 280px;
+  white-space: normal;
+  text-align: center;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;

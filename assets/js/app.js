@@ -558,7 +558,8 @@ function _degisimHesapla(fiyat, onceki) {
 async function _piyasaVerisiCek() {
   try {
     const [data, xu100Kapanis, xu030Kapanis, altinKapanis, brentKapanis, wtiKapanis,
-           sp500Kapanis, nasdaqKapanis, daxKapanis, ftseKapanis, nikkeiKapanis] = await Promise.all([
+           sp500Kapanis, nasdaqKapanis, daxKapanis, ftseKapanis, nikkeiKapanis,
+           usdtryKapanis, eurtryKapanis, eurusdKapanis] = await Promise.all([
       fetchPiyasaVerisi(),
       fetchEndeksGecmisi('XU100.IS'),
       fetchEndeksGecmisi('XU030.IS'),
@@ -570,6 +571,9 @@ async function _piyasaVerisiCek() {
       fetchEndeksGecmisi('^GDAXI'),
       fetchEndeksGecmisi('^FTSE'),
       fetchEndeksGecmisi('^N225'),
+      fetchEndeksGecmisi('USDTRY=X'),
+      fetchEndeksGecmisi('EURTRY=X'),
+      fetchEndeksGecmisi('EURUSD=X'),
     ]);
     if (!data) return;
 
@@ -591,35 +595,40 @@ async function _piyasaVerisiCek() {
     const usdtryResult = data['USDTRY=X']?.chart?.result?.[0];
     if (usdtryResult) {
       const { fiyat, degisim } = _metaFiyatParse(usdtryResult);
-      pv.usdtry = { fiyat, degisim };
+      pv.usdtry = { fiyat, degisim, kapanis: usdtryKapanis };
     }
 
     const eurtryResult = data['EURTRY=X']?.chart?.result?.[0];
     if (eurtryResult) {
       const { fiyat, degisim } = _metaFiyatParse(eurtryResult);
-      pv.eurtry = { fiyat, degisim };
+      pv.eurtry = { fiyat, degisim, kapanis: eurtryKapanis };
     }
 
     const eurusdResult = data['EURUSD=X']?.chart?.result?.[0];
     if (eurusdResult) {
       const { fiyat, degisim } = _metaFiyatParse(eurusdResult);
-      pv.eurusd = { fiyat, degisim };
+      pv.eurusd = { fiyat, degisim, kapanis: eurusdKapanis };
     }
 
     // Altın fiyatlarını anlık Türk kaynağından çek
     const altinData = await fetchAltinFiyatlari();
     if (altinData && altinData.gramTL) {
-      const kur     = pv.usdtry?.fiyat || 0;
-      const kapanis = kur > 0
+      const kur        = pv.usdtry?.fiyat || 0;
+      const gramKapanis = kur > 0
         ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
         : altinKapanis;
       pv.altin = {
-        onsUsd:   altinData.onsUsd,
-        gramTL:   altinData.gramTL,
-        ceyrekTL: altinData.ceyrekTL,
-        tamTL:    altinData.tamTL,
-        degisim:  altinData.degisim,
-        kapanis,
+        onsUsd:         altinData.onsUsd,
+        gramTL:         altinData.gramTL,
+        ceyrekTL:       altinData.ceyrekTL,
+        yarimTL:        altinData.yarimTL,
+        tamTL:          altinData.tamTL,
+        degisim:        altinData.degisim,
+        kapanis:        gramKapanis,
+        onsKapanis:     altinKapanis,
+        ceyrekKapanis:  gramKapanis.map(function(v) { return +(v * 1.606).toFixed(2); }),
+        yarimKapanis:   gramKapanis.map(function(v) { return +(v * 3.212).toFixed(2); }),
+        tamKapanis:     gramKapanis.map(function(v) { return +(v * 6.431).toFixed(2); }),
       };
     } else {
       // Fallback: spot fiyattan hesapla
@@ -628,13 +637,19 @@ async function _piyasaVerisiCek() {
         const { fiyat: onsUsd, degisim } = _metaFiyatParse(altinResult);
         const kur    = pv.usdtry?.fiyat || 0;
         const gramTL = kur > 0 ? +(onsUsd / 31.1035 * kur).toFixed(2) : 0;
-        const kapanis = kur > 0
+        const gramKapanis = kur > 0
           ? altinKapanis.map(function(v) { return +(v / 31.1035 * kur).toFixed(2); })
           : altinKapanis;
         pv.altin = {
-          onsUsd, gramTL, degisim, kapanis,
-          ceyrekTL: gramTL > 0 ? +(gramTL * 1.606).toFixed(2) : 0,
-          tamTL:    gramTL > 0 ? +(gramTL * 6.431).toFixed(2)  : 0,
+          onsUsd, gramTL, degisim,
+          kapanis:       gramKapanis,
+          onsKapanis:    altinKapanis,
+          ceyrekTL:      gramTL > 0 ? +(gramTL * 1.606).toFixed(2) : 0,
+          yarimTL:       gramTL > 0 ? +(gramTL * 3.212).toFixed(2) : 0,
+          tamTL:         gramTL > 0 ? +(gramTL * 6.431).toFixed(2) : 0,
+          ceyrekKapanis: gramKapanis.map(function(v) { return +(v * 1.606).toFixed(2); }),
+          yarimKapanis:  gramKapanis.map(function(v) { return +(v * 3.212).toFixed(2); }),
+          tamKapanis:    gramKapanis.map(function(v) { return +(v * 6.431).toFixed(2); }),
         };
       }
     }

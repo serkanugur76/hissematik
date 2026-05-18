@@ -120,9 +120,13 @@ export function renderPiyasaKartlari() {
     const d   = altin.degisim || 0;
     const cls = d >= 0 ? 'pos' : 'neg';
     const isk = d >= 0 ? '+' : '';
-    if (altin.gramTL)   altinHtml += '<div class="ticker-item"><span class="ticker-label">ALTIN GR</span><span class="ticker-value">' + _fmt(altin.gramTL) + ' ₺</span><span class="ticker-change ' + cls + '">' + isk + d + '%</span></div>';
-    if (altin.ceyrekTL) altinHtml += '<div class="ticker-item"><span class="ticker-label">ÇEYREK</span><span class="ticker-value">' + _fmt(altin.ceyrekTL, 0) + ' ₺</span><span class="ticker-change ' + cls + '">' + isk + d + '%</span></div>';
-    if (altin.tamTL)    altinHtml += '<div class="ticker-item"><span class="ticker-label">TAM ALTIN</span><span class="ticker-value">' + _fmt(altin.tamTL, 0) + ' ₺</span><span class="ticker-change ' + cls + '">' + isk + d + '%</span></div>';
+    const _ta = (lbl, val) => val ? '<div class="ticker-item"><span class="ticker-label">' + lbl + '</span><span class="ticker-value">' + val + '</span><span class="ticker-change ' + cls + '">' + isk + d + '%</span></div>' : '';
+    altinHtml =
+      _ta('ALTIN GR',  altin.gramTL   ? _fmt(altin.gramTL)   + ' ₺' : null) +
+      _ta('ALTIN ONS', altin.onsUsd   ? altin.onsUsd.toFixed(2) + ' $' : null) +
+      _ta('ÇEYREK',    altin.ceyrekTL ? _fmt(altin.ceyrekTL, 0) + ' ₺' : null) +
+      _ta('YARIM',     altin.yarimTL  ? _fmt(altin.yarimTL,  0) + ' ₺' : null) +
+      _ta('TAM ALTIN', altin.tamTL    ? _fmt(altin.tamTL,    0) + ' ₺' : null);
   }
 
   const brentHtml  = _tickerItem('BRENT',   brent  ? brent.fiyat?.toFixed(2)  + ' $' : null, brent?.degisim);
@@ -202,23 +206,37 @@ export function renderPiyasaKartlariSabit() {
     '<div class="pk-degisim ' + (xu030 ? degCls(xu030.degisim) : '') + '">' + (xu030 ? degStr(xu030.degisim) : '—') + '</div>' +
     _sparklineSvg(xu030 && xu030.kapanis, b30pos) + '</div>';
 
-  const apos    = (altin ? altin.degisim : 0) >= 0;
-  const agrhtml = '<div class="piyasa-kart pk-gold">' +
-    '<div class="pk-label">Altın Gram</div>' +
-    '<div class="pk-fiyat" style="color:var(--yellow)">' + (altin && altin.gramTL ? _fmt(altin.gramTL) + ' ₺' : '—') + '</div>' +
-    '<div class="pk-degisim ' + (altin ? degCls(altin.degisim) : '') + '">' + (altin ? degStr(altin.degisim) : '—') + '</div>' +
-    _sparklineSvg(altin && altin.kapanis, apos) + '</div>';
-
-  const achtml = '<div class="piyasa-kart pk-gold">' +
-    '<div class="pk-label">Altın Çeşitleri</div>' +
-    '<div class="pk-altin-row">' +
-      '<div class="pk-altin-item"><div class="pk-altin-sub">Çeyrek</div>' +
-        '<div class="pk-altin-val">' + (altin && altin.ceyrekTL ? _fmt(altin.ceyrekTL, 0) + ' ₺' : '—') + '</div></div>' +
-      '<div class="pk-altin-item"><div class="pk-altin-sub">Tam</div>' +
-        '<div class="pk-altin-val">' + (altin && altin.tamTL ? _fmt(altin.tamTL, 0) + ' ₺' : '—') + '</div></div>' +
-    '</div>' +
-    '<div class="pk-degisim ' + (altin ? degCls(altin.degisim) : '') + '" style="margin-top:0.4rem">' + (altin ? degStr(altin.degisim) : '—') + '</div>' +
+  // Altın: 5 ayrı kart, her birinde sparkline
+  function _altinKart(ad, fiyat, kapanis, birim) {
+    if (!altin) return '';
+    const pos = (altin.degisim || 0) >= 0;
+    const fStr = fiyat ? _fmt(fiyat, fiyat < 100 ? 2 : 0) + ' ' + birim : '—';
+    return '<div class="piyasa-kart pk-gold">' +
+      '<div class="pk-label">' + ad + '</div>' +
+      '<div class="pk-fiyat" style="color:var(--yellow)">' + fStr + '</div>' +
+      '<div class="pk-degisim ' + degCls(altin.degisim) + '">' + degStr(altin.degisim) + '</div>' +
+      _sparklineSvg(kapanis, pos) +
     '</div>';
+  }
+
+  const altinGramHtml   = _altinKart('Altın Gram',   altin?.gramTL,   altin?.kapanis,       '₺');
+  const altinCeyrekHtml = _altinKart('Çeyrek Altın', altin?.ceyrekTL, altin?.ceyrekKapanis, '₺');
+  const altinYarimHtml  = _altinKart('Yarım Altın',  altin?.yarimTL,  altin?.yarimKapanis,  '₺');
+  const altinTamHtml    = _altinKart('Tam Altın',    altin?.tamTL,    altin?.tamKapanis,    '₺');
+  const altinOnsHtml    = _altinKart('Altın ONS',    altin?.onsUsd,   altin?.onsKapanis,    '$');
+
+  // Döviz kartları — sparkline dahil
+  function _dovizKartSpark(ad, veri, birim, ondalik) {
+    if (!veri) return '<div class="piyasa-kart pk-doviz"><div class="pk-label">' + ad + '</div><div class="pk-fiyat">—</div><div class="pk-degisim">—</div></div>';
+    const pos  = veri.degisim >= 0;
+    const fStr = birim === '₺' ? _fmt(veri.fiyat, ondalik || 2) + ' ₺' : _fmt(veri.fiyat, ondalik || 4);
+    return '<div class="piyasa-kart pk-doviz">' +
+      '<div class="pk-label">' + ad + '</div>' +
+      '<div class="pk-fiyat">' + fStr + '</div>' +
+      '<div class="pk-degisim ' + degCls(veri.degisim) + '">' + degStr(veri.degisim) + '</div>' +
+      _sparklineSvg(veri.kapanis, pos) +
+    '</div>';
+  }
 
   function _petrolKart(ad, veri) {
     if (!veri) return '<div class="piyasa-kart pk-petrol"><div class="pk-label">' + ad + '</div><div class="pk-fiyat">—</div><div class="pk-degisim">—</div></div>';
@@ -234,46 +252,32 @@ export function renderPiyasaKartlariSabit() {
   const brentHtml = _petrolKart('Brent Ham Petrol', brent);
   const wtiHtml   = _petrolKart('WTI Ham Petrol',   wti);
 
-  // EUR/USD parite kartı (makro grubuna ekle)
   const usdtry = state.piyasaVerisi.usdtry;
   const eurtry = state.piyasaVerisi.eurtry;
   const eurusd = state.piyasaVerisi.eurusd;
 
-  function _dovizKart(ad, veri, birim) {
-    if (!veri) return '<div class="piyasa-kart pk-doviz"><div class="pk-label">' + ad + '</div><div class="pk-fiyat">—</div><div class="pk-degisim">—</div></div>';
-    const pos = veri.degisim >= 0;
-    const fiyatStr = birim === 'TL' ? _fmt(veri.fiyat) + ' ₺' : _fmt(veri.fiyat, 4);
-    return '<div class="piyasa-kart pk-doviz">' +
-      '<div class="pk-label">' + ad + '</div>' +
-      '<div class="pk-fiyat">' + fiyatStr + '</div>' +
-      '<div class="pk-degisim ' + degCls(veri.degisim) + '">' + degStr(veri.degisim) + '</div>' +
-    '</div>';
-  }
+  const usdHtml2   = _dovizKartSpark('USD / TRY', usdtry, '₺', 2);
+  const eurHtml2   = _dovizKartSpark('EUR / TRY', eurtry, '₺', 2);
+  const euusdHtml2 = _dovizKartSpark('EUR / USD', eurusd, 'USD', 4);
 
-  const usdHtml2  = _dovizKart('USD / TRY', usdtry, 'TL');
-  const eurHtml2  = _dovizKart('EUR / TRY', eurtry, 'TL');
-  const euusdHtml2 = _dovizKart('EUR / USD', eurusd, 'USD');
-
-  // Global endeks kartı
-  function _endeksKart(ad, veri, birimSuffix) {
+  // Global endeks kartı — ülke tooltip dahil
+  function _endeksKart(ad, ulke, veri) {
     if (!veri) return '';
-    const pos = veri.degisim >= 0;
-    const fStr = birimSuffix
-      ? _fmt(veri.fiyat, 0) + ' ' + birimSuffix
-      : _fmt(veri.fiyat, 0);
-    return '<div class="piyasa-kart pk-global">' +
+    const pos  = veri.degisim >= 0;
+    const tip  = ulke ? ' data-tooltip="' + ulke + '"' : '';
+    return '<div class="piyasa-kart pk-global"' + tip + '>' +
       '<div class="pk-label">' + ad + '</div>' +
-      '<div class="pk-fiyat">' + fStr + '</div>' +
+      '<div class="pk-fiyat">' + _fmt(veri.fiyat, 0) + '</div>' +
       '<div class="pk-degisim ' + degCls(veri.degisim) + '">' + degStr(veri.degisim) + '</div>' +
       _sparklineSvg(veri.kapanis, pos) +
     '</div>';
   }
 
-  const sp500Html  = _endeksKart('S&amp;P 500',  sp500,  '');
-  const nasdaqHtml = _endeksKart('NASDAQ',        nasdaq, '');
-  const daxHtml    = _endeksKart('DAX',           dax,    '');
-  const ftseHtml   = _endeksKart('FTSE 100',      ftse,   '');
-  const nikkeiHtml = _endeksKart('Nikkei 225',    nikkei, '');
+  const sp500Html  = _endeksKart('S&amp;P 500', '🇺🇸 ABD — S&amp;P 500 (NYSE + NASDAQ büyük 500 şirket)',  sp500);
+  const nasdaqHtml = _endeksKart('NASDAQ',      '🇺🇸 ABD — NASDAQ (teknoloji ağırlıklı)',                   nasdaq);
+  const daxHtml    = _endeksKart('DAX',         '🇩🇪 Almanya — DAX 40 (Frankfurt Borsası)',                 dax);
+  const ftseHtml   = _endeksKart('FTSE 100',    '🇬🇧 İngiltere — FTSE 100 (Londra Borsası)',                ftse);
+  const nikkeiHtml = _endeksKart('Nikkei 225',  '🇯🇵 Japonya — Nikkei 225 (Tokyo Borsası)',                 nikkei);
 
   // ─── İKİ GRUP: Türk Piyasası | Makro / Global ───
   container.className = 'piyasa-kartlari-wrap';
@@ -288,7 +292,7 @@ export function renderPiyasaKartlariSabit() {
     // Grup 2: Makro / Global (birbirleriyle korelasyonu yüksek varlıklar)
     '<div class="pk-grup">' +
       '<div class="pk-grup-baslik">🌐 Makro &amp; Global <span class="pk-grup-aciklama">— USD bazlı, aralarında korelasyon var</span></div>' +
-      '<div class="pk-grup-kartlar">' + euusdHtml2 + usdHtml2 + eurHtml2 + agrhtml + achtml + brentHtml + wtiHtml + '</div>' +
+      '<div class="pk-grup-kartlar">' + euusdHtml2 + usdHtml2 + eurHtml2 + altinGramHtml + altinOnsHtml + altinCeyrekHtml + altinYarimHtml + altinTamHtml + brentHtml + wtiHtml + '</div>' +
     '</div>';
 }
 
