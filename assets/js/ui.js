@@ -96,7 +96,8 @@ function _tickerItem(label, deger, degisim, tersCls = false) {
 }
 
 export function renderPiyasaKartlari() {
-  const { xu100, xu030, usdtry, eurtry, eurusd, altin, brent, wti } = state.piyasaVerisi;
+  const { xu100, xu030, usdtry, eurtry, eurusd, altin, brent, wti,
+          sp500, nasdaq, dax, ftse, nikkei } = state.piyasaVerisi;
 
   const bist100Html = xu100 ? (() => {
     const { etiket, cls } = _piyasaYonBilgi(xu100.degisim);
@@ -124,10 +125,16 @@ export function renderPiyasaKartlari() {
     if (altin.tamTL)    altinHtml += '<div class="ticker-item"><span class="ticker-label">TAM ALTIN</span><span class="ticker-value">' + _fmt(altin.tamTL, 0) + ' ₺</span><span class="ticker-change ' + cls + '">' + isk + d + '%</span></div>';
   }
 
-  const brentHtml = _tickerItem('BRENT', brent ? brent.fiyat?.toFixed(2) + ' $' : null, brent?.degisim);
-  const wtiHtml   = _tickerItem('WTI',   wti   ? wti.fiyat?.toFixed(2)   + ' $' : null, wti?.degisim);
+  const brentHtml  = _tickerItem('BRENT',   brent  ? brent.fiyat?.toFixed(2)  + ' $' : null, brent?.degisim);
+  const wtiHtml    = _tickerItem('WTI',     wti    ? wti.fiyat?.toFixed(2)    + ' $' : null, wti?.degisim);
+  const sp500Html  = _tickerItem('S&P 500', sp500  ? _fmt(sp500.fiyat,  0)           : null, sp500?.degisim);
+  const nasdaqHtml = _tickerItem('NASDAQ',  nasdaq ? _fmt(nasdaq.fiyat, 0)           : null, nasdaq?.degisim);
+  const daxHtml    = _tickerItem('DAX',     dax    ? _fmt(dax.fiyat,    0)           : null, dax?.degisim);
+  const ftseHtml   = _tickerItem('FTSE',    ftse   ? _fmt(ftse.fiyat,   0)           : null, ftse?.degisim);
+  const nikkeiHtml = _tickerItem('NİKKEİ',  nikkei ? _fmt(nikkei.fiyat, 0)           : null, nikkei?.degisim);
 
-  const icerik = bist100Html + bist30Html + usdHtml + eurHtml + euusdHtml + altinHtml + brentHtml + wtiHtml;
+  const icerik = bist100Html + bist30Html + sp500Html + nasdaqHtml + daxHtml + ftseHtml + nikkeiHtml +
+                 usdHtml + eurHtml + euusdHtml + altinHtml + brentHtml + wtiHtml;
   document.querySelectorAll('.ticker-bar').forEach(container => {
     container.innerHTML =
       '<div class="ticker-track">' +
@@ -167,11 +174,16 @@ export function renderPiyasaKartlariSabit() {
   const container = el('piyasaKartlariRow');
   if (!container) return;
 
-  const xu100 = state.piyasaVerisi.xu100;
-  const xu030 = state.piyasaVerisi.xu030;
-  const altin = state.piyasaVerisi.altin;
-  const brent = state.piyasaVerisi.brent;
-  const wti   = state.piyasaVerisi.wti;
+  const xu100  = state.piyasaVerisi.xu100;
+  const xu030  = state.piyasaVerisi.xu030;
+  const altin  = state.piyasaVerisi.altin;
+  const brent  = state.piyasaVerisi.brent;
+  const wti    = state.piyasaVerisi.wti;
+  const sp500  = state.piyasaVerisi.sp500;
+  const nasdaq = state.piyasaVerisi.nasdaq;
+  const dax    = state.piyasaVerisi.dax;
+  const ftse   = state.piyasaVerisi.ftse;
+  const nikkei = state.piyasaVerisi.nikkei;
 
   function degCls(d) { return parseFloat(d) >= 0 ? 'pos' : 'neg'; }
   function degStr(d) { const n = parseFloat(d) || 0; return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
@@ -242,13 +254,36 @@ export function renderPiyasaKartlariSabit() {
   const eurHtml2  = _dovizKart('EUR / TRY', eurtry, 'TL');
   const euusdHtml2 = _dovizKart('EUR / USD', eurusd, 'USD');
 
+  // Global endeks kartı
+  function _endeksKart(ad, veri, birimSuffix) {
+    if (!veri) return '';
+    const pos = veri.degisim >= 0;
+    const fStr = birimSuffix
+      ? _fmt(veri.fiyat, 0) + ' ' + birimSuffix
+      : _fmt(veri.fiyat, 0);
+    return '<div class="piyasa-kart pk-global">' +
+      '<div class="pk-label">' + ad + '</div>' +
+      '<div class="pk-fiyat">' + fStr + '</div>' +
+      '<div class="pk-degisim ' + degCls(veri.degisim) + '">' + degStr(veri.degisim) + '</div>' +
+      _sparklineSvg(veri.kapanis, pos) +
+    '</div>';
+  }
+
+  const sp500Html  = _endeksKart('S&amp;P 500',  sp500,  '');
+  const nasdaqHtml = _endeksKart('NASDAQ',        nasdaq, '');
+  const daxHtml    = _endeksKart('DAX',           dax,    '');
+  const ftseHtml   = _endeksKart('FTSE 100',      ftse,   '');
+  const nikkeiHtml = _endeksKart('Nikkei 225',    nikkei, '');
+
   // ─── İKİ GRUP: Türk Piyasası | Makro / Global ───
   container.className = 'piyasa-kartlari-wrap';
   container.innerHTML =
-    // Grup 1: Borsa
+    // Grup 1: Borsa (BIST + Büyük Global Endeksler)
     '<div class="pk-grup">' +
-      '<div class="pk-grup-baslik">📈 Borsa</div>' +
-      '<div class="pk-grup-kartlar">' + b100html + b30html + '</div>' +
+      '<div class="pk-grup-baslik">📈 Borsa' +
+        '<span class="pk-grup-aciklama"> — BIST ile global endeksler arasında korelasyon takibi</span>' +
+      '</div>' +
+      '<div class="pk-grup-kartlar">' + b100html + b30html + sp500Html + nasdaqHtml + daxHtml + ftseHtml + nikkeiHtml + '</div>' +
     '</div>' +
     // Grup 2: Makro / Global (birbirleriyle korelasyonu yüksek varlıklar)
     '<div class="pk-grup">' +

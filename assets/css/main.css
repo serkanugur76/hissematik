@@ -685,6 +685,23 @@ tr:last-child td { border-bottom:none; }
 .pk-doviz { border-color: rgba(251,191,36,0.2) !important; }
 .pk-doviz .pk-label { color: #fbbf24; }
 
+/* ── GLOBAL ENDEKS KART ── */
+.pk-global { border-color: rgba(167,139,250,0.25) !important; }
+.pk-global .pk-label { color: #a78bfa; }
+
+/* ── MAKRO SNAPSHOT GRUP BAŞLIĞI ── */
+.makro-snap-grup {
+  grid-column: 1 / -1;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.35rem 0 0.1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.15rem;
+}
+
 /* ── PİYASA KARTLARI GRUPLU DÜZEN ── */
 .piyasa-kartlari-wrap {
   display: flex;

@@ -580,16 +580,15 @@ export async function aiGunSonuOzeti({ key, analizler, currentUser = null, db: d
 export async function aiMakroKorelasyonAnalizEt({ key, piyasaVerisi = {} }) {
   if (!key) return '';
 
-  const { xu100, xu030, usdtry, eurtry, eurusd, altin, brent, wti } = piyasaVerisi;
+  const { xu100, xu030, usdtry, eurtry, eurusd, altin, brent, wti,
+          sp500, nasdaq, dax, ftse, nikkei } = piyasaVerisi;
 
   function _satir(ad, veri, birim) {
-    if (!veri) return ad + ': veri yok\n';
-    const fiyat   = birim ? veri.fiyat?.toFixed(2) + ' ' + birim : veri.fiyat?.toLocaleString('tr-TR');
+    if (!veri) return '';
+    const fiyat   = birim ? veri.fiyat?.toFixed(2) + ' ' + birim : (veri.fiyat?.toLocaleString('tr-TR') || '—');
     const degisim = veri.degisim !== undefined ? (veri.degisim >= 0 ? '+' : '') + veri.degisim + '%' : '—';
-
-    // 30 günlük değişim
     let aylik = '';
-    if (veri.kapanis && veri.kapanis.length >= 2) {
+    if (veri.kapanis && veri.kapanis.length >= 5) {
       const ilk = veri.kapanis[0];
       const son = veri.kapanis.at(-1);
       if (ilk > 0) aylik = ', 30g: ' + ((son - ilk) / ilk * 100).toFixed(1) + '%';
@@ -597,31 +596,42 @@ export async function aiMakroKorelasyonAnalizEt({ key, piyasaVerisi = {} }) {
     return ad + ': ' + fiyat + ' (günlük ' + degisim + aylik + ')\n';
   }
 
-  const snapshot =
+  const borsaBlok =
+    '--- TÜRK BORSASI ---\n' +
     _satir('BIST 100', xu100) +
     _satir('BIST 30',  xu030) +
-    _satir('USD/TRY',  usdtry, 'TL') +
-    _satir('EUR/TRY',  eurtry, 'TL') +
-    _satir('EUR/USD',  eurusd, 'USD') +
-    _satir('Altın (Gram)', altin ? { fiyat: altin.gramTL, degisim: altin.degisim, kapanis: altin.kapanis } : null, 'TL') +
-    _satir('Altın (ONS)',  altin ? { fiyat: altin.onsUsd, degisim: altin.degisim } : null, 'USD') +
+    '\n--- GLOBAL ENDEKSLER ---\n' +
+    _satir('S&P 500 (ABD)',    sp500) +
+    _satir('NASDAQ (ABD)',     nasdaq) +
+    _satir('DAX (Almanya)',    dax) +
+    _satir('FTSE 100 (İngiltere)', ftse) +
+    _satir('Nikkei 225 (Japonya)', nikkei);
+
+  const makroBlok =
+    '\n--- DÖVİZ ---\n' +
+    _satir('USD/TRY', usdtry, 'TL') +
+    _satir('EUR/TRY', eurtry, 'TL') +
+    _satir('EUR/USD', eurusd, 'USD') +
+    '\n--- EMTİA ---\n' +
+    _satir('Altın Gram TL',  altin ? { fiyat: altin.gramTL, degisim: altin.degisim, kapanis: altin.kapanis } : null, 'TL') +
+    _satir('Altın ONS USD',  altin ? { fiyat: altin.onsUsd, degisim: altin.degisim } : null, 'USD') +
     _satir('Brent Ham Petrol', brent, 'USD') +
     _satir('WTI Ham Petrol',   wti,   'USD');
 
   const prompt =
     'Sen makroekonomik analiz uzmanısın. Türk yatırımcılar için aşağıdaki piyasa verilerini analiz et.\n\n' +
-    'GÜNCEL PİYASA VERİLERİ:\n' + snapshot + '\n' +
-    'Lütfen aşağıdaki başlıklar altında TÜRKÇE analiz yap (toplam ~300 kelime):\n\n' +
-    '**1. Petrol & Altın İlişkisi**\n' +
-    'Brent/WTI ile altın arasındaki mevcut korelasyonu açıkla. Risk-off mu risk-on mu?\n\n' +
-    '**2. Dolar & Euro Paritesi Etkisi**\n' +
-    'EUR/USD paritesinin altın ve petrol fiyatlarına etkisi. USD güçlü/zayıf?\n\n' +
-    '**3. Döviz & BIST İlişkisi**\n' +
-    'USD/TRY ve EUR/TRY hareketleri BIST\'i nasıl etkiliyor? TL değer kaybı borsa için artı mı eksi mi?\n\n' +
-    '**4. Petrol & Türkiye**\n' +
-    'Petrol fiyatları Türk ekonomisi ve BIST için ne anlama geliyor? (Enerji ithalatçısı perspektifi)\n\n' +
-    '**5. Genel Senaryo**\n' +
-    'Mevcut konjonktürde en olası senaryo ve Türk yatırımcı için özet çıkarım.\n\n' +
+    'GÜNCEL PİYASA VERİLERİ:\n' + borsaBlok + makroBlok + '\n' +
+    'Lütfen aşağıdaki başlıklar altında TÜRKÇE analiz yap (toplam ~400 kelime):\n\n' +
+    '**1. BIST & Global Endeks Korelasyonu**\n' +
+    'BIST 100\'ün S&P 500, NASDAQ ve DAX ile güncel ilişkisi. Eş yönlü mu, ayrışma var mı? Hangi endeks BIST\'e daha çok etki ediyor?\n\n' +
+    '**2. Petrol & Altın İlişkisi**\n' +
+    'Brent/WTI ile altın arasındaki mevcut korelasyon. Risk-off mu risk-on mu sinyali veriyor?\n\n' +
+    '**3. Dolar Endeksi & Emtia Etkisi**\n' +
+    'EUR/USD paritesi, altın ve petrol fiyatlarına nasıl yansıyor? USD güçlü/zayıf sinyali ne?\n\n' +
+    '**4. Döviz & BIST İlişkisi**\n' +
+    'USD/TRY, EUR/TRY hareketleri BIST\'i nasıl etkiliyor? TL değer kaybı borsa için artı mı eksi mi?\n\n' +
+    '**5. Genel Senaryo & Türk Yatırımcı Çıkarımı**\n' +
+    'Tüm verileri birleştirerek mevcut konjonktürde en olası senaryo ve somut çıkarım.\n\n' +
     'Verilerden somut sayılar kullan. Spekülatif değil, veri odaklı ol.';
 
   try {

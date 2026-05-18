@@ -557,13 +557,19 @@ function _degisimHesapla(fiyat, onceki) {
 
 async function _piyasaVerisiCek() {
   try {
-    const [data, xu100Kapanis, xu030Kapanis, altinKapanis, brentKapanis, wtiKapanis] = await Promise.all([
+    const [data, xu100Kapanis, xu030Kapanis, altinKapanis, brentKapanis, wtiKapanis,
+           sp500Kapanis, nasdaqKapanis, daxKapanis, ftseKapanis, nikkeiKapanis] = await Promise.all([
       fetchPiyasaVerisi(),
       fetchEndeksGecmisi('XU100.IS'),
       fetchEndeksGecmisi('XU030.IS'),
       fetchEndeksGecmisi('GC=F'),
       fetchEndeksGecmisi('BZ=F'),
       fetchEndeksGecmisi('CL=F'),
+      fetchEndeksGecmisi('^GSPC'),
+      fetchEndeksGecmisi('^IXIC'),
+      fetchEndeksGecmisi('^GDAXI'),
+      fetchEndeksGecmisi('^FTSE'),
+      fetchEndeksGecmisi('^N225'),
     ]);
     if (!data) return;
 
@@ -632,6 +638,20 @@ async function _piyasaVerisiCek() {
         };
       }
     }
+
+    // Global endeksler
+    function _endeksParse(kapanis) {
+      if (!kapanis || kapanis.length < 2) return null;
+      const fiyat   = kapanis.at(-1) || 0;
+      const onceki  = kapanis.at(-2) || fiyat;
+      const degisim = onceki > 0 ? +((fiyat - onceki) / onceki * 100).toFixed(2) : 0;
+      return { fiyat: +fiyat.toFixed(2), degisim, kapanis };
+    }
+    if (sp500Kapanis.length)  pv.sp500  = _endeksParse(sp500Kapanis);
+    if (nasdaqKapanis.length) pv.nasdaq = _endeksParse(nasdaqKapanis);
+    if (daxKapanis.length)    pv.dax    = _endeksParse(daxKapanis);
+    if (ftseKapanis.length)   pv.ftse   = _endeksParse(ftseKapanis);
+    if (nikkeiKapanis.length) pv.nikkei = _endeksParse(nikkeiKapanis);
 
     // Petrol: Brent (BZ=F) ve WTI (CL=F)
     function _petrolParse(kapanis) {
@@ -1892,10 +1912,18 @@ window.makroAnalizYap = async () => {
       '</div>';
     }
     snapshotEl.innerHTML =
+      '<div class="makro-snap-grup">📈 Borsa</div>' +
       _snap('BIST 100',    pv.xu100?.fiyat?.toLocaleString('tr-TR'), pv.xu100?.degisim) +
+      _snap('S&P 500',     pv.sp500?.fiyat?.toLocaleString('tr-TR'), pv.sp500?.degisim) +
+      _snap('NASDAQ',      pv.nasdaq?.fiyat?.toLocaleString('tr-TR'),pv.nasdaq?.degisim) +
+      _snap('DAX',         pv.dax?.fiyat?.toLocaleString('tr-TR'),   pv.dax?.degisim) +
+      _snap('FTSE 100',    pv.ftse?.fiyat?.toLocaleString('tr-TR'),  pv.ftse?.degisim) +
+      _snap('Nikkei',      pv.nikkei?.fiyat?.toLocaleString('tr-TR'),pv.nikkei?.degisim) +
+      '<div class="makro-snap-grup">💱 Döviz</div>' +
       _snap('USD/TRY',     pv.usdtry?.fiyat?.toFixed(2), pv.usdtry?.degisim, '₺') +
       _snap('EUR/TRY',     pv.eurtry?.fiyat?.toFixed(2), pv.eurtry?.degisim, '₺') +
       _snap('EUR/USD',     pv.eurusd?.fiyat?.toFixed(4), pv.eurusd?.degisim) +
+      '<div class="makro-snap-grup">🏅 Emtia</div>' +
       _snap('Altın Gram',  pv.altin?.gramTL?.toFixed(0), pv.altin?.degisim, '₺') +
       _snap('Altın ONS',   pv.altin?.onsUsd?.toFixed(2), pv.altin?.degisim, '$') +
       _snap('Brent',       pv.brent?.fiyat?.toFixed(2),  pv.brent?.degisim, '$') +
