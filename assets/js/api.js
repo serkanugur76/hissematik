@@ -862,7 +862,7 @@ export async function mukerrerSinyalleriTemizle({ db }) {
 // Firestore NaN/Infinity kabul etmez. Kaydetmeden önce veriler temizlenir.
 // kapanis/pivot/fib/obv gibi büyük türetilmiş alanlar da atılır (her Güncelle'de yeniden hesaplanır).
 function _verilerTemizle(veriler) {
-  const ATILAN = new Set(['kapanis', 'pivot', 'fib', 'stochRsi', 'williamsR', 'mfi', 'obv']);
+  const ATILAN = new Set(['kapanis', 'pivot', 'fib', 'bollinger', 'stochRsi', 'williamsR', 'mfi', 'obv']);
   const temiz  = {};
   for (const [k, v] of Object.entries(veriler || {})) {
     if (!v) { temiz[k] = v; continue; }

@@ -543,7 +543,8 @@ export function renderDashboard() {
         ? '<span class="pos">+' + v.hacimFark + '%</span>'
         : v.hacimFark < 0 ? '<span class="neg">' + v.hacimFark + '%</span>' : '<span class="muted">—</span>';
       const macdRenk = v.macdHist > 0 ? 'var(--accent)' : 'var(--red)';
-      const bolRenk  = v.bollinger?.yuzde < 25 ? 'var(--accent)' : v.bollinger?.yuzde > 75 ? 'var(--red)' : 'var(--muted)';
+      const bolYuzde = v.bollingerYuzde ?? v.bollinger?.yuzde ?? null;
+      const bolRenk  = bolYuzde < 25 ? 'var(--accent)' : bolYuzde > 75 ? 'var(--red)' : 'var(--muted)';
       const degIsaret = v.degisim >= 0 ? '+' : '';
 
       return '<tr class="clickable-row" onclick="window._uiCallbacks?.hisseDetayAc(\'' + k + '\')" style="cursor:pointer">' +
@@ -555,7 +556,7 @@ export function renderDashboard() {
         '<td><div class="guven-wrap"><div class="guven-bar"><div class="guven-fill ' + guvenCls + '" style="width:' + guven + '%"></div></div><span class="guven-pct">' + guvenStr + '</span></div></td>' +
         '<td class="mono" style="font-size:0.72rem;color:' + macdRenk + '">' + (v.macdHist?.toFixed(3) ?? '—') + '</td>' +
         '<td>' + hacimTxt + '</td>' +
-        '<td class="mono" style="font-size:0.72rem;color:' + bolRenk + '">' + (v.bollinger ? v.bollinger.yuzde + '%' : '—') + '</td>' +
+        '<td class="mono" style="font-size:0.72rem;color:' + bolRenk + '">' + (bolYuzde != null ? bolYuzde + '%' : '—') + '</td>' +
         '</tr>';
     }).join('');
   }

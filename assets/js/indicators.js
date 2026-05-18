@@ -500,25 +500,26 @@ export function parseYahooVeri(result, piyasaYon = undefined) {
     const guvenSkoru = Number.isFinite(skorSonuc.guven) ? skorSonuc.guven : 50;
 
     return {
-      fiyat:       +fiyat.toFixed(2),
+      fiyat:          +fiyat.toFixed(2),
       degisim,
-      rsi:         +rsiVal.toFixed(1),
+      rsi:            +rsiVal.toFixed(1),
       stochRsi,
-      macd:        +macdVal.macd.toFixed(4),
-      macdSignal:  +macdVal.sinyal.toFixed(4),
-      macdHist:    +macdVal.histogram.toFixed(4),
+      macd:           +macdVal.macd.toFixed(4),
+      macdSignal:     +macdVal.sinyal.toFixed(4),
+      macdHist:       +macdVal.histogram.toFixed(4),
       ma9, ma20, ma50, ma200,
       bollinger, williamsR, mfi, obv,
+      bollingerYuzde: bollinger?.yuzde ?? null,  // düz sayı — Firestore güvenli, tablo için
       pivot, fib,
       hafta52H, hafta52L, hafta52Yuzde,
-      hacim:       hacimSon,
+      hacim:          hacimSon,
       hacimFark,
-      guvenSkoru,                    // her zaman sayı, asla NaN veya undefined
-      alYuzde:     skorSonuc.alYuzde,
-      satYuzde:    skorSonuc.satYuzde,
-      sinyal:      hamSinyal,
-      kapanis:     kapanis.slice(-60),
-      ts:          Date.now(),
+      guvenSkoru,
+      alYuzde:        skorSonuc.alYuzde,
+      satYuzde:       skorSonuc.satYuzde,
+      sinyal:         hamSinyal,
+      kapanis:        kapanis.slice(-60),
+      ts:             Date.now(),
     };
   } catch (e) {
     console.error('parseYahooVeri hatası:', result?.meta?.symbol || '?', e);
