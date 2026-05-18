@@ -6,8 +6,17 @@ const KAYNAK = 'https://finans.truncgil.com/today.json';
 
 function parseFiyat(str) {
   if (!str) return 0;
-  // "6.654,38" → 6654.38
-  return parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
+  // "$4.557,94" veya "6.654,38" → sayıya çevir
+  // Önce para birimi sembolü ve % gibi karakterleri at, sonra TR formatını dönüştür
+  const temiz = String(str).replace(/[^0-9.,\-]/g, '');
+  return parseFloat(temiz.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function parseDegisim(str) {
+  if (!str) return 0;
+  // "%0,53" veya "-1,23" → sayıya çevir
+  const temiz = String(str).replace(/[^0-9.,-]/g, '');
+  return parseFloat(temiz.replace(',', '.')) || 0;
 }
 
 export default async function handler(req, res) {
@@ -37,7 +46,7 @@ export default async function handler(req, res) {
       yarimTL:   parseFiyat(yarim?.Satış  || yarim?.Alis),
       tamTL:     parseFiyat(tam?.Satış    || tam?.Alis),
       onsUsd:    parseFiyat(ons?.Satış    || ons?.Alis),
-      degisim:   parseFloat(gram?.Değişim || gram?.Degisim || 0),
+      degisim:   parseDegisim(gram?.Değişim || gram?.Degisim),
       guncelleme: data['Update_Date'] || null,
     });
   } catch (e) {
