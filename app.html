@@ -215,120 +215,121 @@
   <main class="panel" id="panel-hisseler">
     <div class="ticker-bar"></div>
 
-    <!-- Takip edilen hisseler özet + tablo -->
-    <div id="takipOzetContainer">
+    <!-- Alt sekme çubuğu -->
+    <div class="sub-tab-bar">
+      <button class="sub-tab active" data-subtab="takip">📊 Takip Listesi</button>
+      <button class="sub-tab" data-subtab="sinyaller">🎯 Sinyal Geçmişi</button>
+      <button class="sub-tab" data-subtab="tum">🔍 Tüm Hisseler</button>
+    </div>
 
-      <!-- AI analiz kutusu (takip listesindeki tüm hisseler analiz edilir) -->
-      <div id="aiBoxContainer"
-        data-tooltip="Takip listenizdeki TÜM hisseleri analiz eder (portföyde olsun ya da olmasın). RSI, MACD, sinyal geçmişi ve piyasa bağlamı dikkate alınır."></div>
-      <!-- Özet sayaçlar -->
-      <div class="summary-grid" id="summaryCards">
-        <div class="card">
-          <div class="card-title">Takip Edilen</div>
-          <div class="card-value" id="sumTakip">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Güçlü AL</div>
-          <div class="card-value green" id="sumAl">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Güçlü SAT</div>
-          <div class="card-value red" id="sumSat">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Sinyal İsabeti</div>
-          <div class="card-value yellow" id="sumIsabet">—</div>
-        </div>
-      </div>
-
-      <!-- Takip edilen hisseler tablosu -->
-      <div class="card" style="margin-bottom:1.5rem">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Takip Edilen Hisseler</div>
-            <div class="section-sub">Sinyaller ve teknik göstergeler</div>
+    <!-- ALT SEKME: TAKİP LİSTESİ -->
+    <div class="sub-panel active" id="subpanel-takip">
+      <div id="takipOzetContainer">
+        <!-- AI analiz kutusu -->
+        <div id="aiBoxContainer"
+          data-tooltip="Takip listenizdeki TÜM hisseleri analiz eder (portföyde olsun ya da olmasın). RSI, MACD, sinyal geçmişi ve piyasa bağlamı dikkate alınır."></div>
+        <!-- Özet sayaçlar -->
+        <div class="summary-grid" id="summaryCards">
+          <div class="card">
+            <div class="card-title">Takip Edilen</div>
+            <div class="card-value" id="sumTakip">—</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Güçlü AL</div>
+            <div class="card-value green" id="sumAl">—</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Güçlü SAT</div>
+            <div class="card-value red" id="sumSat">—</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sinyal İsabeti</div>
+            <div class="card-value yellow" id="sumIsabet">—</div>
           </div>
         </div>
-        <div class="table-wrap">
-          <table id="dashTable">
-            <thead>
-              <tr>
-                <th>Hisse</th>
-                <th>Fiyat</th>
-                <th>Değişim</th>
-                <th>RSI</th>
-                <th>Sinyal</th>
-                <th>Güven</th>
-                <th>MACD Hist</th>
-                <th>Hacim</th>
-                <th>Bollinger %</th>
-              </tr>
-            </thead>
-            <tbody id="dashTableBody">
-              <tr>
-                <td colspan="9" class="empty-state">
-                  Henüz veri yok. Aşağıdan hisse seç → Güncelle'ye bas.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Sinyal Geçmişi (Hisseler sekmesine taşındı) -->
-      <div class="card" style="margin-bottom:1.5rem">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Sinyal Geçmişi & Doğrulama</div>
-            <div class="section-sub">Sinyaller gerçek piyasa sonuçlarıyla karşılaştırılır — isabeti izle</div>
-          </div>
-          <div class="sinyal-controls">
-            <label class="sinyal-sure-label">
-              Süre:
-              <select id="dogrulamaSuresi" class="form-input sinyal-sure-select">
-                <option value="1">1 Gün</option>
-                <option value="3" selected>3 Gün</option>
-                <option value="7">7 Gün</option>
-              </select>
-            </label>
-            <button class="btn primary" id="btnSinyalleriGuncelle"
-              data-tooltip="Geçmiş sinyallerin fiyatlarla karşılaştırarak doğru/yanlış sonuçlarını hesapla">
-              Sonuçları Kontrol Et
-            </button>
-          </div>
-        </div>
-        <div id="sinyalListesi">
-          <div class="empty-state" style="padding:2rem;text-align:center;color:var(--muted)">
-            Henüz sinyal geçmişi yok. Güncelle'ye basıldığında sinyaller burada birikir.
+        <!-- Takip tablosu -->
+        <div class="card">
+          <div class="table-wrap">
+            <table id="dashTable">
+              <thead>
+                <tr>
+                  <th>Hisse</th>
+                  <th>Fiyat</th>
+                  <th>Değişim</th>
+                  <th>RSI</th>
+                  <th>Sinyal</th>
+                  <th>Güven</th>
+                  <th>MACD Hist</th>
+                  <th>Hacim</th>
+                  <th>Bollinger %</th>
+                </tr>
+              </thead>
+              <tbody id="dashTableBody">
+                <tr>
+                  <td colspan="9" class="empty-state">
+                    Henüz veri yok. Aşağıdan hisse seç → Güncelle'ye bas.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tüm BIST Hisseleri -->
-    <div class="section-header">
-      <div>
-        <div class="section-title">Tüm BIST Hisseleri</div>
-        <div class="section-sub">Tıkla → takibe al &nbsp;|&nbsp; Sağ tıkla → portföye ekle</div>
+    <!-- ALT SEKME: SİNYAL GEÇMİŞİ -->
+    <div class="sub-panel" id="subpanel-sinyaller">
+      <div class="section-header" style="margin-bottom:1rem">
+        <div>
+          <div class="section-title">Sinyal Geçmişi & Doğrulama</div>
+          <div class="section-sub">Sinyaller gerçek piyasa sonuçlarıyla karşılaştırılır — isabeti izle</div>
+        </div>
+        <div class="sinyal-controls">
+          <label class="sinyal-sure-label">
+            Süre:
+            <select id="dogrulamaSuresi" class="form-input sinyal-sure-select">
+              <option value="1">1 Gün</option>
+              <option value="3" selected>3 Gün</option>
+              <option value="7">7 Gün</option>
+            </select>
+          </label>
+          <button class="btn primary" id="btnSinyalleriGuncelle"
+            data-tooltip="Geçmiş sinyallerin fiyatlarla karşılaştırarak doğru/yanlış sonuçlarını hesapla">
+            Sonuçları Kontrol Et
+          </button>
+        </div>
       </div>
-      <button class="btn" id="btnTakibiKaldir" data-tooltip="Seçili hisseleri takip listesinden çıkar">Seçimi Temizle</button>
+      <div id="sinyalListesi">
+        <div class="empty-state" style="padding:2rem;text-align:center;color:var(--muted)">
+          Henüz sinyal geçmişi yok. Güncelle'ye basıldığında sinyaller burada birikir.
+        </div>
+      </div>
     </div>
 
-    <div class="search-row">
-      <input
-        class="search-input"
-        id="searchInput"
-        placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)"
-        autocomplete="off"
-      >
-      <button class="chip active" data-filter="tum">Tümü</button>
-      <button class="chip" data-filter="bist30">BIST 30</button>
-      <button class="chip" data-filter="bist100">BIST 100</button>
-      <button class="chip" data-filter="takip">Takip</button>
-      <button class="chip" data-filter="portfoy">Portföy</button>
+    <!-- ALT SEKME: TÜM HİSSELER -->
+    <div class="sub-panel" id="subpanel-tum">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Tüm BIST Hisseleri</div>
+          <div class="section-sub">Tıkla → takibe al &nbsp;|&nbsp; Sağ tıkla → portföye ekle</div>
+        </div>
+        <button class="btn" id="btnTakibiKaldir" data-tooltip="Seçili hisseleri takip listesinden çıkar">Seçimi Temizle</button>
+      </div>
+      <div class="search-row">
+        <input
+          class="search-input"
+          id="searchInput"
+          placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)"
+          autocomplete="off"
+        >
+        <button class="chip active" data-filter="tum">Tümü</button>
+        <button class="chip" data-filter="bist30">BIST 30</button>
+        <button class="chip" data-filter="bist100">BIST 100</button>
+        <button class="chip" data-filter="takip">Takip</button>
+        <button class="chip" data-filter="portfoy">Portföy</button>
+      </div>
+      <div class="hisse-grid" id="hisseGrid"></div>
     </div>
-
-    <div class="hisse-grid" id="hisseGrid"></div>
 
   </main>
 

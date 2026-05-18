@@ -400,7 +400,7 @@ async function _switchTab(name, btn) {
   // sinyaller sekmesi kaldırıldı — içerik hisseler sekmesinde
   if (name === 'portfoy')   renderPortfoy();
   if (name === 'kap')       await _loadKapBildirimleri();
-  if (name === 'hisseler')  { renderDashboard(); renderSummary(); renderSinyalGecmisi(); }
+  if (name === 'hisseler')  { renderDashboard(); renderSummary(); }
 }
 
 // ─────────────────────────────────────────────
@@ -1221,6 +1221,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('[data-tab]');
     if (!btn) return;
     _switchTab(btn.dataset.tab, btn);
+  });
+
+  // Alt sekme navigasyonu (Hisseler paneli içi)
+  document.querySelector('.sub-tab-bar')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-subtab]');
+    if (!btn) return;
+    const subtab = btn.dataset.subtab;
+    document.querySelectorAll('.sub-tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.sub-panel').forEach(p => p.classList.toggle('active', p.id === 'subpanel-' + subtab));
+    if (subtab === 'sinyaller') renderSinyalGecmisi();
+    if (subtab === 'tum')       renderHisseler();
   });
 
   // Tab navigasyonu — mobil menü
