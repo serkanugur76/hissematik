@@ -838,8 +838,8 @@ export function renderPortfoy() {
     const kzpSat = mal > 0 ? (kzSat / mal * 100) : 0;
     const sin    = v ? '<span class="pill ' + sinyalClass(v.sinyal) + '">' + v.sinyal + '</span>' : '—';
 
-    return '<tr>' +
-      '<td><span class="mono" style="font-weight:500">' + k + '</span><br><span class="muted" style="font-size:0.68rem">' + (p.ad || '') + '</span></td>' +
+    return '<tr class="clickable-row" style="cursor:pointer" onclick="window._uiCallbacks?.hisseDetayAc(\'' + k + '\')">' +
+      '<td><span class="mono" style="font-weight:600;color:var(--accent)">' + k + '</span><br><span class="muted" style="font-size:0.68rem">' + (p.ad || '') + '</span></td>' +
       '<td class="mono">' + p.adet + '</td>' +
       '<td class="mono">' + p.alisFiyati.toFixed(2) + ' ₺</td>' +
       '<td class="mono">' + (gf ? gf.toFixed(2) + ' ₺' : '—') + '</td>' +
@@ -847,7 +847,7 @@ export function renderPortfoy() {
       '<td class="mono">' + (deg ? deg.toFixed(0) + ' ₺' : '—') + '</td>' +
       '<td class="mono ' + (kzSat >= 0 ? 'pos' : 'neg') + '">' + (kzSat >= 0 ? '+' : '') + kzSat.toFixed(0) + ' ₺<br><span style="font-size:0.72rem">' + (kzpSat >= 0 ? '+' : '') + kzpSat.toFixed(1) + '%</span></td>' +
       '<td>' + sin + '</td>' +
-      '<td><button class="btn danger" onclick="window._uiCallbacks?.portfoyCikar(\'' + k + '\')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>' +
+      '<td><button class="btn danger" onclick="event.stopPropagation();window._uiCallbacks?.portfoyCikar(\'' + k + '\')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>' +
       '</tr>';
   }).join('');
 
