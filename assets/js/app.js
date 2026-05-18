@@ -1393,6 +1393,20 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnKullaniciEkleOnayla')?.addEventListener('click',   () => window.kullaniciEkle());
   el('btnAdminKeyKaydet')?.addEventListener('click',        () => window.adminKendiKeyiKaydet());
   el('btnMukerrerTemizle')?.addEventListener('click',       () => window.mukerrerTemizle());
+
+  // Sinyal geçmişi — doğrulama süresini state'e yansıt + manuel kontrol butonu
+  el('dogrulamaSuresi')?.addEventListener('change', (e) => {
+    setState({ dogrulamaGun: parseInt(e.target.value) || 3 });
+  });
+  el('btnSinyalleriGuncelle')?.addEventListener('click', async () => {
+    const btn = el('btnSinyalleriGuncelle');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Kontrol ediliyor...'; }
+    try { await _sinyalleriDogrula(); renderSinyalGecmisi(); renderSummary(); }
+    catch (e) { showToast('Doğrulama sırasında hata: ' + (e?.message || ''), 'error'); }
+    finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sonuçları Kontrol Et'; }
+    }
+  });
   el('btnTokenYenile')?.addEventListener('click',           () => window.loadTokenIstatistik());
   el('btnGunSonuOzet')?.addEventListener('click',           () => window.gunSonuOzetOlustur());
   el('btnAnalizGecmisi')?.addEventListener('click',         () => window.analizGecmisiAc());
