@@ -228,7 +228,8 @@
       <button class="sub-tab" data-subtab="sinyaller">🎯 Sinyal Geçmişi</button>
       <button class="sub-tab" data-subtab="tum">🔍 Tüm Hisseler</button>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+    <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:1rem">
+      <button class="btn" onclick="window.karsilastirmaAc()" data-tooltip="İki hisseyi yan yana karşılaştır">📈 Karşılaştır</button>
       <button class="btn" onclick="window.screenerAc()" data-tooltip="Kriterlere göre BIST hisselerini tara">🔍 Hisse Tarama</button>
     </div>
 
@@ -354,6 +355,7 @@
       <button class="sub-tab" data-portfoy-subtab="altin">🥇 Altın</button>
       <button class="sub-tab" data-portfoy-subtab="doviz">💱 Döviz</button>
       <button class="sub-tab" data-portfoy-subtab="grafik">📊 Performans</button>
+      <button class="sub-tab" data-portfoy-subtab="temettu">💰 Temettü</button>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn" onclick="window.rrModalAc()" data-tooltip="Pozisyon büyüklüğü ve risk oranı hesapla">⚖️ Risk/Ödül Hesaplayıcı</button></div>
     <div class="portfoy-sub-panel active" id="portfoy-sp-hisse">
@@ -367,6 +369,9 @@
     </div>
     <div class="portfoy-sub-panel" id="portfoy-sp-grafik">
       <div id="portfoyGrafikContent"></div>
+    </div>
+    <div class="portfoy-sub-panel" id="portfoy-sp-temettu">
+      <div id="portfoyTemettuContent"></div>
     </div>
   </main>
 
@@ -1187,6 +1192,43 @@
 ══════════════════════════════════════════ -->
 <script type="module" src="assets/js/app.js"></script>
 
+<!-- Temettü Ekle Modal -->
+<div class="modal-overlay" id="temettuModal">
+  <div class="modal-box">
+    <div class="modal-title">💰 Temettü Kaydı Ekle</div>
+    <div class="modal-sub">Aldığınız temettü ödemesini kaydedin</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Hisse Sembolü</label>
+        <input type="text" id="tmSembol" class="form-input" placeholder="ör: THYAO" style="text-transform:uppercase">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Hisse Başı Temettü (₺)</label>
+          <input type="number" id="tmHisseBasi" class="form-input" placeholder="ör: 3.50" step="0.01" min="0">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Sahip Olduğunuz Adet</label>
+          <input type="number" id="tmAdet" class="form-input" placeholder="ör: 100" min="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ödeme / Hak Tarihi</label>
+        <input type="date" id="tmTarih" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Not <span style="color:var(--muted);font-size:0.72rem">(opsiyonel)</span></label>
+        <input type="text" id="tmNot" class="form-input" placeholder="ör: 2024 yıllık temettü">
+      </div>
+      <div id="tmTahsilLabel" style="margin-top:0.5rem;font-size:0.85rem;color:var(--accent);font-weight:600;min-height:1.2em"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="window.temettuKaydet()">Kaydet</button>
+      <button class="btn" data-modal-close="temettuModal">İptal</button>
+    </div>
+  </div>
+</div>
+
 <!-- Risk/Ödül Hesaplayıcı Modal -->
 <div class="modal-overlay" id="rrModal">
   <div class="modal-box">
@@ -1297,6 +1339,33 @@
     <div class="modal-footer">
       <button class="btn primary" onclick="window.dovizKaydet()">Kaydet</button>
       <button class="btn" data-modal-close="dovizModal">İptal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Çoklu Karşılaştırma Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="karsilastirmaModal">
+  <div class="modal-box modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📈 Hisse Karşılaştırma</div>
+        <div class="modal-sub">İki hisseyi yan yana karşılaştır</div>
+      </div>
+      <button class="modal-close" data-modal-close="karsilastirmaModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">1. Hisse</label>
+          <input type="text" id="krHisse1" class="form-input" placeholder="ör: THYAO" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">2. Hisse</label>
+          <input type="text" id="krHisse2" class="form-input" placeholder="ör: PGSUS" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+      </div>
+      <button class="btn primary" onclick="window.karsilastirmaUygula()" style="width:100%;margin-bottom:1.25rem">Karşılaştır</button>
+      <div id="krSonuc"></div>
     </div>
   </div>
 </div>

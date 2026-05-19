@@ -79,7 +79,7 @@ import {
   renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
   renderDashboard, renderHisseler, renderSinyalGecmisi, renderKorelasyonMatrisi,
   renderPortfoy, renderPortfoyAltin, renderPortfoyDoviz, renderPortfoyGrafik, portfoyModalAc,
-  renderAlarmlar, renderScreener,
+  renderAlarmlar, renderScreener, renderTemettu, renderKarsilastirma,
   renderHisseDetay, renderDetayOzet, renderDetayTeknik, renderHisseAnalizSonucu,
   renderHaberler, renderHaberAnaliz,
   renderSozluk, renderPopularTerimler,
@@ -332,6 +332,7 @@ onAuthStateChanged(auth, async (user) => {
     portfoyDoviz:   userDoc.portfoyDoviz   || {},
     fiyatAlarmlari: userDoc.fiyatAlarmlari || [],
     hisseNotlari:   userDoc.hisseNotlari   || {},
+    temettu:        userDoc.temettu        || [],
     veriler:        userDoc.veriler        || {},
   });
 
@@ -754,14 +755,14 @@ async function toggleTakip(k) {
   } else {
     state.takipEdilen.add(k);
   }
-  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
   renderHisseler();
   renderSummary();
 }
 
 window.takibiKaldir = () => {
   state.takipEdilen.clear();
-  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
   renderHisseler();
   renderSummary();
 };
@@ -806,7 +807,7 @@ window.portfoyKaydet = async () => {
   if (!state.takipEdilen.has(k)) state.takipEdilen.add(k);
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     closeModal('portfoyModal');
     renderHisseler();
     renderPortfoy();
@@ -819,7 +820,7 @@ window.portfoyKaydet = async () => {
 async function portfoyCikar(k) {
   if (!confirm(k + ' portföyden çıkarılsın mı?')) return;
   delete state.portfoy[k];
-  await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+  await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
   renderPortfoy();
   renderHisseler();
   showToast(k + ' portföyden çıkarıldı');
@@ -853,7 +854,7 @@ function _alarmlariKontrolEt() {
     }
   });
   if (tetiklenenVar) {
-    saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
   }
 }
 
@@ -901,7 +902,7 @@ window.altinKaydet = async () => {
   state.portfoyAltin[tur].push({ miktar, alisFiyati: fiyat, eklemeTarihi: tarih || new Date().toISOString().split('T')[0] });
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     closeModal('altinModal');
     renderPortfoyAltin();
     showToast('Altın pozisyonu eklendi ✓');
@@ -915,7 +916,7 @@ window.altinCikar = async (tur, idx) => {
   state.portfoyAltin[tur]?.splice(idx, 1);
   if (!state.portfoyAltin[tur]?.length) delete state.portfoyAltin[tur];
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     renderPortfoyAltin();
     showToast('Altın pozisyonu silindi');
   } catch (e) { showToast('Silinemedi', 'error'); }
@@ -947,7 +948,7 @@ window.alarmKaydet = async () => {
     Notification.requestPermission();
   }
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     closeModal('alarmModal');
     renderAlarmlar();
     showToast('🔔 Alarm kuruldu: ' + sembol + ' ' + (yon === 'yukari' ? '≥' : '≤') + ' ' + hedef + ' ₺');
@@ -957,7 +958,7 @@ window.alarmKaydet = async () => {
 window.alarmSil = async (id) => {
   state.fiyatAlarmlari = state.fiyatAlarmlari.filter(a => a.id !== id);
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     renderAlarmlar();
     showToast('Alarm silindi');
   } catch (e) { showToast('Silinemedi', 'error'); }
@@ -980,9 +981,76 @@ window.notKaydet = async (sembol) => {
     delete state.hisseNotlari[sembol];
   }
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     showToast('Not kaydedildi ✓');
   } catch (e) { showToast('Not kaydedilemedi', 'error'); }
+};
+
+// ─────────────────────────────────────────────
+// TEMETTÜ TAKİBİ
+// ─────────────────────────────────────────────
+
+window.temettuModalAc = (sembol) => {
+  const p = sembol ? state.portfoy[sembol] : null;
+  el('tmSembol').value    = sembol || '';
+  el('tmAdet').value      = p?.adet || '';
+  el('tmHisseBasi').value = '';
+  el('tmTarih').value     = new Date().toISOString().split('T')[0];
+  el('tmNot').value       = '';
+  el('tmTahsilLabel').textContent = '';
+  openModal('temettuModal');
+};
+
+window.temettuHesapla = () => {
+  const hisseBasi = Number(el('tmHisseBasi')?.value) || 0;
+  const adet      = Number(el('tmAdet')?.value)      || 0;
+  const lbl       = el('tmTahsilLabel');
+  if (lbl) lbl.textContent = hisseBasi && adet ? 'Toplam Tahsilat: ' + (hisseBasi * adet).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' ₺' : '';
+};
+
+window.temettuKaydet = async () => {
+  const sembol    = el('tmSembol')?.value?.trim().toUpperCase();
+  const hisseBasi = Number(el('tmHisseBasi')?.value) || 0;
+  const adet      = Number(el('tmAdet')?.value)      || 0;
+  const tarih     = el('tmTarih')?.value;
+  const not       = el('tmNot')?.value?.trim() || '';
+  if (!sembol || !hisseBasi || !adet) { showToast('Sembol, hisse başı tutar ve adet zorunlu!', 'error'); return; }
+  const kayit = { id: Date.now().toString(), sembol, hisseBasi, adet, tutar: +(hisseBasi * adet).toFixed(2), tarih, not, olusturma: Date.now() };
+  state.temettu.push(kayit);
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
+    closeModal('temettuModal');
+    renderTemettu();
+    showToast('💰 Temettü kaydedildi: ' + sembol + ' — ' + kayit.tutar.toLocaleString('tr-TR') + ' ₺');
+  } catch (e) { showToast('Kaydedilemedi', 'error'); }
+};
+
+window.temettuSil = async (id) => {
+  state.temettu = state.temettu.filter(t => t.id !== id);
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
+    renderTemettu();
+    showToast('Kayıt silindi');
+  } catch (e) { showToast('Silinemedi', 'error'); }
+};
+
+// ─────────────────────────────────────────────
+// ÇOKLU HİSSE KARŞILAŞTIRMA
+// ─────────────────────────────────────────────
+
+window.karsilastirmaAc = () => {
+  el('krHisse1').value = '';
+  el('krHisse2').value = '';
+  el('krSonuc').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">İki hisse girin ve Karşılaştır\'a basın.</div>';
+  openModal('karsilastirmaModal');
+};
+
+window.karsilastirmaUygula = () => {
+  const k1 = el('krHisse1').value.trim().toUpperCase();
+  const k2 = el('krHisse2').value.trim().toUpperCase();
+  if (!k1 || !k2) { showToast('İki hisse sembolü girin', 'error'); return; }
+  if (k1 === k2)  { showToast('Farklı iki hisse girin', 'error'); return; }
+  renderKarsilastirma(k1, k2);
 };
 
 // ─────────────────────────────────────────────
@@ -1091,7 +1159,7 @@ window.dovizKaydet = async () => {
   state.portfoyDoviz[tur].push({ miktar, alisFiyati: fiyat, eklemeTarihi: tarih || new Date().toISOString().split('T')[0] });
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     closeModal('dovizModal');
     renderPortfoyDoviz();
     showToast('Döviz pozisyonu eklendi ✓');
@@ -1105,7 +1173,7 @@ window.dovizCikar = async (tur, idx) => {
   state.portfoyDoviz[tur]?.splice(idx, 1);
   if (!state.portfoyDoviz[tur]?.length) delete state.portfoyDoviz[tur];
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, temettu: state.temettu, veriler: state.veriler });
     renderPortfoyDoviz();
     showToast('Döviz pozisyonu silindi');
   } catch (e) { showToast('Silinemedi', 'error'); }
@@ -1554,6 +1622,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tab === 'altin')  renderPortfoyAltin();
     if (tab === 'doviz')  renderPortfoyDoviz();
     if (tab === 'grafik') renderPortfoyGrafik();
+    if (tab === 'temettu') renderTemettu();
   });
 
   // Alt sekme navigasyonu (Hisseler paneli içi)
@@ -1699,6 +1768,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Güncelle
   el('btnGuncelle')?.addEventListener('click', () => window.verileriGuncelle());
+
+  // Temettü hesaplama
+  el('tmHisseBasi')?.addEventListener('input', () => window.temettuHesapla());
+  el('tmAdet')?.addEventListener('input',      () => window.temettuHesapla());
 
   // Hisse arama
   el('searchInput')?.addEventListener('input',   () => renderHisseler());

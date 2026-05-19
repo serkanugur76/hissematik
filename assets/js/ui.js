@@ -1339,6 +1339,210 @@ export function renderSektorPerformans() {
 }
 
 // ─────────────────────────────────────────────
+// TEMETTÜ TAKİBİ
+// ─────────────────────────────────────────────
+
+export function renderTemettu() {
+  const wrapper = el('portfoyTemettuContent');
+  if (!wrapper) return;
+  const kayitlar = (state.temettu || []).slice().sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+
+  // Özet hesapla
+  const toplamTahsilat = kayitlar.reduce((s, t) => s + (t.tutar || 0), 0);
+  const buYil = new Date().getFullYear().toString();
+  const buYilTahsilat = kayitlar.filter(t => (t.tarih || '').startsWith(buYil)).reduce((s, t) => s + (t.tutar || 0), 0);
+
+  // Sembol bazlı özet
+  const sembolOzet = {};
+  kayitlar.forEach(t => {
+    if (!sembolOzet[t.sembol]) sembolOzet[t.sembol] = 0;
+    sembolOzet[t.sembol] += t.tutar || 0;
+  });
+
+  const bosSayfaHtml =
+    '<div style="text-align:center;padding:4rem;color:var(--muted)">' +
+      '<div style="font-size:2.5rem;margin-bottom:1rem">💰</div>' +
+      '<div style="margin-bottom:0.5rem;color:var(--text)">Temettü kaydı yok</div>' +
+      '<div style="font-size:0.8rem;margin-bottom:1.5rem">Aldığınız temettü ödemelerini kaydedin</div>' +
+      '<button class="btn" onclick="window.temettuModalAc()">+ Temettü Ekle</button>' +
+    '</div>';
+
+  if (kayitlar.length === 0) { wrapper.innerHTML = bosSayfaHtml; return; }
+
+  const satirlar = kayitlar.map(t => {
+    const tarihStr = t.tarih ? new Date(t.tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    return '<tr>' +
+      '<td><span class="mono" style="font-weight:600;color:var(--accent)">' + t.sembol + '</span></td>' +
+      '<td class="mono">' + tarihStr + '</td>' +
+      '<td class="mono">' + t.adet.toLocaleString('tr-TR') + '</td>' +
+      '<td class="mono">' + t.hisseBasi.toFixed(2) + ' ₺</td>' +
+      '<td class="mono" style="color:var(--accent);font-weight:600">+' + t.tutar.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' ₺</td>' +
+      '<td style="color:var(--muted);font-size:0.75rem">' + (t.not || '—') + '</td>' +
+      '<td><button class="btn danger" onclick="window.temettuSil(\'' + t.id + '\')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Sil</button></td>' +
+    '</tr>';
+  }).join('');
+
+  const sembolBadgeler = Object.entries(sembolOzet)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => '<span style="display:inline-flex;gap:0.3rem;align-items:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:6px;padding:0.2rem 0.6rem;font-size:0.78rem;margin:0.15rem"><span class="mono" style="color:var(--accent)">' + k + '</span><span style="color:var(--muted)">' + v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺</span></span>')
+    .join('');
+
+  wrapper.innerHTML =
+    '<div class="portfoy-summary">' +
+      '<div class="grid-4" style="margin-bottom:0.75rem">' +
+        '<div><div class="card-title">Toplam Tahsilat</div><div class="card-value green" style="font-size:1.2rem">+' + toplamTahsilat.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺</div></div>' +
+        '<div><div class="card-title">' + buYil + ' Yılı</div><div class="card-value green" style="font-size:1.2rem">+' + buYilTahsilat.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺</div></div>' +
+        '<div><div class="card-title">Kayıt Sayısı</div><div class="card-value" style="font-size:1.2rem">' + kayitlar.length + '</div></div>' +
+        '<div><div class="card-title">Hisse Sayısı</div><div class="card-value" style="font-size:1.2rem">' + Object.keys(sembolOzet).length + '</div></div>' +
+      '</div>' +
+      '<div style="margin-bottom:0.5rem;font-size:0.78rem;color:var(--muted)">Hisse Bazında:</div>' +
+      '<div style="margin-bottom:0.75rem">' + sembolBadgeler + '</div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">' +
+      '<button class="btn" onclick="window.temettuModalAc()">+ Temettü Ekle</button>' +
+    '</div>' +
+    '<div class="card"><div class="table-wrap"><table>' +
+      '<thead><tr><th>Hisse</th><th>Tarih</th><th>Adet</th><th>Hisse Başı</th><th>Toplam</th><th>Not</th><th></th></tr></thead>' +
+      '<tbody>' + satirlar + '</tbody>' +
+    '</table></div></div>';
+}
+
+// ─────────────────────────────────────────────
+// ÇOKLU HİSSE KARŞILAŞTIRMA
+// ─────────────────────────────────────────────
+
+export function renderKarsilastirma(k1, k2) {
+  const wrapper = el('krSonuc');
+  if (!wrapper) return;
+  const v1 = state.veriler[k1];
+  const v2 = state.veriler[k2];
+
+  if (!v1 && !v2) {
+    wrapper.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Her iki hisse de veri tabanında bulunamadı. Önce Güncelle\'ye basın.</div>';
+    return;
+  }
+
+  // Metrics karşılaştırma tablosu
+  const metrik = (baslik, val1, val2, format, higherBetter) => {
+    const n1 = parseFloat(val1);
+    const n2 = parseFloat(val2);
+    const v1Str = val1 != null ? (format ? format(n1) : n1) : '—';
+    const v2Str = val2 != null ? (format ? format(n2) : n2) : '—';
+    let r1 = '', r2 = '';
+    if (val1 != null && val2 != null && n1 !== n2) {
+      const better = higherBetter ? (n1 > n2 ? 1 : 2) : (n1 < n2 ? 1 : 2);
+      r1 = better === 1 ? ' style="color:var(--accent);font-weight:700"' : '';
+      r2 = better === 2 ? ' style="color:var(--accent);font-weight:700"' : '';
+    }
+    return '<tr><td style="color:var(--muted);font-size:0.78rem">' + baslik + '</td>' +
+      '<td class="mono" ' + r1 + '>' + v1Str + '</td>' +
+      '<td class="mono" ' + r2 + '>' + v2Str + '</td></tr>';
+  };
+
+  const fmtPct  = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  const fmtTL   = v => v.toFixed(2) + ' ₺';
+  const fmtNum  = v => v.toFixed(1);
+
+  const sin1 = v1?.sinyal || '—';
+  const sin2 = v2?.sinyal || '—';
+  const sc1  = v1 ? sinyalClass(sin1) : '';
+  const sc2  = v2 ? sinyalClass(sin2) : '';
+
+  const metricsHtml =
+    '<div class="card" style="margin-bottom:1rem"><div class="table-wrap"><table>' +
+      '<thead><tr>' +
+        '<th style="color:var(--muted)">Gösterge</th>' +
+        '<th style="color:var(--accent)">' + k1 + '</th>' +
+        '<th style="color:var(--yellow)">' + k2 + '</th>' +
+      '</tr></thead><tbody>' +
+      '<tr><td style="color:var(--muted);font-size:0.78rem">Sinyal</td>' +
+        '<td><span class="pill ' + sc1 + '">' + sin1 + '</span></td>' +
+        '<td><span class="pill ' + sc2 + '">' + sin2 + '</span></td></tr>' +
+      metrik('Fiyat', v1?.fiyat, v2?.fiyat, fmtTL, null) +
+      metrik('Günlük Değişim', v1?.degisim, v2?.degisim, fmtPct, true) +
+      metrik('RSI', v1?.rsi, v2?.rsi, fmtNum, null) +
+      metrik('Güven Skoru', v1?.guvenSkoru, v2?.guvenSkoru, v => v + '/100', true) +
+      metrik('MACD Hist', v1?.macdHist, v2?.macdHist, v => v?.toFixed(3), true) +
+      metrik('Bollinger %', v1?.bollingerYuzde, v2?.bollingerYuzde, v => v + '%', null) +
+      '</tbody></table></div></div>';
+
+  // Performans grafiği (normalize edilmiş)
+  const kap1 = v1?.kapanis;
+  const kap2 = v2?.kapanis;
+  const hasGrafik = kap1?.length >= 2 && kap2?.length >= 2;
+
+  const grafikHtml = hasGrafik
+    ? '<canvas id="krGrafikCanvas" style="width:100%;height:180px;margin-bottom:1rem"></canvas>'
+    : '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:0.8rem">Grafik için geçmiş veri yok</div>';
+
+  wrapper.innerHTML = metricsHtml + grafikHtml;
+
+  if (!hasGrafik) return;
+
+  requestAnimationFrame(() => {
+    const canvas = el('krGrafikCanvas');
+    if (!canvas) return;
+    const W   = canvas.offsetWidth || 560;
+    const H   = 180;
+    canvas.width  = W * (window.devicePixelRatio || 1);
+    canvas.height = H * (window.devicePixelRatio || 1);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    const ctx  = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+    const len  = Math.min(kap1.length, kap2.length, 60);
+    const d1   = kap1.slice(-len);
+    const d2   = kap2.slice(-len);
+    const n1   = d1.map(v => v / d1[0] * 100);  // normalize to 100
+    const n2   = d2.map(v => v / d2[0] * 100);
+
+    const pad  = { top: 20, right: 16, bottom: 28, left: 44 };
+    const cW   = W - pad.left - pad.right;
+    const cH   = H - pad.top  - pad.bottom;
+    const allV = [...n1, ...n2];
+    const minV = Math.min(...allV) * 0.998;
+    const maxV = Math.max(...allV) * 1.002;
+    const rng  = maxV - minV || 1;
+    const xOf  = i   => pad.left + (i / (len - 1)) * cW;
+    const yOf  = val => pad.top  + (1 - (val - minV) / rng) * cH;
+
+    const cs = getComputedStyle(document.documentElement);
+    const brd = 'rgba(255,255,255,0.05)';
+    const muted = cs.getPropertyValue('--muted').trim() || '#616478';
+
+    // Izgara
+    ctx.strokeStyle = brd; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (i / 4) * cH;
+      const v = maxV - (i / 4) * rng;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+      ctx.fillStyle = muted; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+      ctx.fillText(v.toFixed(1), pad.left - 4, y + 3);
+    }
+
+    // 100 baseline
+    const y100 = yOf(100);
+    ctx.beginPath(); ctx.moveTo(pad.left, y100); ctx.lineTo(W - pad.right, y100);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '8px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('100', pad.left + 2, y100 - 3);
+
+    // Draw lines
+    [[n1, '#6366f1', k1], [n2, '#fbbf24', k2]].forEach(([data, color, lbl]) => {
+      ctx.beginPath();
+      data.forEach((v, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v)); });
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+      // Label at end
+      const lastY = yOf(data[data.length - 1]);
+      ctx.fillStyle = color; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'left';
+      ctx.fillText(lbl + ' ' + (data[data.length-1] - 100 >= 0 ? '+' : '') + (data[data.length-1] - 100).toFixed(1) + '%', xOf(data.length - 1) - 55, lastY - 5);
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
 // ALARMLAR
 // ─────────────────────────────────────────────
 

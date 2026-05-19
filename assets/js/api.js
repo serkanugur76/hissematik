@@ -889,11 +889,11 @@ function _verilerTemizle(veriler) {
   return temiz;
 }
 
-export async function saveUserData({ db, currentUser, takipEdilen, portfoy, portfoyAltin, portfoyDoviz, fiyatAlarmlari, hisseNotlari, veriler }) {
+export async function saveUserData({ db, currentUser, takipEdilen, portfoy, portfoyAltin, portfoyDoviz, fiyatAlarmlari, hisseNotlari, temettu, veriler }) {
   if (!currentUser) return;
   try {
     const temizVeriler = _verilerTemizle(veriler);
-    await updateDoc(doc(db, 'users', currentUser.uid), { takipEdilen: [...takipEdilen], portfoy, portfoyAltin: portfoyAltin || {}, portfoyDoviz: portfoyDoviz || {}, fiyatAlarmlari: fiyatAlarmlari || [], hisseNotlari: hisseNotlari || {}, veriler: temizVeriler });
+    await updateDoc(doc(db, 'users', currentUser.uid), { takipEdilen: [...takipEdilen], portfoy, portfoyAltin: portfoyAltin || {}, portfoyDoviz: portfoyDoviz || {}, fiyatAlarmlari: fiyatAlarmlari || [], hisseNotlari: hisseNotlari || {}, temettu: temettu || [], veriler: temizVeriler });
   } catch (e) {
     console.error('saveUserData hatası:', e);
     _notify('Verileriniz kaydedilemedi: ' + firebaseHataYonet(e), 'error');
