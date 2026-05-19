@@ -2841,3 +2841,77 @@ export function renderBacktest(kod, veriler, ufuk) {
     ctx.setLineDash([]);
   });
 }
+
+// ─────────────────────────────────────────────
+// renderTemelAnaliz — hisse detay modalında
+// temel analiz verilerini gösterir
+// ─────────────────────────────────────────────
+export function renderTemelAnaliz(veri) {
+  const container = el('detayTemel');
+  if (!container) return;
+
+  if (!veri) {
+    container.innerHTML = '<div style="color:var(--red);font-size:0.82rem;padding:0.5rem 0">⚠️ Temel veri alınamadı.</div>';
+    return;
+  }
+
+  function satir(etiket, deger, birim = '', renk = '') {
+    if (deger === null || deger === undefined) return '';
+    const style = renk ? `color:${renk};` : '';
+    return `<div class="temel-satir">
+      <span class="temel-etiket">${etiket}</span>
+      <span class="temel-deger mono" style="${style}">${deger}${birim ? '<span style="font-size:0.72rem;color:var(--muted);margin-left:2px">' + birim + '</span>' : ''}</span>
+    </div>`;
+  }
+
+  function renkKar(v) {
+    return v === null ? '' : v >= 15 ? 'var(--green)' : v >= 5 ? 'var(--yellow)' : 'var(--red)';
+  }
+
+  const piyasaDegeriStr = veri.piyasaDegeri
+    ? (veri.piyasaDegeri >= 1e12
+        ? (veri.piyasaDegeri / 1e12).toFixed(2) + ' T₺'
+        : veri.piyasaDegeri >= 1e9
+          ? (veri.piyasaDegeri / 1e9).toFixed(1) + ' Mrd₺'
+          : (veri.piyasaDegeri / 1e6).toFixed(0) + ' Mn₺')
+    : null;
+
+  const html = `
+    <div class="temel-grid">
+      <div class="temel-grup">
+        <div class="temel-grup-baslik">📐 Değerleme</div>
+        ${satir('F/K',           veri.fk    ?? '—', 'x')}
+        ${satir('İleri F/K',     veri.ileriFK ?? '—', 'x')}
+        ${satir('PD/DD',         veri.pddd  ?? '—', 'x')}
+        ${satir('F/S',           veri.fiyatSatis ?? '—', 'x')}
+        ${satir('EV/EBITDA',     veri.evEbitda ?? '—', 'x')}
+        ${satir('Piyasa Değeri', piyasaDegeriStr ?? '—')}
+      </div>
+      <div class="temel-grup">
+        <div class="temel-grup-baslik">💹 Kârlılık</div>
+        ${satir('EPS',           veri.eps ?? '—', '₺')}
+        ${satir('ROE',           veri.roe ?? '—', '%', renkKar(veri.roe))}
+        ${satir('ROA',           veri.roa ?? '—', '%', renkKar(veri.roa))}
+        ${satir('Net Kâr Marjı', veri.netKarMarji ?? '—', '%', renkKar(veri.netKarMarji))}
+        ${satir('Brüt Marj',     veri.brutMarji ?? '—', '%', renkKar(veri.brutMarji))}
+      </div>
+      <div class="temel-grup">
+        <div class="temel-grup-baslik">💰 Temettü</div>
+        ${satir('Temettü Verimi', veri.temettuVerimi ?? '—', '%', veri.temettuVerimi >= 3 ? 'var(--green)' : '')}
+        ${satir('Dağıtım Oranı', veri.temettuOrani ?? '—', '%')}
+      </div>
+      <div class="temel-grup">
+        <div class="temel-grup-baslik">🏦 Borç & Büyüme</div>
+        ${satir('Borç/Özkaynak', veri.borcOzkaynak ?? '—', '%', veri.borcOzkaynak > 200 ? 'var(--red)' : veri.borcOzkaynak > 100 ? 'var(--yellow)' : 'var(--green)')}
+        ${satir('Nakit/Hisse',   veri.nakit ?? '—', '₺')}
+        ${satir('Gelir Büyümesi', veri.gelirBuyume ?? '—', '%', veri.gelirBuyume > 0 ? 'var(--green)' : 'var(--red)')}
+        ${satir('Kâr Büyümesi',  veri.karBuyume ?? '—', '%', veri.karBuyume > 0 ? 'var(--green)' : 'var(--red)')}
+        ${satir('Beta',          veri.beta ?? '—')}
+      </div>
+    </div>
+    ${veri.sektorTR ? `<div style="margin-top:0.5rem;font-size:0.78rem;color:var(--muted)">🏭 Sektör: <span style="color:var(--fg)">${veri.sektorTR}</span></div>` : ''}
+    ${veri.aciklama ? `<details style="margin-top:0.75rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--muted);user-select:none">Şirket Açıklaması</summary><p style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;line-height:1.5">${veri.aciklama}</p></details>` : ''}
+  `;
+
+  container.innerHTML = html;
+}

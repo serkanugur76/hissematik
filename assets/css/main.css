@@ -2075,3 +2075,13 @@ tr:last-child td { border-bottom:none; }
 .rr-kart.rr-green { border-color: rgba(52,211,153,0.2); background: rgba(52,211,153,0.04); }
 .rr-kart-baslik { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; }
 .rr-kart-deger  { font-size: 1.1rem; font-weight: 600; font-family: var(--mono); }
+
+/* ── Temel Analiz Grid ── */
+.temel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.25rem; }
+@media (max-width: 520px) { .temel-grid { grid-template-columns: 1fr; } }
+.temel-grup { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 0.65rem 0.85rem; }
+.temel-grup-baslik { font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-bottom: 0.45rem; letter-spacing: 0.03em; }
+.temel-satir { display: flex; justify-content: space-between; align-items: center; padding: 0.22rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.temel-satir:last-child { border-bottom: none; }
+.temel-etiket { font-size: 0.78rem; color: var(--muted); }
+.temel-deger  { font-size: 0.82rem; font-weight: 500; }

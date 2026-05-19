@@ -96,6 +96,7 @@ import {
   renderEkonomikTakvim,
   renderSektorPerformans,
   renderBacktest,
+  renderTemelAnaliz,
 } from './ui.js';
 
 setApiToast(showToast);
@@ -1864,6 +1865,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   el('detayNotKaydetBtn')?.addEventListener('click', () => {
     window.notKaydet(state.detayKod);
+  });
+
+  el('btnTemelYukle')?.addEventListener('click', async () => {
+    const btn = el('btnTemelYukle');
+    const kod = state.detayKod;
+    if (!kod) return;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Yükleniyor...'; }
+    const container = el('detayTemel');
+    if (container) container.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:0.5rem 0">Veriler alınıyor…</div>';
+    try {
+      const res  = await fetch(`https://hissematik.vercel.app/api/temel?sembol=${encodeURIComponent(kod)}`);
+      const json = await res.json();
+      if (!res.ok || json.hata) throw new Error(json.hata || 'API hatası');
+      renderTemelAnaliz(json.veri);
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Yenile'; }
+    } catch (e) {
+      if (container) container.innerHTML = `<div style="color:var(--red);font-size:0.82rem;padding:0.5rem 0">⚠️ ${e.message}</div>`;
+      if (btn) { btn.disabled = false; btn.textContent = 'Yükle'; }
+    }
   });
 
   // Admin
