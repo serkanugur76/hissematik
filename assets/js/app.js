@@ -5,7 +5,7 @@
 
 import {
   auth, db, provider,
-  signInWithPopup, signOut, onAuthStateChanged,
+  signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged,
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, getDocs, addDoc,
   query, where, orderBy, limit, serverTimestamp, deleteField,
@@ -172,7 +172,7 @@ if (!navigator.onLine) _offlineBannerGoster();
 
 window.googleLogin = async () => {
   try {
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   } catch (e) {
     showToast('Giriş başarısız: ' + e.message, 'error');
   }
@@ -182,6 +182,9 @@ window.logout = async () => {
   resetState();
   location.reload();
 };
+
+// Redirect tabanlı giriş sonucunu yakala (COOP hatası önlemi)
+getRedirectResult(auth).catch(() => {});
 
 onAuthStateChanged(auth, async (user) => {
   el('loadingScreen').classList.add('hide');
