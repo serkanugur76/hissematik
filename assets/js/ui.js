@@ -1299,8 +1299,8 @@ export function renderEkonomikTakvim() {
 // ─────────────────────────────────────────────
 
 export function renderSektorPerformans() {
-  const wrapper = el('sektorPerformansKart');
-  if (!wrapper) return;
+  const wrappers = document.querySelectorAll('.sektor-performans-kart');
+  if (!wrappers.length) return;
   const veriler = state.veriler;
 
   const SEKTORLER = {
@@ -1346,7 +1346,7 @@ export function renderSektorPerformans() {
     '</div>';
   }).join('');
 
-  wrapper.innerHTML =
+  const html =
     '<div class="card" style="margin-bottom:0.75rem">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">' +
         '<div class="card-title" style="margin-bottom:0">🏭 Sektör Performansı</div>' +
@@ -1354,6 +1354,7 @@ export function renderSektorPerformans() {
       '</div>' +
       kartlar +
     '</div>';
+  wrappers.forEach(w => { w.innerHTML = html; });
 }
 
 // ─────────────────────────────────────────────
