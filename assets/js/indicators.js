@@ -721,4 +721,3 @@ export function portfoyRiskHesapla(veriler, portfoy) {
     gunSayisi: minLen,
   };
 }
-}
