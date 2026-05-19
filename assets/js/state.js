@@ -112,6 +112,8 @@ export const state = {
   portfoy:    {},
   portfoyAltin: {},
   portfoyDoviz: {},
+  fiyatAlarmlari: [],
+  hisseNotlari:   {},
 
   // ── Sinyal Geçmişi ─────────────────────────
   sinyalGecmisi: [],
@@ -155,6 +157,8 @@ export function resetState() {
   state.portfoy         = {};
   state.portfoyAltin    = {};
   state.portfoyDoviz    = {};
+  state.fiyatAlarmlari  = [];
+  state.hisseNotlari    = {};
   state.sinyalGecmisi   = [];
   state.dogrulamaGun    = DOGRULAMA_GUN_VARSAYILAN;
   state.piyasaVerisi    = {};

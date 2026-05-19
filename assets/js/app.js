@@ -79,6 +79,7 @@ import {
   renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
   renderDashboard, renderHisseler, renderSinyalGecmisi, renderKorelasyonMatrisi,
   renderPortfoy, renderPortfoyAltin, renderPortfoyDoviz, portfoyModalAc,
+  renderAlarmlar, renderScreener,
   renderHisseDetay, renderDetayOzet, renderDetayTeknik, renderHisseAnalizSonucu,
   renderHaberler, renderHaberAnaliz,
   renderSozluk, renderPopularTerimler,
@@ -323,11 +324,13 @@ onAuthStateChanged(auth, async (user) => {
     userDoc,
     isAdmin,
     anthropicKey,
-    takipEdilen:  new Set(userDoc.takipEdilen || []),
-    portfoy:      userDoc.portfoy      || {},
-    portfoyAltin: userDoc.portfoyAltin || {},
-    portfoyDoviz: userDoc.portfoyDoviz || {},
-    veriler:      userDoc.veriler      || {},
+    takipEdilen:    new Set(userDoc.takipEdilen || []),
+    portfoy:        userDoc.portfoy        || {},
+    portfoyAltin:   userDoc.portfoyAltin   || {},
+    portfoyDoviz:   userDoc.portfoyDoviz   || {},
+    fiyatAlarmlari: userDoc.fiyatAlarmlari || [],
+    hisseNotlari:   userDoc.hisseNotlari   || {},
+    veriler:        userDoc.veriler        || {},
   });
 
   // UI
@@ -497,11 +500,13 @@ window.verileriGuncelle = async () => {
   try {
     await saveUserData({
       db, currentUser: state.currentUser,
-      takipEdilen:  state.takipEdilen,
-      portfoy:      state.portfoy,
-      portfoyAltin: state.portfoyAltin,
-      portfoyDoviz: state.portfoyDoviz,
-      veriler:      state.veriler,
+      takipEdilen:    state.takipEdilen,
+      portfoy:        state.portfoy,
+      portfoyAltin:   state.portfoyAltin,
+      portfoyDoviz:   state.portfoyDoviz,
+      fiyatAlarmlari: state.fiyatAlarmlari,
+      hisseNotlari:   state.hisseNotlari,
+      veriler:        state.veriler,
     });
   } catch (e) {
     console.warn('verileriGuncelle: saveUserData başarısız', e?.code || e?.message);
@@ -514,6 +519,8 @@ window.verileriGuncelle = async () => {
   renderHisseler();
   renderSummary();
   renderSinyalGecmisi();
+  _alarmlariKontrolEt();
+  _slTpKontrolEt();
   setState({ haberlerYuklendi: false });
   const guncellenenSayisi = Object.keys(state.veriler).filter(k => state.veriler[k].fiyat).length;
   showToast(guncellenenSayisi + ' hisse güncellendi ✓');
@@ -742,14 +749,14 @@ async function toggleTakip(k) {
   } else {
     state.takipEdilen.add(k);
   }
-  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
   renderHisseler();
   renderSummary();
 }
 
 window.takibiKaldir = () => {
   state.takipEdilen.clear();
-  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
   renderHisseler();
   renderSummary();
 };
@@ -788,11 +795,13 @@ window.portfoyKaydet = async () => {
   const k     = state.portfoyKod;
   if (!adet || !fiyat) { showToast('Adet ve fiyat zorunlu!', 'error'); return; }
 
-  state.portfoy[k] = { adet, alisFiyati: fiyat, alisTarihi: tarih, ad: hisseAdi(k) };
+  const sl  = Number(el('pStopLoss').value)   || null;
+  const tp  = Number(el('pTakeProfiti').value) || null;
+  state.portfoy[k] = { adet, alisFiyati: fiyat, alisTarihi: tarih, ad: hisseAdi(k), ...(sl ? { stopLoss: sl } : {}), ...(tp ? { takeProfiti: tp } : {}) };
   if (!state.takipEdilen.has(k)) state.takipEdilen.add(k);
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
     closeModal('portfoyModal');
     renderHisseler();
     renderPortfoy();
@@ -805,10 +814,63 @@ window.portfoyKaydet = async () => {
 async function portfoyCikar(k) {
   if (!confirm(k + ' portföyden çıkarılsın mı?')) return;
   delete state.portfoy[k];
-  await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+  await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
   renderPortfoy();
   renderHisseler();
   showToast(k + ' portföyden çıkarıldı');
+}
+
+// ─────────────────────────────────────────────
+// ALARM & SL/TP KONTROL
+// ─────────────────────────────────────────────
+
+function _alarmlariKontrolEt() {
+  const veriler = state.veriler;
+  let tetiklenenVar = false;
+  state.fiyatAlarmlari.forEach(alarm => {
+    if (!alarm.aktif || alarm.tetiklendi) return;
+    const fiyat = veriler[alarm.sembol]?.fiyat;
+    if (!fiyat) return;
+    const tetiklendi = alarm.yon === 'yukari' ? fiyat >= alarm.hedef : fiyat <= alarm.hedef;
+    if (!tetiklendi) return;
+    alarm.tetiklendi        = true;
+    alarm.tetiklenmeZamani  = Date.now();
+    tetiklenenVar           = true;
+    const yon = alarm.yon === 'yukari' ? '↑' : '↓';
+    showToast('🔔 ' + alarm.sembol + ' alarmı tetiklendi! ' + yon + ' Hedef: ' + alarm.hedef + ' ₺ — Güncel: ' + fiyat.toFixed(2) + ' ₺', 'warning');
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try {
+        new Notification('HisseMATIK 🔔 ' + alarm.sembol, {
+          body: (alarm.yon === 'yukari' ? 'Hedef fiyat ↑' : 'Hedef fiyat ↓') + ' ' + alarm.hedef + ' ₺ tetiklendi! Güncel: ' + fiyat.toFixed(2) + ' ₺',
+          icon: '/favicon.ico',
+        });
+      } catch (_) {}
+    }
+  });
+  if (tetiklenenVar) {
+    saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+  }
+}
+
+function _slTpKontrolEt() {
+  Object.entries(state.portfoy).forEach(([k, p]) => {
+    const fiyat = state.veriler[k]?.fiyat;
+    if (!fiyat) return;
+    if (p.stopLoss && fiyat <= p.stopLoss && !p.slUyariVerildi) {
+      p.slUyariVerildi = true;
+      showToast('⚠️ ' + k + ' STOP LOSS! Fiyat ' + fiyat.toFixed(2) + ' ₺ → SL: ' + p.stopLoss + ' ₺', 'error');
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try { new Notification('⚠️ ' + k + ' Stop Loss!', { body: 'Fiyat: ' + fiyat.toFixed(2) + ' ₺ | SL: ' + p.stopLoss + ' ₺' }); } catch (_) {}
+      }
+    }
+    if (p.takeProfiti && fiyat >= p.takeProfiti && !p.tpUyariVerildi) {
+      p.tpUyariVerildi = true;
+      showToast('🎯 ' + k + ' TAKE PROFIT! Fiyat ' + fiyat.toFixed(2) + ' ₺ → TP: ' + p.takeProfiti + ' ₺', 'success');
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try { new Notification('🎯 ' + k + ' Take Profit!', { body: 'Hedef aşıldı! Fiyat: ' + fiyat.toFixed(2) + ' ₺ | TP: ' + p.takeProfiti + ' ₺' }); } catch (_) {}
+      }
+    }
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -834,7 +896,7 @@ window.altinKaydet = async () => {
   state.portfoyAltin[tur].push({ miktar, alisFiyati: fiyat, eklemeTarihi: tarih || new Date().toISOString().split('T')[0] });
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
     closeModal('altinModal');
     renderPortfoyAltin();
     showToast('Altın pozisyonu eklendi ✓');
@@ -848,10 +910,114 @@ window.altinCikar = async (tur, idx) => {
   state.portfoyAltin[tur]?.splice(idx, 1);
   if (!state.portfoyAltin[tur]?.length) delete state.portfoyAltin[tur];
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
     renderPortfoyAltin();
     showToast('Altın pozisyonu silindi');
   } catch (e) { showToast('Silinemedi', 'error'); }
+};
+
+// ─────────────────────────────────────────────
+// ALARM PENCERE FONKSİYONLARI
+// ─────────────────────────────────────────────
+
+window.alarmModalAc = (sembol) => {
+  const guncelFiyat = state.veriler[sembol]?.fiyat || 0;
+  el('alarmSembol').value   = sembol || '';
+  el('alarmHedef').value    = guncelFiyat ? guncelFiyat.toFixed(2) : '';
+  el('alarmYon').value      = 'yukari';
+  el('alarmNot').value      = '';
+  el('alarmModalSub').textContent = sembol ? (sembol + ' — Güncel: ' + (guncelFiyat ? guncelFiyat.toFixed(2) + ' ₺' : '—')) : '';
+  openModal('alarmModal');
+};
+
+window.alarmKaydet = async () => {
+  const sembol = el('alarmSembol').value.trim().toUpperCase();
+  const hedef  = Number(el('alarmHedef').value);
+  const yon    = el('alarmYon').value;
+  const not    = el('alarmNot').value.trim();
+  if (!sembol || !hedef) { showToast('Sembol ve hedef fiyat zorunlu!', 'error'); return; }
+  const alarm = { id: Date.now().toString(), sembol, hedef, yon, not, aktif: true, olusturma: Date.now(), tetiklendi: false };
+  state.fiyatAlarmlari.push(alarm);
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    closeModal('alarmModal');
+    renderAlarmlar();
+    showToast('🔔 Alarm kuruldu: ' + sembol + ' ' + (yon === 'yukari' ? '≥' : '≤') + ' ' + hedef + ' ₺');
+  } catch (e) { showToast('Alarm kaydedilemedi', 'error'); }
+};
+
+window.alarmSil = async (id) => {
+  state.fiyatAlarmlari = state.fiyatAlarmlari.filter(a => a.id !== id);
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    renderAlarmlar();
+    showToast('Alarm silindi');
+  } catch (e) { showToast('Silinemedi', 'error'); }
+};
+
+window.alarmlarAc = () => {
+  renderAlarmlar();
+  openModal('alarmlarModal');
+};
+
+// ─────────────────────────────────────────────
+// HİSSE NOT DEFTERİ
+// ─────────────────────────────────────────────
+
+window.notKaydet = async (sembol) => {
+  const metin = el('detayNot')?.value?.trim() || '';
+  if (metin) {
+    state.hisseNotlari[sembol] = { metin, tarih: Date.now() };
+  } else {
+    delete state.hisseNotlari[sembol];
+  }
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
+    showToast('Not kaydedildi ✓');
+  } catch (e) { showToast('Not kaydedilemedi', 'error'); }
+};
+
+// ─────────────────────────────────────────────
+// SCREENER (HİSSE TARAMA)
+// ─────────────────────────────────────────────
+
+window.screenerAc = () => {
+  el('scrRsiMin').value     = '0';
+  el('scrRsiMax').value     = '100';
+  el('scrSinyal').value     = 'hepsi';
+  el('scrMacd').value       = 'hepsi';
+  el('scrDegisimMin').value = '';
+  el('scrDegisimMax').value = '';
+  el('scrSonuclar').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Kriterleri seçin ve Tara butonuna basın.</div>';
+  openModal('screenerModal');
+};
+
+window.screenerUygula = () => {
+  const rsiMin     = Number(el('scrRsiMin').value)   || 0;
+  const rsiMax     = Number(el('scrRsiMax').value)   || 100;
+  const sinyal     = el('scrSinyal').value;
+  const macd       = el('scrMacd').value;
+  const degMin     = el('scrDegisimMin').value !== '' ? Number(el('scrDegisimMin').value) : null;
+  const degMax     = el('scrDegisimMax').value !== '' ? Number(el('scrDegisimMax').value) : null;
+
+  const sonuclar = Object.entries(state.veriler).filter(([k, v]) => {
+    if (!v.fiyat || !v.rsi) return false;
+    if (v.rsi < rsiMin || v.rsi > rsiMax) return false;
+    if (sinyal !== 'hepsi' && v.sinyal !== sinyal) return false;
+    if (macd === 'pozitif' && !(v.macdHist > 0)) return false;
+    if (macd === 'negatif' && !(v.macdHist < 0)) return false;
+    if (degMin !== null && v.degisim < degMin) return false;
+    if (degMax !== null && v.degisim > degMax) return false;
+    return true;
+  }).sort((a, b) => {
+    const skor = (v) => (v.guvenSkoru || 0) + (['GÜÇLÜ AL','AL'].includes(v.sinyal) ? 20 : ['GÜÇLÜ SAT','SAT'].includes(v.sinyal) ? 10 : 0);
+    return skor(b[1]) - skor(a[1]);
+  });
+
+  renderScreener(sonuclar);
 };
 
 // Döviz
@@ -873,7 +1039,7 @@ window.dovizKaydet = async () => {
   state.portfoyDoviz[tur].push({ miktar, alisFiyati: fiyat, eklemeTarihi: tarih || new Date().toISOString().split('T')[0] });
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
     closeModal('dovizModal');
     renderPortfoyDoviz();
     showToast('Döviz pozisyonu eklendi ✓');
@@ -887,7 +1053,7 @@ window.dovizCikar = async (tur, idx) => {
   state.portfoyDoviz[tur]?.splice(idx, 1);
   if (!state.portfoyDoviz[tur]?.length) delete state.portfoyDoviz[tur];
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, fiyatAlarmlari: state.fiyatAlarmlari, hisseNotlari: state.hisseNotlari, veriler: state.veriler });
     renderPortfoyDoviz();
     showToast('Döviz pozisyonu silindi');
   } catch (e) { showToast('Silinemedi', 'error'); }
@@ -902,6 +1068,9 @@ async function hisseDetayAc(kod) {
   const veri = state.veriler[kod] || {};
   renderHisseDetay(kod, veri);
   renderDetayTeknik(kod, veri);
+  // Notu yükle
+  const not = state.hisseNotlari[kod];
+  if (el('detayNot')) el('detayNot').value = not?.metin || '';
   document.querySelectorAll('.grafik-btn').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.gun) === _grafikGun);
   });
@@ -1527,6 +1696,12 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btnGrafikAnaliz')?.addEventListener('click', () => window.grafikAnalizEt());
   el('detayPortfoyEkleBtn')?.addEventListener('click', () => {
     if (state.detayKod) portfoyModalAc(state.detayKod, hisseAdi(state.detayKod));
+  });
+  el('detayAlarmBtn')?.addEventListener('click', () => {
+    window.alarmModalAc(state.detayKod || '');
+  });
+  el('detayNotKaydetBtn')?.addEventListener('click', () => {
+    window.notKaydet(state.detayKod);
   });
 
   // Admin

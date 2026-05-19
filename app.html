@@ -78,6 +78,7 @@
       <button class="nav-tab" data-tab="haberler">📰 Haberler</button>
       <button class="nav-tab" data-tab="kap">📋 KAP</button>
       <button class="nav-tab" data-tab="sozluk">📚 Sözlük</button>
+      <button class="nav-tab-action" onclick="window.alarmlarAc()" data-tooltip="Fiyat alarmlarınız" id="btnAlarmlarAc">🔔 Alarmlar</button>
       <button class="nav-tab admin-only" data-tab="admin">⚙ Admin</button>
     </nav>
 
@@ -220,6 +221,9 @@
       <button class="sub-tab active" data-subtab="takip">📊 Takip Listesi</button>
       <button class="sub-tab" data-subtab="sinyaller">🎯 Sinyal Geçmişi</button>
       <button class="sub-tab" data-subtab="tum">🔍 Tüm Hisseler</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+      <button class="btn" onclick="window.screenerAc()" data-tooltip="Kriterlere göre BIST hisselerini tara">🔍 Hisse Tarama</button>
     </div>
 
     <!-- ALT SEKME: TAKİP LİSTESİ -->
@@ -711,6 +715,16 @@
       <label class="form-label" for="pTarih">Alış Tarihi</label>
       <input class="form-input" id="pTarih" type="date">
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="pStopLoss">Stop Loss ₺ <span style="color:var(--muted);font-size:0.72rem">(opsiyonel)</span></label>
+        <input class="form-input" id="pStopLoss" type="number" step="0.01" placeholder="ör: 40.00" min="0">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="pTakeProfiti">Take Profit ₺ <span style="color:var(--muted);font-size:0.72rem">(opsiyonel)</span></label>
+        <input class="form-input" id="pTakeProfiti" type="number" step="0.01" placeholder="ör: 55.00" min="0">
+      </div>
+    </div>
 
     <div class="modal-actions">
       <button class="btn" data-modal-close="portfoyModal">İptal</button>
@@ -813,6 +827,15 @@
         <div id="detayPortfoy"></div>
       </section>
 
+      <!-- Not Defteri -->
+      <section class="detay-bolum" id="detayNotBlok">
+        <div class="detay-bolum-baslik" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📝 Notlarım</span>
+          <button class="btn" id="detayNotKaydetBtn" style="font-size:0.72rem;padding:0.3rem 0.75rem">Kaydet</button>
+        </div>
+        <textarea id="detayNot" class="form-input" rows="3" placeholder="Bu hisse hakkında notlarınızı buraya yazın... (neden aldım, hedefim, çıkış stratejim)" style="margin-top:0.5rem;resize:vertical;font-size:0.82rem;line-height:1.6"></textarea>
+      </section>
+
       <!-- AI Karar Analizi -->
       <section class="detay-ai-glass" style="margin-bottom:0.5rem">
         <div class="detay-ai-label">⬡ AI Karar Analizi</div>
@@ -829,6 +852,7 @@
       <button class="btn" id="detayPortfoyEkleBtn" data-tooltip="Hisseyi portföyüne ekle, alış fiyatı ve miktarını gir">+ Portföye Ekle</button>
       <button class="btn" id="detayTakipBtn" data-tooltip="Bu hisseyi dashboard takip listene ekle/çıkar">☆ Takibe Al</button>
       <button class="btn" id="detayPaylasBtn" data-tooltip="Analiz sonucunu görsel olarak kaydet/paylaş">📸 Paylaş</button>
+      <button class="btn" id="detayAlarmBtn" data-tooltip="Bu hisse için fiyat alarmı kur">🔔 Alarm</button>
     </div>
 
   </div>
@@ -928,6 +952,110 @@
   </div>
 </div>
  
+<!-- Fiyat Alarmı Modal -->
+<div class="modal-overlay" id="alarmModal">
+  <div class="modal">
+    <div class="modal-title">🔔 Fiyat Alarmı Kur</div>
+    <div class="modal-sub" id="alarmModalSub">Hedef fiyata ulaşınca bildirim alırsınız.</div>
+    <div class="form-group">
+      <label class="form-label">Hisse Sembolü</label>
+      <input type="text" id="alarmSembol" class="form-input" placeholder="ör: THYAO" style="text-transform:uppercase">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hedef Fiyat (₺)</label>
+      <input type="number" id="alarmHedef" class="form-input" placeholder="ör: 125.50" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Alarm Yönü</label>
+      <select id="alarmYon" class="form-input">
+        <option value="yukari">↑ Fiyat bu değere ulaşınca veya geçince (Direnç / Alım)</option>
+        <option value="asagi">↓ Fiyat bu değerin altına düşünce (Destek / Satım)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Not <span style="color:var(--muted);font-size:0.72rem">(opsiyonel)</span></label>
+      <input type="text" id="alarmNot" class="form-input" placeholder="ör: Direnç kırması, Trend dönüşü...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" data-modal-close="alarmModal">İptal</button>
+      <button class="btn primary" onclick="window.alarmKaydet()">Alarm Kur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alarmlar Listesi Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="alarmlarModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🔔 Fiyat Alarmlarım</div>
+        <div class="modal-sub">Aktif ve tetiklenmiş alarmlarınız</div>
+      </div>
+      <button class="modal-close" data-modal-close="alarmlarModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+        <button class="btn" onclick="window.alarmModalAc('')">+ Yeni Alarm</button>
+      </div>
+      <div id="alarmlarListesi"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Screener Modal -->
+<div class="modal-overlay modal-overlay--scroll" id="screenerModal">
+  <div class="modal modal--wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🔍 Hisse Tarama</div>
+        <div class="modal-sub">Kriterlere göre BIST hisselerini filtrele</div>
+      </div>
+      <button class="modal-close" data-modal-close="screenerModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.25rem">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">RSI Min</label>
+          <input type="number" id="scrRsiMin" class="form-input" value="0" min="0" max="100">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">RSI Max</label>
+          <input type="number" id="scrRsiMax" class="form-input" value="100" min="0" max="100">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Sinyal</label>
+          <select id="scrSinyal" class="form-input">
+            <option value="hepsi">Hepsi</option>
+            <option value="GÜÇLÜ AL">Güçlü Al</option>
+            <option value="AL">Al</option>
+            <option value="BEKLE">Bekle</option>
+            <option value="SAT">Sat</option>
+            <option value="GÜÇLÜ SAT">Güçlü Sat</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">MACD Histogram</label>
+          <select id="scrMacd" class="form-input">
+            <option value="hepsi">Hepsi</option>
+            <option value="pozitif">Pozitif (↑)</option>
+            <option value="negatif">Negatif (↓)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Günlük Değişim Min %</label>
+          <input type="number" id="scrDegisimMin" class="form-input" placeholder="ör: -5" step="0.1">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Günlük Değişim Max %</label>
+          <input type="number" id="scrDegisimMax" class="form-input" placeholder="ör: 5" step="0.1">
+        </div>
+      </div>
+      <button class="btn primary" onclick="window.screenerUygula()" style="width:100%;margin-bottom:1.25rem">Tara</button>
+      <div id="scrSonuclar"><div style="text-align:center;padding:2rem;color:var(--muted)">Kriterleri seçin ve Tara butonuna basın.</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- Portföy AI Analiz Modal -->
 <div class="modal-overlay modal-overlay--scroll" id="portfoyAnalizModal">
   <div class="modal modal--wide">

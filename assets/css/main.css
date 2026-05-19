@@ -2029,3 +2029,22 @@ tr:last-child td { border-bottom:none; }
 }
 .portfoy-sub-panel { display: none; }
 .portfoy-sub-panel.active { display: block; }
+
+/* ── Broker Araçları ── */
+.nav-tab-action {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--muted);
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-tab-action:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+
+/* Alarm badge on bell icon */
+#btnAlarmlarAc.has-alarm { color: var(--yellow); border-color: rgba(255,209,102,0.4); }
+
+/* Screener row hover */
+#scrSonuclar .clickable-row:hover { background: rgba(99,102,241,0.08); }

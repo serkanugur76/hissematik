@@ -838,6 +838,23 @@ export function renderPortfoy() {
     const kzpSat = mal > 0 ? (kzSat / mal * 100) : 0;
     const sin    = v ? '<span class="pill ' + sinyalClass(v.sinyal) + '">' + v.sinyal + '</span>' : '—';
 
+    const sl   = p.stopLoss    || null;
+    const tp   = p.takeProfiti || null;
+    const slTpCell = (() => {
+      if (!sl && !tp) return '<td><span style="color:var(--muted);font-size:0.72rem">—</span></td>';
+      let html = '<td style="font-size:0.72rem;min-width:80px">';
+      if (tp) html += '<div style="color:var(--accent)">▲TP ' + tp.toFixed(2) + '</div>';
+      if (sl) html += '<div style="color:var(--red)">▼SL ' + sl.toFixed(2) + '</div>';
+      if (sl && tp && gf > 0) {
+        const range = tp - sl;
+        const pos   = range > 0 ? Math.max(0, Math.min(100, (gf - sl) / range * 100)) : 50;
+        const barColor = pos >= 70 ? 'var(--accent)' : pos <= 30 ? 'var(--red)' : 'var(--yellow)';
+        html += '<div style="background:rgba(255,255,255,0.07);border-radius:3px;height:4px;margin-top:3px"><div style="width:' + pos.toFixed(0) + '%;height:100%;background:' + barColor + ';border-radius:3px"></div></div>';
+      }
+      html += '</td>';
+      return html;
+    })();
+
     return '<tr class="clickable-row" style="cursor:pointer" onclick="window._uiCallbacks?.hisseDetayAc(\'' + k + '\')">' +
       '<td><span class="mono" style="font-weight:600;color:var(--accent)">' + k + '</span><br><span class="muted" style="font-size:0.68rem">' + (p.ad || '') + '</span></td>' +
       '<td class="mono">' + p.adet + '</td>' +
@@ -846,6 +863,7 @@ export function renderPortfoy() {
       '<td class="mono">' + mal.toFixed(0) + ' ₺</td>' +
       '<td class="mono">' + (deg ? deg.toFixed(0) + ' ₺' : '—') + '</td>' +
       '<td class="mono ' + (kzSat >= 0 ? 'pos' : 'neg') + '">' + (kzSat >= 0 ? '+' : '') + kzSat.toFixed(0) + ' ₺<br><span style="font-size:0.72rem">' + (kzpSat >= 0 ? '+' : '') + kzpSat.toFixed(1) + '%</span></td>' +
+      slTpCell +
       '<td>' + sin + '</td>' +
       '<td><button class="btn danger" onclick="event.stopPropagation();window._uiCallbacks?.portfoyCikar(\'' + k + '\')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>' +
       '</tr>';
@@ -861,7 +879,7 @@ export function renderPortfoy() {
       '</div>' +
     '</div>' +
     '<div class="card"><div class="table-wrap"><table>' +
-      '<thead><tr><th>Hisse</th><th>Adet</th><th>Alış</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th>Sinyal</th><th></th></tr></thead>' +
+      '<thead><tr><th>Hisse</th><th>Adet</th><th>Alış</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th>SL/TP</th><th>Sinyal</th><th></th></tr></thead>' +
       '<tbody>' + rows + '</tbody>' +
     '</table></div></div>';
 }
@@ -875,6 +893,8 @@ export function portfoyModalAc(k, a) {
   el('portfoyModalTitle').textContent = k + ' — Portföye Ekle';
   el('portfoyModalSub').textContent   = a;
   el('pTarih').value = new Date().toISOString().split('T')[0];
+  if (el('pStopLoss'))   el('pStopLoss').value   = '';
+  if (el('pTakeProfiti')) el('pTakeProfiti').value = '';
   openModal('portfoyModal');
 }
 
@@ -1037,6 +1057,92 @@ export function renderPortfoyDoviz() {
     '<div class="card"><div class="table-wrap"><table>' +
       '<thead><tr><th>Döviz</th><th>Miktar</th><th>Alış Kuru</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th></th></tr></thead>' +
       '<tbody>' + rows + '</tbody>' +
+    '</table></div></div>';
+}
+
+// ─────────────────────────────────────────────
+// ALARMLAR
+// ─────────────────────────────────────────────
+
+export function renderAlarmlar() {
+  const wrapper = el('alarmlarListesi');
+  if (!wrapper) return;
+  const alaralar = state.fiyatAlarmlari || [];
+
+  if (alaralar.length === 0) {
+    wrapper.innerHTML =
+      '<div style="text-align:center;padding:3rem;color:var(--muted)">' +
+        '<div style="font-size:2rem;margin-bottom:0.75rem">🔔</div>' +
+        '<div style="color:var(--text);margin-bottom:0.5rem">Aktif alarm yok</div>' +
+        '<div style="font-size:0.8rem">Hisse detayından veya aşağıdan alarm kurabilirsiniz.</div>' +
+      '</div>';
+    return;
+  }
+
+  const satirlar = alaralar.map(a => {
+    const fiyat   = state.veriler[a.sembol]?.fiyat || 0;
+    const mesafe  = fiyat > 0 ? ((a.hedef - fiyat) / fiyat * 100) : 0;
+    const yon     = a.yon === 'yukari' ? '↑ ≥' : '↓ ≤';
+    const durum   = a.tetiklendi
+      ? '<span style="color:var(--accent);font-weight:600">✓ Tetiklendi</span>'
+      : a.aktif
+        ? '<span style="color:var(--yellow)">● Aktif</span>'
+        : '<span style="color:var(--muted)">○ Pasif</span>';
+    const mesafeStr = fiyat > 0 && !a.tetiklendi
+      ? '<span style="font-size:0.72rem;color:' + (mesafe >= 0 ? 'var(--accent)' : 'var(--red)') + '">(' + (mesafe >= 0 ? '+' : '') + mesafe.toFixed(1) + '%)</span>'
+      : '';
+    return '<tr>' +
+      '<td><span class="mono" style="font-weight:600;color:var(--accent)">' + a.sembol + '</span></td>' +
+      '<td class="mono">' + yon + ' ' + a.hedef.toFixed(2) + ' ₺ ' + mesafeStr + '</td>' +
+      '<td class="mono">' + (fiyat ? fiyat.toFixed(2) + ' ₺' : '—') + '</td>' +
+      '<td>' + durum + '</td>' +
+      '<td style="color:var(--muted);font-size:0.75rem">' + (a.not || '—') + '</td>' +
+      '<td><button class="btn danger" onclick="window.alarmSil(\'' + a.id + '\')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Sil</button></td>' +
+      '</tr>';
+  }).join('');
+
+  wrapper.innerHTML =
+    '<div class="card"><div class="table-wrap"><table>' +
+      '<thead><tr><th>Sembol</th><th>Hedef</th><th>Güncel Fiyat</th><th>Durum</th><th>Not</th><th></th></tr></thead>' +
+      '<tbody>' + satirlar + '</tbody>' +
+    '</table></div></div>';
+}
+
+// ─────────────────────────────────────────────
+// SCREENER
+// ─────────────────────────────────────────────
+
+export function renderScreener(sonuclar) {
+  const wrapper = el('scrSonuclar');
+  if (!wrapper) return;
+
+  if (!sonuclar || sonuclar.length === 0) {
+    wrapper.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">Kriterlere uyan hisse bulunamadı.</div>';
+    return;
+  }
+
+  const satirlar = sonuclar.slice(0, 50).map(([k, v]) => {
+    const sin    = '<span class="pill ' + sinyalClass(v.sinyal) + '">' + v.sinyal + '</span>';
+    const guven  = v.guvenSkoru ?? 0;
+    const guvenRenk = guven >= 70 ? 'var(--accent)' : guven >= 50 ? 'var(--yellow)' : 'var(--muted)';
+    const rsiRenk   = v.rsi < 30 ? 'var(--accent)' : v.rsi > 70 ? 'var(--red)' : 'var(--text)';
+    const degRenk   = v.degisim >= 0 ? 'pos' : 'neg';
+    return '<tr class="clickable-row" style="cursor:pointer" onclick="window._uiCallbacks?.hisseDetayAc(\'' + k + '\')">' +
+      '<td><span class="mono" style="font-weight:600;color:var(--accent)">' + k + '</span></td>' +
+      '<td class="mono">' + (v.fiyat?.toFixed(2) || '—') + ' ₺</td>' +
+      '<td class="mono ' + degRenk + '">' + (v.degisim >= 0 ? '+' : '') + (v.degisim?.toFixed(2) || '0') + '%</td>' +
+      '<td class="mono" style="color:' + rsiRenk + '">' + (v.rsi?.toFixed(1) || '—') + '</td>' +
+      '<td class="mono" style="color:' + (v.macdHist > 0 ? 'var(--accent)' : 'var(--red)') + '">' + (v.macdHist?.toFixed(3) || '—') + '</td>' +
+      '<td>' + sin + '</td>' +
+      '<td style="color:' + guvenRenk + '">' + guven + '</td>' +
+      '</tr>';
+  }).join('');
+
+  wrapper.innerHTML =
+    '<div style="margin-bottom:0.5rem;font-size:0.82rem;color:var(--muted)">' + sonuclar.length + ' hisse bulundu' + (sonuclar.length > 50 ? ' (ilk 50 gösteriliyor)' : '') + '</div>' +
+    '<div class="card"><div class="table-wrap"><table>' +
+      '<thead><tr><th>Hisse</th><th>Fiyat</th><th>Değişim</th><th>RSI</th><th>MACD Hist</th><th>Sinyal</th><th>Güven</th></tr></thead>' +
+      '<tbody>' + satirlar + '</tbody>' +
     '</table></div></div>';
 }
 
