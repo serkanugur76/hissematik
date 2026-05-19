@@ -1709,6 +1709,7 @@ export function renderHisseDetay(kod) {
   }
 
   renderDetayTeknik(kod);
+  renderDetaySeviyeler(kod);
 
   const xu  = piyasaVerisi.xu100;
   const usd = piyasaVerisi.usdtry;

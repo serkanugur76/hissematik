@@ -1371,6 +1371,7 @@ async function hisseDetayAc(kod) {
     if (state.detayKod !== kod) return;
     renderDetayOzet(kod);
     renderDetayTeknik(kod);
+    renderDetaySeviyeler(kod);   // kapanis yüklendikten sonra seviyeler güncellenir
     renderGrafik(kod, _grafikGun);
   });
 }
