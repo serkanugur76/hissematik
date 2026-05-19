@@ -217,6 +217,7 @@
       <button class="sub-tab active" data-subtab="takip">📊 Takip Listesi</button>
       <button class="sub-tab" data-subtab="sinyaller">🎯 Sinyal Geçmişi</button>
       <button class="sub-tab" data-subtab="tum">🔍 Tüm Hisseler</button>
+      <button class="sub-tab" data-subtab="backtest">📊 Backtest</button>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:1rem">
       <button class="btn" onclick="window.karsilastirmaAc()" data-tooltip="İki hisseyi yan yana karşılaştır">📈 Karşılaştır</button>
@@ -357,6 +358,40 @@
       </div>
       <div class="hisse-grid" id="hisseGrid"></div>
       <div class="sektor-performans-kart" style="margin-top:1.5rem"></div>
+    </div>
+
+    <!-- ALT SEKME: BACKTEST -->
+    <div class="sub-panel" id="subpanel-backtest">
+      <div class="section-header" style="margin-bottom:1rem">
+        <div>
+          <div class="section-title">📊 Sinyal Backtest</div>
+          <div class="section-sub">Geçmiş sinyallerin doğruluk oranını ölç</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1.5rem">
+        <div style="flex:1;min-width:160px">
+          <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:0.4rem">Hisse Kodu</label>
+          <select id="backtestKod" class="search-input" style="height:40px"></select>
+        </div>
+        <div style="min-width:130px">
+          <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:0.4rem">Ufuk (Gün)</label>
+          <select id="backtestUfuk" class="search-input" style="height:40px">
+            <option value="3">3 Gün</option>
+            <option value="5" selected>5 Gün</option>
+            <option value="10">10 Gün</option>
+          </select>
+        </div>
+        <button class="btn primary" onclick="window.backtestCalistir()" style="height:40px;white-space:nowrap">▶ Analiz Et</button>
+      </div>
+
+      <div id="backtestSonuc">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">Hisse seç ve Analiz Et'e bas</div>
+          <div class="empty-sub">Geçmişteki AL/SAT sinyallerinin ne kadar doğru olduğunu göreceksin</div>
+        </div>
+      </div>
     </div>
 
   </main>

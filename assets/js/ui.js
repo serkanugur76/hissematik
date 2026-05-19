@@ -10,7 +10,7 @@ import {
   DOGRULAMA_GUN_VARSAYILAN,
 } from './state.js';
 
-import { sinyalClass, gostergelerListele } from './indicators.js';
+import { sinyalClass, gostergelerListele, backtestHesapla } from './indicators.js';
 
 // ─────────────────────────────────────────────
 // YARDIMCILAR
@@ -2698,4 +2698,146 @@ export function analizArsiviPdfOlustur(analizler, kullaniciAd = '') {
 
   const dosyaAdi = 'HisseMATIK_Analiz_Raporu_' + new Date().toISOString().split('T')[0] + '.pdf';
   doc.save(dosyaAdi);
+}
+
+
+// ─────────────────────────────────────────────
+// BACKTEST SONUÇLARI
+// ─────────────────────────────────────────────
+
+export function renderBacktest(kod, veriler, ufuk) {
+  const container = el('backtestSonuc');
+  if (!container) return;
+
+  const veri = veriler[kod];
+  if (!veri?.kapanis?.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Veri yok</div><div class="empty-sub">Önce güncelle butonuna bas</div></div>';
+    return;
+  }
+
+  const bt = backtestHesapla(veri.kapanis, ufuk);
+
+  if (!bt || !bt.ozet) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Yetersiz veri</div><div class="empty-sub">Backtest için en az 30 günlük kapanış verisi gerekli</div></div>';
+    return;
+  }
+
+  const { ozet, sinyaller, equityCurve } = bt;
+  const isabetRenk = ozet.isabet >= 60 ? 'var(--green)' : ozet.isabet >= 50 ? 'var(--yellow)' : 'var(--red)';
+  const equityRenk = ozet.sonEquity >= 100 ? 'var(--green)' : 'var(--red)';
+
+  // Summary cards
+  const kartsatir = `
+    <div class="grid-4" style="margin-bottom:1rem">
+      <div class="card" style="text-align:center">
+        <div class="card-title">Sinyal Sayısı</div>
+        <div class="card-value mono">${ozet.toplamSinyal}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">AL: ${ozet.alSayisi} · SAT: ${ozet.satSayisi}</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">İsabet Oranı</div>
+        <div class="card-value mono" style="color:${isabetRenk}">${ozet.isabet}%</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">${ozet.dogruSayisi} / ${ozet.toplamSinyal} doğru</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">Ort. Getiri</div>
+        <div class="card-value mono" style="color:${ozet.ortGetiri >= 0 ? 'var(--green)' : 'var(--red)'}">${ozet.ortGetiri > 0 ? '+' : ''}${ozet.ortGetiri}%</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">sinyal başına</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">100₺ → Bugün</div>
+        <div class="card-value mono" style="color:${equityRenk}">${ozet.sonEquity}₺</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">${ozet.sonEquity >= 100 ? '+' : ''}${(ozet.sonEquity - 100).toFixed(2)}₺</div>
+      </div>
+    </div>`;
+
+  // Equity curve canvas
+  const canvasId = 'backtestCanvas_' + kod;
+  const canvasHtml = `<div class="card" style="margin-bottom:1rem;padding:1rem">
+    <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.5rem;color:var(--muted)">Equity Eğrisi (100₺ başlangıç)</div>
+    <canvas id="${canvasId}" height="80" style="width:100%"></canvas>
+  </div>`;
+
+  // Signal table
+  const satirlar = sinyaller.map((s, i) => {
+    const renkClass = s.dogru ? 'color:var(--green)' : 'color:var(--red)';
+    const getiriStr = (s.getiri > 0 ? '+' : '') + s.getiri + '%';
+    const sinyalBg = s.sinyal.includes('AL') ? 'var(--green)' : 'var(--red)';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:0.4rem 0.6rem;color:var(--muted);font-size:0.75rem">${i + 1}</td>
+      <td style="padding:0.4rem 0.6rem"><span class="chip" style="background:${sinyalBg}20;color:${sinyalBg};border-color:${sinyalBg}40;font-size:0.7rem">${s.sinyal}</span></td>
+      <td style="padding:0.4rem 0.6rem;font-family:monospace;font-size:0.82rem">${s.girisFiyat}₺</td>
+      <td style="padding:0.4rem 0.6rem;font-family:monospace;font-size:0.82rem">${s.cikisFiyat}₺</td>
+      <td style="padding:0.4rem 0.6rem;font-family:monospace;font-size:0.82rem;${renkClass}">${getiriStr}</td>
+      <td style="padding:0.4rem 0.6rem;font-size:1rem">${s.dogru ? '✅' : '❌'}</td>
+    </tr>`;
+  }).join('');
+
+  const tablo = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+    <thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);font-size:0.72rem">
+      <th style="padding:0.4rem 0.6rem;text-align:left">#</th>
+      <th style="padding:0.4rem 0.6rem;text-align:left">Sinyal</th>
+      <th style="padding:0.4rem 0.6rem;text-align:left">Giriş</th>
+      <th style="padding:0.4rem 0.6rem;text-align:left">Çıkış (${ufuk}g)</th>
+      <th style="padding:0.4rem 0.6rem;text-align:left">Getiri</th>
+      <th style="padding:0.4rem 0.6rem;text-align:left">Sonuç</th>
+    </tr></thead>
+    <tbody>${satirlar}</tbody>
+  </table></div>`;
+
+  const uyari = ozet.toplamSinyal < 5
+    ? '<div style="background:var(--yellow)20;border:1px solid var(--yellow)40;border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.8rem;color:var(--yellow)">⚠️ Sinyal sayısı çok az (' + ozet.toplamSinyal + '). Sonuçlar istatistiksel olarak anlamlı değil — daha fazla tarihsel veri için önce güncelle.</div>'
+    : '';
+
+  container.innerHTML = uyari + kartsatir + canvasHtml + tablo;
+
+  // Draw equity curve
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || equityCurve.length < 2) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.offsetWidth || 600;
+    canvas.width = W;
+    canvas.height = 80;
+    const min = Math.min(...equityCurve);
+    const max = Math.max(...equityCurve);
+    const range = max - min || 1;
+    const pad = 4;
+    const x = (i) => pad + (i / (equityCurve.length - 1)) * (W - pad * 2);
+    const y = (v) => pad + (1 - (v - min) / range) * (80 - pad * 2);
+
+    ctx.clearRect(0, 0, W, 80);
+
+    // Fill
+    const grad = ctx.createLinearGradient(0, 0, 0, 80);
+    const lineColor = equityCurve.at(-1) >= 100 ? '#00e5a0' : '#ff4d6d';
+    grad.addColorStop(0, lineColor + '30');
+    grad.addColorStop(1, lineColor + '05');
+    ctx.beginPath();
+    ctx.moveTo(x(0), y(equityCurve[0]));
+    equityCurve.forEach((v, i) => { if (i > 0) ctx.lineTo(x(i), y(v)); });
+    ctx.lineTo(x(equityCurve.length - 1), 80);
+    ctx.lineTo(x(0), 80);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    equityCurve.forEach((v, i) => i === 0 ? ctx.moveTo(x(i), y(v)) : ctx.lineTo(x(i), y(v)));
+    ctx.stroke();
+
+    // Baseline 100
+    const baseY = y(100);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(pad, baseY);
+    ctx.lineTo(W - pad, baseY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
 }

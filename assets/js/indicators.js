@@ -542,3 +542,77 @@ export function sinyalPiyasaFiltrele(sinyal, _hisseDegisim, piyasaYon) {
 
   return sinyal;
 }
+
+
+// ─────────────────────────────────────────────
+// BACKTEST
+// Geçmiş kapanış verisiyle sinyal isabetini ölç
+// ufuk: sinyal sonrası kaç gün bakılacak
+// ─────────────────────────────────────────────
+
+export function backtestHesapla(kapanis, ufuk = 5) {
+  if (!kapanis || kapanis.length < 30) return null;
+
+  const sinyaller = [];
+  // Start from index 26 (MACD needs 26 bars) and leave `ufuk` bars at end for outcome
+  const baslangic = 26;
+  const bitis = kapanis.length - ufuk;
+
+  for (let i = baslangic; i < bitis; i++) {
+    const dilim = kapanis.slice(0, i + 1);
+    const rsi = calcRSI(dilim, 14);
+    const macdVal = calcMACD(dilim);
+    const bollinger = calcBollinger(dilim);
+    const stochRsi = calcStochRSI(dilim);
+    const williamsR = calcWilliamsR(dilim);
+    const n = dilim.length;
+    const ma20 = +avg(dilim.slice(-Math.min(20, n))).toFixed(2);
+    const ma50 = +avg(dilim.slice(-Math.min(50, n))).toFixed(2);
+
+    const { sinyal } = gelismisSkor({
+      rsi, stochRsi,
+      macd: macdVal.macd, macdSignal: macdVal.sinyal, macdHist: macdVal.histogram,
+      bollinger, ma20, ma50,
+      hacimFark: 0, williamsR, mfi: 50,
+    });
+
+    if (sinyal === 'BEKLE') continue;
+
+    const girisFiyat = kapanis[i];
+    const cikisFiyat = kapanis[i + ufuk];
+    const getiri = +((cikisFiyat - girisFiyat) / girisFiyat * 100).toFixed(2);
+    const isAl = sinyal.includes('AL');
+    const dogru = isAl ? getiri > 0 : getiri < 0;
+    const efektifGetiri = isAl ? getiri : -getiri; // long için yükseliş, short için düşüş kâr
+
+    sinyaller.push({ gun: i, sinyal, girisFiyat: +girisFiyat.toFixed(2), cikisFiyat: +cikisFiyat.toFixed(2), getiri, efektifGetiri, dogru });
+  }
+
+  if (sinyaller.length === 0) return { sinyaller: [], ozet: null };
+
+  const dogru = sinyaller.filter(s => s.dogru).length;
+  const isabet = Math.round(dogru / sinyaller.length * 100);
+  const ortGetiri = +(sinyaller.reduce((s, x) => s + x.efektifGetiri, 0) / sinyaller.length).toFixed(2);
+
+  // Equity curve: 100₺ ile başla, her sinyalde efektif getiriyi uygula
+  let equity = 100;
+  const equityCurve = [100];
+  for (const s of sinyaller) {
+    equity = +(equity * (1 + s.efektifGetiri / 100)).toFixed(2);
+    equityCurve.push(equity);
+  }
+
+  return {
+    sinyaller,
+    ozet: {
+      toplamSinyal: sinyaller.length,
+      dogruSayisi:  dogru,
+      isabet,
+      ortGetiri,
+      alSayisi:  sinyaller.filter(s => s.sinyal.includes('AL')).length,
+      satSayisi: sinyaller.filter(s => s.sinyal.includes('SAT')).length,
+      sonEquity: +equity.toFixed(2),
+    },
+    equityCurve,
+  };
+}

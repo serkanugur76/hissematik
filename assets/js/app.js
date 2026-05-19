@@ -95,6 +95,7 @@ import {
   renderGunSonuOzetleri,
   renderEkonomikTakvim,
   renderSektorPerformans,
+  renderBacktest,
 } from './ui.js';
 
 setApiToast(showToast);
@@ -1650,6 +1651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sub-panel').forEach(p => p.classList.toggle('active', p.id === 'subpanel-' + subtab));
     if (subtab === 'sinyaller') renderSinyalGecmisi();
     if (subtab === 'tum')       renderHisseler();
+    if (subtab === 'backtest')  _backtestPanelAc();
   });
 
   // Tab navigasyonu — mobil menü
@@ -2632,6 +2634,36 @@ window.kampanyaModalAc = () => {
   if (hata)  { hata.textContent = ''; hata.style.display = 'none'; }
   if (btn)   { btn.disabled = false; btn.textContent = 'Aktive Et'; }
   openModal('kampanyaModal');
+};
+
+// ─────────────────────────────────────────────
+// BACKTEST
+// ─────────────────────────────────────────────
+
+function _backtestPanelAc() {
+  const sel = el('backtestKod');
+  if (!sel) return;
+  // Populate with tracked stocks first, then all BIST stocks that have data
+  const secenekler = [];
+  for (const k of state.takipEdilen) {
+    if (state.veriler[k]?.kapanis?.length) secenekler.push(k);
+  }
+  for (const [k] of BIST) {
+    if (!state.takipEdilen.has(k) && state.veriler[k]?.kapanis?.length) secenekler.push(k);
+  }
+  if (secenekler.length === 0) {
+    el('backtestSonuc').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Veri yok</div><div class="empty-sub">Önce Güncelle butonuna bas</div></div>';
+    return;
+  }
+  const mevcut = sel.value;
+  sel.innerHTML = secenekler.map(k => `<option value="${k}" ${k === mevcut ? 'selected' : ''}>${k}</option>`).join('');
+}
+
+window.backtestCalistir = () => {
+  const kod = el('backtestKod')?.value;
+  const ufuk = parseInt(el('backtestUfuk')?.value || '5');
+  if (!kod) { showToast('Hisse seç', 'error'); return; }
+  renderBacktest(kod, state.veriler, ufuk);
 };
 
 window.kampanyaKoduAktif = async () => {
