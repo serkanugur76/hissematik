@@ -242,7 +242,7 @@ export async function fetchHaberler() {
 // CLAUDE AI — GRAFİK ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiGrafikAnalizEt({ key, kod, veri, gun }) {
+export async function aiGrafikAnalizEt({ key, kod, veri, gun, currentUser = null }) {
   if (!key || !veri?.kapanis?.length) return '';
   const kapanis = veri.kapanis.slice(-Math.min(gun, veri.kapanis.length));
   if (kapanis.length < 3) return '';
@@ -280,7 +280,7 @@ export async function aiGrafikAnalizEt({ key, kod, veri, gun }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiGrafikAnalizEt hatası:', e);
@@ -359,7 +359,7 @@ export function kapHashOlustur(bildirim) {
 // CLAUDE AI — KAP BİLDİRİM ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiKapAnalizEt({ key, bildirim, takipEdilen = new Set(), portfoy = {} }) {
+export async function aiKapAnalizEt({ key, bildirim, takipEdilen = new Set(), portfoy = {}, currentUser = null }) {
   if (!key || !bildirim) return null;
 
   const takipKodlar       = [...takipEdilen];
@@ -385,7 +385,7 @@ export async function aiKapAnalizEt({ key, bildirim, takipEdilen = new Set(), po
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1200);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     const temiz = text.replace(/```json|```/g, '').trim();
     const baslangic = temiz.indexOf('{');
     const bitis     = temiz.lastIndexOf('}');
@@ -409,7 +409,7 @@ export function kapSonIndexKaydet(idx) { _kapSonIndex = idx; }
 // CLAUDE AI — PORTFÖY ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiPortfoyAnalizYap({ key, veriler, takipEdilen, sinyalGecmisi = [], piyasaVerisi = {} }) {
+export async function aiPortfoyAnalizYap({ key, veriler, takipEdilen, sinyalGecmisi = [], piyasaVerisi = {}, currentUser = null }) {
   if (!key || takipEdilen.size === 0) return '';
 
   const dogru   = sinyalGecmisi.filter(s => s.dogrulandi === true).length;
@@ -443,7 +443,7 @@ export async function aiPortfoyAnalizYap({ key, veriler, takipEdilen, sinyalGecm
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 800);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiPortfoyAnalizYap hatası:', e);
@@ -456,7 +456,7 @@ export async function aiPortfoyAnalizYap({ key, veriler, takipEdilen, sinyalGecm
 // CLAUDE AI — HİSSE ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piyasaVerisi = {}, portfoy = {}, haberlerData = [], bistListesi = [] }) {
+export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piyasaVerisi = {}, portfoy = {}, haberlerData = [], bistListesi = [], currentUser = null }) {
   if (!key || !veri) return null;
 
   const gecmis = sinyalGecmisi.filter(s => s.sembol === kod).slice(0, 5)
@@ -481,7 +481,7 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     return { metin: text, tarih: Date.now(), sembol: kod, fiyat: veri.fiyat };
   } catch (e) {
     console.error('aiHisseAnalizEt hatası:', e);
@@ -494,7 +494,7 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
 // CLAUDE AI — HABER ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
+export async function aiHaberAnalizEt({ key, haber, takipEdilen, currentUser = null }) {
   if (!key || !haber) return null;
   const prompt =
     'Aşağıdaki finansal haberi analiz et.\n\nHABER BAŞLIĞI: ' + haber.baslik + '\n' +
@@ -503,7 +503,7 @@ export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1000);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     const temiz = text.replace(/```json|```/g, '').trim();
     const baslangic = temiz.indexOf('{');
     const bitis     = temiz.lastIndexOf('}');
@@ -519,12 +519,12 @@ export async function aiHaberAnalizEt({ key, haber, takipEdilen }) {
 // CLAUDE AI — TERİM AÇIKLAMA
 // ─────────────────────────────────────────────
 
-export async function aiTerimAcikla({ key, terim }) {
+export async function aiTerimAcikla({ key, terim, currentUser = null }) {
   if (!key || !terim) return '';
   const prompt = 'Borsa terimi olarak "' + terim + '" nedir?\nTürkçe, sade, 2-3 cümle.';
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 300);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiTerimAcikla hatası:', e);
@@ -551,7 +551,7 @@ export async function aiGunSonuOzeti({ key, analizler, currentUser = null, db: d
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 600);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
 
     // Arşivle
     if (dbRef && text) {
@@ -577,7 +577,7 @@ export async function aiGunSonuOzeti({ key, analizler, currentUser = null, db: d
 // MAKRO KORELASYOn ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiMakroKorelasyonAnalizEt({ key, piyasaVerisi = {} }) {
+export async function aiMakroKorelasyonAnalizEt({ key, piyasaVerisi = {}, currentUser = null }) {
   if (!key) return '';
 
   const { xu100, xu030, usdtry, eurtry, eurusd, altin, brent, wti,
@@ -636,7 +636,7 @@ export async function aiMakroKorelasyonAnalizEt({ key, piyasaVerisi = {} }) {
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 1200, 50000);
-    try { await tokenKaydet({ currentUser: null, tokens }); } catch (_) {}
+    try { await tokenKaydet({ currentUser, tokens }); } catch (_) {}
     return text;
   } catch (e) {
     console.error('aiMakroKorelasyonAnalizEt hatası:', e);

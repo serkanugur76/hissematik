@@ -484,6 +484,7 @@ window.verileriGuncelle = async () => {
         takipEdilen:   state.takipEdilen,
         sinyalGecmisi: state.sinyalGecmisi,
         piyasaVerisi:  state.piyasaVerisi,
+        currentUser:   state.currentUser,
       });
     } catch (_) {}
   }
@@ -1269,6 +1270,7 @@ window.hisseAiAnalizEt = async () => {
       portfoy:       state.portfoy,
       haberlerData:  state.haberlerData,
       bistListesi:   BIST,
+      currentUser:   state.currentUser,
     });
     if (analiz) {
       await hisseAnalizKaydet({ db, currentUser: state.currentUser, sembol: kod, analiz });
@@ -1314,7 +1316,7 @@ async function tekHaberAnalizEt(idx) {
   if (cache) { renderHaberAnaliz(idx, cache); btn?.remove(); return; }
 
   try {
-    const analiz = await aiHaberAnalizEt({ key, haber: h, takipEdilen: state.takipEdilen });
+    const analiz = await aiHaberAnalizEt({ key, haber: h, takipEdilen: state.takipEdilen, currentUser: state.currentUser });
     if (analiz) {
       const kayit = await haberAnalizKaydet({
         db, currentUser: state.currentUser,
@@ -1371,7 +1373,7 @@ async function terimSorAPI(terim) {
   if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
 
   try {
-    const aciklama = await aiTerimAcikla({ key, terim });
+    const aciklama = await aiTerimAcikla({ key, terim, currentUser: state.currentUser });
     if (aciklama) {
       const yeni = await sozlukTerimKaydet({ db, terim, aciklama, currentUser: state.currentUser });
       sozlukVeriler.unshift(yeni);
@@ -1567,8 +1569,9 @@ async function _kapAiAnalizEt() {
     const analiz = await aiKapAnalizEt({
       key,
       bildirim,
-      takipEdilen: state.takipEdilen,
-      portfoy:     state.portfoy,
+      takipEdilen:  state.takipEdilen,
+      portfoy:      state.portfoy,
+      currentUser:  state.currentUser,
     });
 
     if (!analiz) throw new Error('Analiz boş döndü');
@@ -2379,7 +2382,7 @@ window.grafikAnalizEt = async () => {
       showToast('Grafik verisi yok — önce güncelle', 'error');
       return;
     }
-    const text = await aiGrafikAnalizEt({ key, kod, veri, gun: _grafikGun });
+    const text = await aiGrafikAnalizEt({ key, kod, veri, gun: _grafikGun, currentUser: state.currentUser });
     if (text) {
       sonucEl.innerHTML = text
         .replace(/\n\n/g, '<br><br>')
@@ -2596,7 +2599,7 @@ window.makroAnalizYap = async (zorlaYenile = false) => {
   if (btn) { btn.disabled = true; btn.textContent = 'Analiz yapılıyor...'; }
 
   try {
-    const yorum = await aiMakroKorelasyonAnalizEt({ key, piyasaVerisi: pv });
+    const yorum = await aiMakroKorelasyonAnalizEt({ key, piyasaVerisi: pv, currentUser: state.currentUser });
     if (yorum) {
       _makroCacheYaz(yorum, _makroFiyatlarCikart(pv));
       _makroIcerikGoster(yorum, Date.now(), icerikEl, zamanEl, true);
