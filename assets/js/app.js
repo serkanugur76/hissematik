@@ -403,11 +403,9 @@ function _apiKeyDurumGoster() {
 
 async function _switchTab(name, btn) {
   switchTab(name, btn);
-  if (name === 'haberler')  await _loadHaberler();
-  if (name === 'sozluk')    await _loadSozluk();
+  if (name === 'kesfet')    await _loadHaberler();   // varsayılan alt sekme: Haberler
   // sinyaller sekmesi kaldırıldı — içerik hisseler sekmesinde
   if (name === 'portfoy')   { renderPortfoy(); renderPortfoyAltin(); renderPortfoyDoviz(); }
-  if (name === 'kap')       await _loadKapBildirimleri();
   if (name === 'hisseler')  { renderDashboard(); renderSummary(); }
 }
 
@@ -1623,6 +1621,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tab === 'doviz')  renderPortfoyDoviz();
     if (tab === 'grafik') renderPortfoyGrafik();
     if (tab === 'temettu') renderTemettu();
+  });
+
+  // Keşfet alt sekme navigasyonu (Haberler / KAP / Sözlük)
+  document.getElementById('panel-kesfet')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-kesfet-subtab]');
+    if (!btn) return;
+    const tab = btn.dataset.kesfetSubtab;
+    document.querySelectorAll('[data-kesfet-subtab]').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.kesfet-sub-panel').forEach(p => p.classList.toggle('active', p.id === 'kesfet-sp-' + tab));
+    if (tab === 'haberler') await _loadHaberler();
+    if (tab === 'kap')      await _loadKapBildirimleri();
+    if (tab === 'sozluk')   await _loadSozluk();
   });
 
   // Alt sekme navigasyonu (Hisseler paneli içi)

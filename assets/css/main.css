@@ -2047,6 +2047,8 @@ tr:last-child td { border-bottom:none; }
 }
 .portfoy-sub-panel { display: none; }
 .portfoy-sub-panel.active { display: block; }
+.kesfet-sub-panel { display: none; }
+.kesfet-sub-panel.active { display: block; }
 
 /* ── Broker Araçları ── */
 .nav-tab-action {

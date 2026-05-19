@@ -75,9 +75,7 @@
       <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
       <button class="nav-tab" data-tab="hisseler">Hisseler</button>
       <button class="nav-tab" data-tab="portfoy">Portföy</button>
-      <button class="nav-tab" data-tab="haberler">📰 Haberler</button>
-      <button class="nav-tab" data-tab="kap">📋 KAP</button>
-      <button class="nav-tab" data-tab="sozluk">📚 Sözlük</button>
+      <button class="nav-tab" data-tab="kesfet">🔍 Keşfet</button>
       <button class="nav-tab-action" onclick="window.alarmlarAc()" data-tooltip="Fiyat alarmlarınız" id="btnAlarmlarAc">🔔 Alarmlar</button>
       <button class="nav-tab admin-only" data-tab="admin">⚙ Admin</button>
     </nav>
@@ -141,17 +139,9 @@
         <span class="mobile-nav-icon">💼</span>
         <span>Portföy</span>
       </button>
-      <button class="mobile-nav-item" data-tab="haberler">
-        <span class="mobile-nav-icon">📰</span>
-        <span>Haberler</span>
-      </button>
-      <button class="mobile-nav-item" data-tab="kap">
-        <span class="mobile-nav-icon">📋</span>
-        <span>KAP</span>
-      </button>
-      <button class="mobile-nav-item" data-tab="sozluk">
-        <span class="mobile-nav-icon">📚</span>
-        <span>Sözlük</span>
+      <button class="mobile-nav-item" data-tab="kesfet">
+        <span class="mobile-nav-icon">🔍</span>
+        <span>Keşfet</span>
       </button>
       <button class="mobile-nav-item admin-only" data-tab="admin" style="display:none">
         <span class="mobile-nav-icon">⚙</span>
@@ -404,93 +394,137 @@
 
 
   <!-- ════════════════════════════════════════
-       PANEL: HABERLER
+       PANEL: KEŞFET (Haberler + KAP + Sözlük)
   ════════════════════════════════════════ -->
-  <main class="panel" id="panel-haberler">
+  <main class="panel" id="panel-kesfet">
     <div class="ticker-bar"></div>
 
-    <div class="section-header">
-      <div>
-        <div class="section-title">📰 Piyasa Haberleri</div>
-        <div class="section-sub">Finans dünyasından son dakika haberleri</div>
-      </div>
-      <button class="btn primary" id="btnHaberleriYenile" data-tooltip="Güncel finans haberlerini yükle">⟳ Yenile</button>
+    <!-- Keşfet alt sekme çubuğu -->
+    <div class="sub-tab-bar kesfet-sub-tab-bar">
+      <button class="sub-tab active" data-kesfet-subtab="haberler">📰 Haberler</button>
+      <button class="sub-tab" data-kesfet-subtab="kap">📋 KAP</button>
+      <button class="sub-tab" data-kesfet-subtab="sozluk">📚 Sözlük</button>
     </div>
 
-    <div id="haberListesi">
-      <div class="empty-state">
-        <div class="empty-icon">📰</div>
-        <div>Haberler yükleniyor...</div>
+    <!-- ── ALT PANEL: HABERLER ── -->
+    <div class="kesfet-sub-panel active" id="kesfet-sp-haberler">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📰 Piyasa Haberleri</div>
+          <div class="section-sub">Finans dünyasından son dakika haberleri</div>
+        </div>
+        <button class="btn primary" id="btnHaberleriYenile" data-tooltip="Güncel finans haberlerini yükle">⟳ Yenile</button>
+      </div>
+
+      <div id="haberListesi">
+        <div class="empty-state">
+          <div class="empty-icon">📰</div>
+          <div>Haberler yükleniyor...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALT PANEL: KAP ── -->
+    <div class="kesfet-sub-panel" id="kesfet-sp-kap">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📋 KAP Bildirimleri</div>
+          <div class="section-sub">Kamuyu Aydınlatma Platformu — resmi şirket bildirimleri</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <span id="kapPollingDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block" title="Otomatik yenileme kapalı"></span>
+          <button class="btn" id="btnKapFiltreTakip" data-tooltip="Sadece takip ettiğin hisselerin KAP bildirimleri">Sadece Takip</button>
+          <button class="btn primary" id="btnKapYenile" data-tooltip="KAP bildirimlerini yeniden yükle">⟳ Yenile</button>
+        </div>
+      </div>
+
+      <div class="search-row" style="margin-bottom:1rem">
+        <input
+          class="search-input"
+          id="kapSearch"
+          placeholder="Şirket adı veya hisse kodu ara..."
+          autocomplete="off"
+        >
+        <button class="chip active" data-kap-filter="tum">Tümü</button>
+        <button class="chip" data-kap-filter="FR">Finansal Rapor</button>
+        <button class="chip" data-kap-filter="ODA">Özel Durum</button>
+        <button class="chip" data-kap-filter="DG">Diğer</button>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:1rem">
+        <div class="card">
+          <div class="card-title">Toplam Bildirim</div>
+          <div class="card-value mono" id="kapTopToplam">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Kritik</div>
+          <div class="card-value red mono" id="kapTopKritik">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Takibinizdeki</div>
+          <div class="card-value yellow mono" id="kapTopTakip">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Son Güncelleme</div>
+          <div class="card-value mono" id="kapSonGuncelleme" style="font-size:0.75rem">—</div>
+        </div>
+      </div>
+
+      <div id="kapListesi">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">KAP bildirimleri yüklenmedi</div>
+          <div class="empty-sub">Yenile butonuna bas veya sekmeye ilk geçişte otomatik yüklenir</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALT PANEL: SÖZLÜK ── -->
+    <div class="kesfet-sub-panel" id="kesfet-sp-sozluk">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📚 Finans Terimleri Sözlüğü</div>
+          <div class="section-sub">Anlamını merak ettiğin terime tıkla → Claude açıklar → Listene eklenir</div>
+        </div>
+        <div id="adminSozlukBtns">
+          <button class="btn primary" id="btnPushGonder">📢 Push Gönder</button>
+        </div>
+      </div>
+
+      <div class="search-row">
+        <input
+          class="search-input"
+          id="sozlukSearch"
+          placeholder="Terim ara veya yaz..."
+          autocomplete="off"
+        >
+        <button class="btn primary" id="btnTerimiSor">+ Sormak İstiyorum</button>
+      </div>
+
+      <div class="popular-terimler-wrap">
+        <div class="popular-terimler-baslik">Sık Kullanılan Terimler</div>
+        <div id="popularTerimler"></div>
+      </div>
+
+      <div class="card">
+        <div id="sozlukListesi">
+          <div class="empty-state">
+            <div class="empty-icon">📖</div>
+            <div class="empty-title">Sözlüğün henüz boş</div>
+            <div class="empty-sub">Yukarıdan terim ara veya dashboard'daki sinyallerde terimlere tıkla</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="adminSozlukStats">
+        <div class="section-title" style="margin-bottom:1rem">📊 Kullanıcı İstatistikleri</div>
+        <div class="card">
+          <div id="terimIstatistik"></div>
+        </div>
       </div>
     </div>
 
   </main>
-<!-- ════════════════════════════════════════
-     PANEL: KAP BİLDİRİMLERİ
-     
-     Bu bloğu app.html'deki panel-haberler
-     bölümünün HEMEN ALTINA ekle.
-════════════════════════════════════════ -->
-<main class="panel" id="panel-kap">
-  <div class="ticker-bar"></div>
-
-  <div class="section-header">
-    <div>
-      <div class="section-title">📋 KAP Bildirimleri</div>
-      <div class="section-sub">Kamuyu Aydınlatma Platformu — resmi şirket bildirimleri</div>
-    </div>
-    <div style="display:flex;gap:0.5rem;align-items:center">
-      <!-- Otomatik yenileme göstergesi -->
-      <span id="kapPollingDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block" title="Otomatik yenileme kapalı"></span>
-      <button class="btn" id="btnKapFiltreTakip" data-tooltip="Sadece takip ettiğin hisselerin KAP bildirimleri">Sadece Takip</button>
-      <button class="btn primary" id="btnKapYenile" data-tooltip="KAP bildirimlerini yeniden yükle">⟳ Yenile</button>
-    </div>
-  </div>
-
-  <!-- Filtre satırı -->
-  <div class="search-row" style="margin-bottom:1rem">
-    <input
-      class="search-input"
-      id="kapSearch"
-      placeholder="Şirket adı veya hisse kodu ara..."
-      autocomplete="off"
-    >
-    <button class="chip active" data-kap-filter="tum">Tümü</button>
-    <button class="chip" data-kap-filter="FR">Finansal Rapor</button>
-    <button class="chip" data-kap-filter="ODA">Özel Durum</button>
-    <button class="chip" data-kap-filter="DG">Diğer</button>
-  </div>
-
-  <!-- Özet sayaçlar -->
-  <div class="grid-4" style="margin-bottom:1rem">
-    <div class="card">
-      <div class="card-title">Toplam Bildirim</div>
-      <div class="card-value mono" id="kapTopToplam">—</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Kritik</div>
-      <div class="card-value red mono" id="kapTopKritik">—</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Takibinizdeki</div>
-      <div class="card-value yellow mono" id="kapTopTakip">—</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Son Güncelleme</div>
-      <div class="card-value mono" id="kapSonGuncelleme" style="font-size:0.75rem">—</div>
-    </div>
-  </div>
-
-  <!-- Bildirim listesi — JS tarafından doldurulur -->
-  <div id="kapListesi">
-    <div class="empty-state">
-      <div class="empty-icon">📋</div>
-      <div class="empty-title">KAP bildirimleri yüklenmedi</div>
-      <div class="empty-sub">Yenile butonuna bas veya sekmeye ilk geçişte otomatik yüklenir</div>
-    </div>
-  </div>
-
-</main>
 
 
 <!-- ════════════════════════════════════════
@@ -541,59 +575,6 @@
 
 
 
-  <!-- ════════════════════════════════════════
-       PANEL: SÖZLÜK
-  ════════════════════════════════════════ -->
-  <main class="panel" id="panel-sozluk">
-    <div class="ticker-bar"></div>
-
-    <div class="section-header">
-      <div>
-        <div class="section-title">📚 Finans Terimleri Sözlüğü</div>
-        <div class="section-sub">Anlamını merak ettiğin terime tıkla → Claude açıklar → Listene eklenir</div>
-      </div>
-      <div id="adminSozlukBtns">
-        <button class="btn primary" id="btnPushGonder">📢 Push Gönder</button>
-      </div>
-    </div>
-
-    <!-- Terim arama -->
-    <div class="search-row">
-      <input
-        class="search-input"
-        id="sozlukSearch"
-        placeholder="Terim ara veya yaz..."
-        autocomplete="off"
-      >
-      <button class="btn primary" id="btnTerimiSor">+ Sormak İstiyorum</button>
-    </div>
-
-    <!-- Popüler terimler (js tarafından oluşturulur) -->
-    <div class="popular-terimler-wrap">
-      <div class="popular-terimler-baslik">Sık Kullanılan Terimler</div>
-      <div id="popularTerimler"></div>
-    </div>
-
-    <!-- Terim listesi -->
-    <div class="card">
-      <div id="sozlukListesi">
-        <div class="empty-state">
-          <div class="empty-icon">📖</div>
-          <div class="empty-title">Sözlüğün henüz boş</div>
-          <div class="empty-sub">Yukarıdan terim ara veya dashboard'daki sinyallerde terimlere tıkla</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Admin: istatistikler -->
-    <div id="adminSozlukStats">
-      <div class="section-title" style="margin-bottom:1rem">📊 Kullanıcı İstatistikleri</div>
-      <div class="card">
-        <div id="terimIstatistik"></div>
-      </div>
-    </div>
-
-  </main>
 
 
   <!-- ════════════════════════════════════════
