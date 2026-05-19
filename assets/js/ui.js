@@ -1061,6 +1061,284 @@ export function renderPortfoyDoviz() {
 }
 
 // ─────────────────────────────────────────────
+// PORTFÖY PERFORMANS GRAFİĞİ
+// ─────────────────────────────────────────────
+
+export function renderPortfoyGrafik() {
+  const wrapper = el('portfoyGrafikContent');
+  if (!wrapper) return;
+  const { portfoy, veriler } = state;
+  const items = Object.entries(portfoy);
+  if (items.length === 0) {
+    wrapper.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Portföy boş</div>';
+    return;
+  }
+
+  // Her hisse için kapanis uzunluğunu bul
+  const maxLen = items.reduce((m, [k]) => {
+    const ln = veriler[k]?.kapanis?.length || 0;
+    return Math.max(m, ln);
+  }, 0);
+
+  if (maxLen < 2) {
+    wrapper.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Grafik için veri yok — önce Güncelle\'ye basın.</div>';
+    return;
+  }
+
+  // Günlük toplam portföy değeri hesapla
+  const gunSayisi = Math.min(maxLen, 90);
+  const portfoyDeger = new Array(gunSayisi).fill(0);
+  const maliyet = items.reduce((s, [, p]) => s + p.adet * p.alisFiyati, 0);
+
+  items.forEach(([k, p]) => {
+    const kap = veriler[k]?.kapanis;
+    if (!kap || kap.length < 2) return;
+    const slice = kap.slice(-gunSayisi);
+    // Pad from the left if shorter
+    const padLen = gunSayisi - slice.length;
+    slice.forEach((fiyat, i) => {
+      portfoyDeger[padLen + i] += (fiyat || slice[0]) * p.adet;
+    });
+  });
+
+  // Filter zeros at start
+  const ilkSifirDisi = portfoyDeger.findIndex(v => v > 0);
+  const veri = portfoyDeger.slice(ilkSifirDisi < 0 ? 0 : ilkSifirDisi);
+  if (veri.length < 2) {
+    wrapper.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted)">Yetersiz veri</div>';
+    return;
+  }
+
+  const bas = veri[0];
+  const son = veri[veri.length - 1];
+  const kzp = bas > 0 ? ((son - bas) / bas * 100) : 0;
+  const kzRenk = kzp >= 0 ? 'var(--accent)' : 'var(--red)';
+
+  wrapper.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">' +
+      '<div>' +
+        '<div style="font-size:0.75rem;color:var(--muted)">Son ' + veri.length + ' gün portföy değeri</div>' +
+        '<div style="font-size:1.5rem;font-weight:700;font-family:var(--mono)">' + son.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div style="font-size:0.75rem;color:var(--muted)">Başlangıç Maliyeti</div>' +
+        '<div style="font-size:1rem;font-family:var(--mono)">' + maliyet.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺</div>' +
+        '<div style="font-size:1rem;font-weight:700;color:' + kzRenk + '">' + (kzp >= 0 ? '+' : '') + kzp.toFixed(2) + '% dönem getirisi</div>' +
+      '</div>' +
+    '</div>' +
+    '<canvas id="portfoyGrafikCanvas" style="width:100%;height:200px"></canvas>';
+
+  // Çiz
+  requestAnimationFrame(() => {
+    const canvas = el('portfoyGrafikCanvas');
+    if (!canvas) return;
+    const W = canvas.offsetWidth || 560;
+    const H = 200;
+    canvas.width  = W * (window.devicePixelRatio || 1);
+    canvas.height = H * (window.devicePixelRatio || 1);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+    const pad  = { top: 20, right: 16, bottom: 28, left: 72 };
+    const cW   = W - pad.left - pad.right;
+    const cH   = H - pad.top  - pad.bottom;
+    const minV = Math.min(...veri) * 0.995;
+    const maxV = Math.max(...veri) * 1.005;
+    const rng  = maxV - minV || 1;
+    const xOf  = i   => pad.left + (i / (veri.length - 1)) * cW;
+    const yOf  = val => pad.top  + (1 - (val - minV) / rng) * cH;
+    const pos  = son >= bas;
+
+    const cs = getComputedStyle(document.documentElement);
+    const muted = cs.getPropertyValue('--muted').trim() || '#616478';
+    const brd   = 'rgba(255,255,255,0.05)';
+
+    // Izgara
+    ctx.strokeStyle = brd; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (i / 4) * cH;
+      const v2 = maxV - (i / 4) * rng;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+      ctx.fillStyle = muted; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+      ctx.fillText((v2 / 1000).toFixed(0) + 'K', pad.left - 5, y + 3);
+    }
+
+    // Gradient fill
+    const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+    grad.addColorStop(0, pos ? 'rgba(52,211,153,0.25)' : 'rgba(239,68,68,0.25)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    veri.forEach((v2, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(v2)) : ctx.lineTo(xOf(i), yOf(v2)); });
+    ctx.lineTo(xOf(veri.length - 1), H - pad.bottom);
+    ctx.lineTo(xOf(0), H - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    veri.forEach((v2, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(v2)) : ctx.lineTo(xOf(i), yOf(v2)); });
+    ctx.strokeStyle = pos ? '#34d399' : '#ef4444'; ctx.lineWidth = 2; ctx.stroke();
+
+    // Maliyet çizgisi
+    if (maliyet >= minV && maliyet <= maxV) {
+      const yMal = yOf(maliyet);
+      ctx.beginPath(); ctx.moveTo(pad.left, yMal); ctx.lineTo(W - pad.right, yMal);
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '9px monospace'; ctx.textAlign = 'left';
+      ctx.fillText('Maliyet', pad.left + 4, yMal - 3);
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// EKONOMİK TAKVİM
+// ─────────────────────────────────────────────
+
+export function renderEkonomikTakvim() {
+  const wrapper = el('ekonomikTakvimKart');
+  if (!wrapper) return;
+
+  const ETKINLIKLER = [
+    // 2025 TCMB PPK Toplantıları
+    { tarih: '2025-01-23', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-03-06', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-04-17', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-05-22', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-06-19', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-07-24', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-09-18', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-10-23', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    { tarih: '2025-12-04', baslik: 'TCMB PPK Toplantısı', kategori: 'tcmb', onem: 3 },
+    // TÜİK Enflasyon
+    { tarih: '2025-06-03', baslik: 'TÜFE/ÜFE Açıklaması (Mayıs)', kategori: 'tuik', onem: 2 },
+    { tarih: '2025-07-03', baslik: 'TÜFE/ÜFE Açıklaması (Haziran)', kategori: 'tuik', onem: 2 },
+    { tarih: '2025-08-04', baslik: 'TÜFE/ÜFE Açıklaması (Temmuz)', kategori: 'tuik', onem: 2 },
+    { tarih: '2025-09-03', baslik: 'TÜFE/ÜFE Açıklaması (Ağustos)', kategori: 'tuik', onem: 2 },
+    { tarih: '2025-10-03', baslik: 'TÜFE/ÜFE Açıklaması (Eylül)', kategori: 'tuik', onem: 2 },
+    { tarih: '2025-11-03', baslik: 'TÜFE/ÜFE Açıklaması (Ekim)', kategori: 'tuik', onem: 2 },
+    { tarih: '2025-12-03', baslik: 'TÜFE/ÜFE Açıklaması (Kasım)', kategori: 'tuik', onem: 2 },
+    // Bilanço dönemleri
+    { tarih: '2025-08-20', baslik: 'BİST — H1 2025 Bilanço Sezonu Sonu', kategori: 'bilanco', onem: 2 },
+    { tarih: '2025-11-20', baslik: 'BİST — Q3 2025 Bilanço Sezonu Sonu', kategori: 'bilanco', onem: 2 },
+    // Önemli global
+    { tarih: '2025-06-18', baslik: 'Fed Faiz Kararı', kategori: 'fed', onem: 2 },
+    { tarih: '2025-07-30', baslik: 'Fed Faiz Kararı', kategori: 'fed', onem: 2 },
+    { tarih: '2025-09-17', baslik: 'Fed Faiz Kararı', kategori: 'fed', onem: 2 },
+    { tarih: '2025-11-05', baslik: 'Fed Faiz Kararı', kategori: 'fed', onem: 2 },
+    { tarih: '2025-12-17', baslik: 'Fed Faiz Kararı', kategori: 'fed', onem: 2 },
+  ];
+
+  const bugun = new Date();
+  bugun.setHours(0, 0, 0, 0);
+
+  // Gelecekteki ve son 3 günün etkinlikleri
+  const yakin = ETKINLIKLER
+    .map(e => ({ ...e, d: new Date(e.tarih) }))
+    .filter(e => e.d >= new Date(bugun.getTime() - 3 * 86400000))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 8);
+
+  if (yakin.length === 0) {
+    wrapper.innerHTML = '';
+    return;
+  }
+
+  const kategoriRenk = { tcmb: '#f59e0b', tuik: '#8b5cf6', bilanco: '#06b6d4', fed: '#3b82f6' };
+  const kategoriEtiket = { tcmb: 'TCMB', tuik: 'TÜİK', bilanco: 'Bilanço', fed: 'Fed' };
+
+  const satirlar = yakin.map(e => {
+    const fark = Math.round((e.d - bugun) / 86400000);
+    const farkStr = fark === 0 ? '<span style="color:var(--yellow);font-weight:600">Bugün</span>'
+      : fark === 1 ? '<span style="color:var(--yellow)">Yarın</span>'
+      : fark < 0   ? '<span style="color:var(--muted)">' + Math.abs(fark) + ' gün önce</span>'
+      : '<span style="color:var(--muted)">' + fark + ' gün</span>';
+    const renk  = kategoriRenk[e.kategori] || 'var(--muted)';
+    const badge = '<span style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:' + renk + '22;color:' + renk + ';border:1px solid ' + renk + '44">' + (kategoriEtiket[e.kategori] || e.kategori) + '</span>';
+    const tarihStr = e.d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', weekday: 'short' });
+    return '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+      '<div style="min-width:80px;font-size:0.75rem;color:var(--muted)">' + tarihStr + '</div>' +
+      badge +
+      '<div style="flex:1;font-size:0.8rem;color:var(--text)">' + e.baslik + '</div>' +
+      '<div style="font-size:0.75rem;text-align:right">' + farkStr + '</div>' +
+    '</div>';
+  }).join('');
+
+  wrapper.innerHTML =
+    '<div class="card" style="margin-bottom:0.75rem">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">' +
+        '<div class="card-title" style="margin-bottom:0">📅 Ekonomik Takvim</div>' +
+        '<span style="font-size:0.72rem;color:var(--muted)">Yaklaşan etkinlikler</span>' +
+      '</div>' +
+      satirlar +
+    '</div>';
+}
+
+// ─────────────────────────────────────────────
+// SEKTÖR PERFORMANS ANALİZİ
+// ─────────────────────────────────────────────
+
+export function renderSektorPerformans() {
+  const wrapper = el('sektorPerformansKart');
+  if (!wrapper) return;
+  const veriler = state.veriler;
+
+  const SEKTORLER = {
+    'Bankacılık':  ['AKBNK','GARAN','YKBNK','ISCTR','HALKB','VAKBN','ALBRK','QNBFB'],
+    'Holding':     ['KCHOL','SAHOL','SISE','TKFEN','TAVHL','DOHOL'],
+    'Enerji/Petrol': ['TUPRS','AYGAZ','AKSA','BIMAS','MPARK'],
+    'Havacılık':   ['THYAO','PGSUS','CLEBI','UCAK'],
+    'Perakende':   ['BIMAS','MGROS','SOKM','BIZIM'],
+    'Telekom':     ['TCELL','TTKOM'],
+    'Sanayi/Metal':['EREGL','KARSN','CEMTS','ISDMR'],
+    'Otomotiv':    ['TOASO','FROTO','OTKAR','DOAS'],
+    'GYO':         ['ISGYO','EKGYO','RYGYO','HLGYO'],
+    'Sigorta':     ['AKGRT','ANSGR','RAYSG'],
+  };
+
+  const sonuclar = Object.entries(SEKTORLER).map(([sektor, kodlar]) => {
+    const mevcutlar = kodlar.filter(k => veriler[k]?.degisim != null);
+    if (mevcutlar.length === 0) return null;
+    const ort = mevcutlar.reduce((s, k) => s + (veriler[k].degisim || 0), 0) / mevcutlar.length;
+    return { sektor, ort: +ort.toFixed(2), sayi: mevcutlar.length };
+  }).filter(Boolean).sort((a, b) => b.ort - a.ort);
+
+  if (sonuclar.length === 0) {
+    wrapper.innerHTML = '';
+    return;
+  }
+
+  const maxAbs = Math.max(...sonuclar.map(s => Math.abs(s.ort)), 0.1);
+
+  const kartlar = sonuclar.map(s => {
+    const pos      = s.ort >= 0;
+    const barW     = Math.min(100, Math.abs(s.ort) / maxAbs * 100);
+    const renk     = pos ? 'var(--accent)' : 'var(--red)';
+    const barColor = pos ? 'rgba(52,211,153,0.5)' : 'rgba(239,68,68,0.5)';
+    return '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0">' +
+      '<div style="min-width:110px;font-size:0.78rem;color:var(--text)">' + s.sektor + '</div>' +
+      '<div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">' +
+        '<div style="height:100%;width:' + barW + '%;background:' + barColor + ';border-radius:3px"></div>' +
+      '</div>' +
+      '<div style="min-width:52px;text-align:right;font-size:0.8rem;font-family:var(--mono);font-weight:600;color:' + renk + '">' +
+        (pos ? '+' : '') + s.ort.toFixed(2) + '%' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  wrapper.innerHTML =
+    '<div class="card" style="margin-bottom:0.75rem">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">' +
+        '<div class="card-title" style="margin-bottom:0">🏭 Sektör Performansı</div>' +
+        '<span style="font-size:0.72rem;color:var(--muted)">Günlük ortalama değişim</span>' +
+      '</div>' +
+      kartlar +
+    '</div>';
+}
+
+// ─────────────────────────────────────────────
 // ALARMLAR
 // ─────────────────────────────────────────────
 

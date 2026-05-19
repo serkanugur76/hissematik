@@ -78,7 +78,7 @@ import {
   showToast, closeModal, openModal,
   renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
   renderDashboard, renderHisseler, renderSinyalGecmisi, renderKorelasyonMatrisi,
-  renderPortfoy, renderPortfoyAltin, renderPortfoyDoviz, portfoyModalAc,
+  renderPortfoy, renderPortfoyAltin, renderPortfoyDoviz, renderPortfoyGrafik, portfoyModalAc,
   renderAlarmlar, renderScreener,
   renderHisseDetay, renderDetayOzet, renderDetayTeknik, renderHisseAnalizSonucu,
   renderHaberler, renderHaberAnaliz,
@@ -93,6 +93,8 @@ import {
   renderAnalizGecmisi,
   renderPushMesajlari,
   renderGunSonuOzetleri,
+  renderEkonomikTakvim,
+  renderSektorPerformans,
 } from './ui.js';
 
 setApiToast(showToast);
@@ -515,6 +517,7 @@ window.verileriGuncelle = async () => {
   hideLoading();
   setStatus('live', 'Canlı');
   renderDashboard();
+  renderSektorPerformans();
   renderPortfoy();
   renderHisseler();
   renderSummary();
@@ -712,6 +715,8 @@ async function _piyasaVerisiCek() {
     renderPiyasaKartlari();
     renderPiyasaKartlariSabit();
     renderKorelasyonMatrisi();
+    renderEkonomikTakvim();
+    renderSektorPerformans();
 
     // Makro analiz butonu: piyasa verisi hazırsa göster
     const makroBtnSatir = el('makroAnalizSatiri');
@@ -1018,6 +1023,53 @@ window.screenerUygula = () => {
   });
 
   renderScreener(sonuclar);
+};
+
+// ─────────────────────────────────────────────
+// RİSK / ÖDÜL HESAPLAYICI
+// ─────────────────────────────────────────────
+
+window.rrModalAc = (giris, sl, tp) => {
+  if (giris) el('rrGiris').value = giris;
+  if (sl)    el('rrSl').value    = sl;
+  if (tp)    el('rrTp').value    = tp;
+  window.rrHesapla();
+  openModal('rrModal');
+};
+
+window.rrHesapla = () => {
+  const giris   = Number(el('rrGiris')?.value)   || 0;
+  const slFiyat = Number(el('rrSl')?.value)       || 0;
+  const tpFiyat = Number(el('rrTp')?.value)       || 0;
+  const sermaye = Number(el('rrSermaye')?.value)  || 0;
+  const risk    = Number(el('rrRisk')?.value)      || 2;
+  const sonuc   = el('rrSonuc');
+  if (!sonuc) return;
+  if (!giris || !slFiyat) { sonuc.style.display = 'none'; return; }
+
+  const riskTL    = sermaye > 0 ? sermaye * risk / 100 : null;
+  const kayipHisse = Math.abs(giris - slFiyat);
+  const kazancHisse = tpFiyat > 0 ? Math.abs(tpFiyat - giris) : null;
+  const rr         = kazancHisse && kayipHisse > 0 ? (kazancHisse / kayipHisse) : null;
+  const adet        = riskTL && kayipHisse > 0 ? Math.floor(riskTL / kayipHisse) : null;
+  const maliyet     = adet ? adet * giris : null;
+  const topKayip    = adet ? adet * kayipHisse : (riskTL || null);
+  const topKazanc   = adet && kazancHisse ? adet * kazancHisse : null;
+
+  const _kart = (id, baslik, deger, renk) => {
+    const el2 = el(id);
+    if (el2) el2.innerHTML = '<div class="rr-kart-baslik">' + baslik + '</div><div class="rr-kart-deger" style="' + (renk ? 'color:' + renk : '') + '">' + deger + '</div>';
+  };
+
+  const rrStr = rr ? (rr >= 2 ? '✅ ' : rr >= 1 ? '⚠️ ' : '❌ ') + '1 : ' + rr.toFixed(2) : '—';
+  const rrRenk = rr ? (rr >= 2 ? 'var(--accent)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)') : '';
+  _kart('rrRatio', 'Risk / Ödül Oranı', rrStr, rrRenk);
+  _kart('rrAdet',  'Önerilen Lot/Adet', adet ? adet.toLocaleString('tr-TR') + ' adet' : '(sermaye gir)', '');
+  _kart('rrKayip', 'Max Kayıp', topKayip ? '- ' + topKayip.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : (riskTL ? '- ' + riskTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—'), 'var(--red)');
+  _kart('rrKazanc','Hedef Kazanç', topKazanc ? '+ ' + topKazanc.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : (tpFiyat ? '(adet gir)' : '—'), 'var(--accent)');
+  _kart('rrMaliyet','Toplam Maliyet', maliyet ? maliyet.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—', '');
+
+  sonuc.style.display = 'block';
 };
 
 // Döviz
@@ -1501,6 +1553,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.portfoy-sub-panel').forEach(p => p.classList.toggle('active', p.id === 'portfoy-sp-' + tab));
     if (tab === 'altin')  renderPortfoyAltin();
     if (tab === 'doviz')  renderPortfoyDoviz();
+    if (tab === 'grafik') renderPortfoyGrafik();
   });
 
   // Alt sekme navigasyonu (Hisseler paneli içi)
@@ -1699,6 +1752,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   el('detayAlarmBtn')?.addEventListener('click', () => {
     window.alarmModalAc(state.detayKod || '');
+  });
+  el('detayRrBtn')?.addEventListener('click', () => {
+    const k = state.detayKod;
+    const v = k ? state.veriler[k] : null;
+    const p = k ? state.portfoy[k] : null;
+    window.rrModalAc(
+      v?.fiyat   || (p?.alisFiyati || ''),
+      p?.stopLoss   || '',
+      p?.takeProfiti || ''
+    );
   });
   el('detayNotKaydetBtn')?.addEventListener('click', () => {
     window.notKaydet(state.detayKod);
