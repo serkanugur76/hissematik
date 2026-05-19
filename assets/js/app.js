@@ -1104,6 +1104,10 @@ window.screenerUygula = () => {
 // ─────────────────────────────────────────────
 
 window.rrModalAc = (giris, sl, tp) => {
+  // Kaydedilmiş sermayeyi yükle
+  const kaydedilmisSermaye = localStorage.getItem('hm_rr_sermaye');
+  if (kaydedilmisSermaye && el('rrSermaye') && !el('rrSermaye').value)
+    el('rrSermaye').value = kaydedilmisSermaye;
   if (giris) el('rrGiris').value = giris;
   if (sl)    el('rrSl').value    = sl;
   if (tp)    el('rrTp').value    = tp;
@@ -1111,37 +1115,128 @@ window.rrModalAc = (giris, sl, tp) => {
   openModal('rrModal');
 };
 
+window.rrSermayeKaydet = () => {
+  const v = el('rrSermaye')?.value;
+  if (v) localStorage.setItem('hm_rr_sermaye', v);
+};
+
 window.rrHesapla = () => {
-  const giris   = Number(el('rrGiris')?.value)   || 0;
-  const slFiyat = Number(el('rrSl')?.value)       || 0;
-  const tpFiyat = Number(el('rrTp')?.value)       || 0;
-  const sermaye = Number(el('rrSermaye')?.value)  || 0;
-  const risk    = Number(el('rrRisk')?.value)      || 2;
-  const sonuc   = el('rrSonuc');
+  const giris    = Number(el('rrGiris')?.value)   || 0;
+  const slFiyat  = Number(el('rrSl')?.value)       || 0;
+  const tpFiyat  = Number(el('rrTp')?.value)       || 0;
+  const sermaye  = Number(el('rrSermaye')?.value)  || 0;
+  const risk     = Number(el('rrRisk')?.value)      || 2;
+  const sonuc    = el('rrSonuc');
   if (!sonuc) return;
   if (!giris || !slFiyat) { sonuc.style.display = 'none'; return; }
 
-  const riskTL    = sermaye > 0 ? sermaye * risk / 100 : null;
-  const kayipHisse = Math.abs(giris - slFiyat);
+  const kayipHisse  = Math.abs(giris - slFiyat);
   const kazancHisse = tpFiyat > 0 ? Math.abs(tpFiyat - giris) : null;
-  const rr         = kazancHisse && kayipHisse > 0 ? (kazancHisse / kayipHisse) : null;
-  const adet        = riskTL && kayipHisse > 0 ? Math.floor(riskTL / kayipHisse) : null;
-  const maliyet     = adet ? adet * giris : null;
-  const topKayip    = adet ? adet * kayipHisse : (riskTL || null);
-  const topKazanc   = adet && kazancHisse ? adet * kazancHisse : null;
+  const rr          = kazancHisse && kayipHisse > 0 ? (kazancHisse / kayipHisse) : null;
+
+  // Seçili risk oranı için hesapla
+  const riskTL   = sermaye > 0 ? sermaye * risk / 100 : null;
+  const adet     = riskTL && kayipHisse > 0 ? Math.floor(riskTL / kayipHisse) : null;
+  const maliyet  = adet ? adet * giris : null;
+  const topKayip = adet ? adet * kayipHisse : (riskTL || null);
+  const topKazanc = adet && kazancHisse ? adet * kazancHisse : null;
+  const portfoyAgirlik = maliyet && sermaye > 0 ? (maliyet / sermaye * 100) : null;
 
   const _kart = (id, baslik, deger, renk) => {
     const el2 = el(id);
-    if (el2) el2.innerHTML = '<div class="rr-kart-baslik">' + baslik + '</div><div class="rr-kart-deger" style="' + (renk ? 'color:' + renk : '') + '">' + deger + '</div>';
+    if (!el2) return;
+    el2.innerHTML = '<div class="rr-kart-baslik">' + baslik + '</div>' +
+      '<div class="rr-kart-deger" style="' + (renk ? 'color:' + renk : '') + '">' + deger + '</div>';
   };
 
-  const rrStr = rr ? (rr >= 2 ? '✅ ' : rr >= 1 ? '⚠️ ' : '❌ ') + '1 : ' + rr.toFixed(2) : '—';
-  const rrRenk = rr ? (rr >= 2 ? 'var(--accent)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)') : '';
+  const rrStr  = rr ? (rr >= 2 ? '✅ ' : rr >= 1 ? '⚠️ ' : '❌ ') + '1 : ' + rr.toFixed(2) : '—';
+  const rrRenk = rr ? (rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)') : '';
   _kart('rrRatio', 'Risk / Ödül Oranı', rrStr, rrRenk);
-  _kart('rrAdet',  'Önerilen Lot/Adet', adet ? adet.toLocaleString('tr-TR') + ' adet' : '(sermaye gir)', '');
-  _kart('rrKayip', 'Max Kayıp', topKayip ? '- ' + topKayip.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : (riskTL ? '- ' + riskTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—'), 'var(--red)');
-  _kart('rrKazanc','Hedef Kazanç', topKazanc ? '+ ' + topKazanc.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : (tpFiyat ? '(adet gir)' : '—'), 'var(--accent)');
-  _kart('rrMaliyet','Toplam Maliyet', maliyet ? maliyet.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—', '');
+  _kart('rrAdet',  'Önerilen Adet', adet != null ? adet.toLocaleString('tr-TR') + ' adet' : '(sermaye gir)', '');
+  _kart('rrKayip', 'Max Kayıp',
+    topKayip != null ? '− ' + topKayip.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—',
+    'var(--red)');
+  _kart('rrKazanc', 'Hedef Kazanç',
+    topKazanc != null ? '+ ' + topKazanc.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺'
+    : (tpFiyat ? '(adet gir)' : '—'),
+    'var(--green)');
+  _kart('rrMaliyet', 'Toplam Maliyet',
+    maliyet != null ? maliyet.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' ₺' : '—', '');
+  _kart('rrPortfoyAgirlik', 'Portföy Ağırlığı',
+    portfoyAgirlik != null
+      ? '%' + portfoyAgirlik.toFixed(1) + (portfoyAgirlik > 20 ? ' ⚠️' : ' ✓')
+      : '(sermaye gir)',
+    portfoyAgirlik != null ? (portfoyAgirlik > 20 ? 'var(--yellow)' : 'var(--green)') : '');
+
+  // 3 Senaryo Tablosu
+  const senaryolar = [
+    { etiket: 'Muhafazakâr', oran: 1,   stil: 'var(--green)'  },
+    { etiket: 'Normal',      oran: 2,   stil: 'var(--yellow)' },
+    { etiket: 'Agresif',     oran: 3,   stil: 'var(--red)'    },
+  ];
+  const tbody = el('rrSenaryoBody');
+  if (tbody && sermaye > 0 && kayipHisse > 0) {
+    tbody.innerHTML = senaryolar.map(s => {
+      const rTL  = sermaye * s.oran / 100;
+      const sAdet   = Math.floor(rTL / kayipHisse);
+      const sMaliyet = sAdet * giris;
+      const sKayip   = sAdet * kayipHisse;
+      const sAgirlik = (sMaliyet / sermaye * 100).toFixed(1);
+      const aktif    = s.oran === risk;
+      return `<tr style="border-bottom:1px solid var(--border);${aktif ? 'background:rgba(255,255,255,0.04)' : ''}">
+        <td style="padding:0.4rem 0.5rem;color:${s.stil};font-weight:${aktif ? 600 : 400}">
+          %${s.oran} ${s.etiket}${aktif ? ' ◀' : ''}
+        </td>
+        <td style="padding:0.4rem 0.5rem;text-align:right;font-family:monospace">${sAdet.toLocaleString('tr-TR')}</td>
+        <td style="padding:0.4rem 0.5rem;text-align:right;font-family:monospace">${(sMaliyet/1000).toFixed(1)}K₺</td>
+        <td style="padding:0.4rem 0.5rem;text-align:right;font-family:monospace;color:var(--red)">−${(sKayip/1000).toFixed(1)}K₺</td>
+        <td style="padding:0.4rem 0.5rem;text-align:right;font-family:monospace">%${sAgirlik}</td>
+      </tr>`;
+    }).join('');
+  } else if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:0.5rem;color:var(--muted);font-size:0.78rem;text-align:center">Senaryo için sermaye girin</td></tr>';
+  }
+
+  // Kelly Kriteri
+  const kellyBlok = el('rrKellyBlok');
+  const kellyIcerik = el('rrKellyIcerik');
+  if (kellyBlok && kellyIcerik) {
+    // Seçili hissenin sinyal geçmişinden isabet oranı
+    const kod = state.detayKod;
+    const gecmis = (state.sinyalGecmisi || []).filter(s => s.sembol === kod && s.dogrulandi !== null);
+    if (gecmis.length >= 5 && sermaye > 0 && kayipHisse > 0) {
+      const dogruSayisi = gecmis.filter(s => s.dogrulandi === true).length;
+      const p = dogruSayisi / gecmis.length;          // kazanma olasılığı
+      const q = 1 - p;                                // kaybetme olasılığı
+      // R/R oranı veya varsayılan 1.5
+      const b = rr ?? 1.5;
+      const kelly = (p * b - q) / b;                  // Kelly formülü: (pb - q) / b
+      const kellyPct = Math.max(0, kelly * 100);
+      const kellyTL  = sermaye * kellyPct / 100;
+      const kellyAdet = kellyTL > 0 && kayipHisse > 0 ? Math.floor(kellyTL / kayipHisse) : 0;
+      const halfKelly = kellyPct / 2; // Yarım Kelly — daha güvenli
+
+      kellyBlok.style.display = 'block';
+      kellyIcerik.innerHTML =
+        `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.4rem">
+          <div><div style="color:var(--muted);font-size:0.72rem">İsabet (%${gecmis.length} sinyal)</div>
+               <div style="font-weight:600">${Math.round(p*100)}%</div></div>
+          <div><div style="color:var(--muted);font-size:0.72rem">Tam Kelly</div>
+               <div style="font-weight:600;color:${kellyPct > 25 ? 'var(--red)' : 'var(--green)'}">%${kellyPct.toFixed(1)}</div></div>
+          <div><div style="color:var(--muted);font-size:0.72rem">Yarım Kelly (önerilen)</div>
+               <div style="font-weight:600;color:var(--green)">%${halfKelly.toFixed(1)}</div></div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted)">
+          Önerilen adet: <strong style="color:var(--fg)">${Math.floor(kellyAdet/2).toLocaleString('tr-TR')} lot</strong>
+          (Yarım Kelly = %${halfKelly.toFixed(1)} risk)
+          ${kellyPct <= 0 ? ' — <span style="color:var(--red)">Negatif beklenti: bu işlemi geç</span>' : ''}
+        </div>`;
+    } else {
+      kellyBlok.style.display = gecmis.length > 0 ? 'block' : 'none';
+      if (gecmis.length > 0 && gecmis.length < 5)
+        kellyIcerik.innerHTML = `<span style="color:var(--muted);font-size:0.78rem">Kelly için en az 5 doğrulanmış sinyal gerekli (şu an: ${gecmis.length})</span>`;
+    }
+  }
 
   sonuc.style.display = 'block';
 };
