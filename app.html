@@ -326,18 +326,44 @@
         </div>
         <button class="btn" id="btnTakibiKaldir" data-tooltip="Seçili hisseleri takip listesinden çıkar">Seçimi Temizle</button>
       </div>
-      <div class="search-row">
-        <input
-          class="search-input"
-          id="searchInput"
-          placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)"
-          autocomplete="off"
-        >
-        <button class="chip active" data-filter="tum">Tümü</button>
-        <button class="chip" data-filter="bist30">BIST 30</button>
-        <button class="chip" data-filter="bist100">BIST 100</button>
-        <button class="chip" data-filter="takip">Takip</button>
-        <button class="chip" data-filter="portfoy">Portföy</button>
+      <!-- Filtreler — arama barının üstünde -->
+      <div class="filtre-container">
+        <div class="filtre-satir">
+          <span class="filtre-grup-etiket">Genel</span>
+          <div class="filtre-scroll">
+            <button class="chip active" data-filter="tum">Tümü</button>
+            <button class="chip" data-filter="bist30">BIST 30</button>
+            <button class="chip" data-filter="bist100">BIST 100</button>
+            <button class="chip" data-filter="takip">⭐ Takip</button>
+            <button class="chip" data-filter="portfoy">💼 Portföy</button>
+          </div>
+        </div>
+        <div class="filtre-satir">
+          <span class="filtre-grup-etiket">Sektör</span>
+          <div class="filtre-scroll">
+            <button class="chip" data-filter="sektor-banka">🏦 Bankacılık</button>
+            <button class="chip" data-filter="sektor-holding">🏢 Holding</button>
+            <button class="chip" data-filter="sektor-enerji">⚡ Enerji</button>
+            <button class="chip" data-filter="sektor-havaci">✈️ Havacılık</button>
+            <button class="chip" data-filter="sektor-perakende">🛒 Perakende</button>
+            <button class="chip" data-filter="sektor-telekom">📡 Telekom</button>
+            <button class="chip" data-filter="sektor-sanayi">🔩 Sanayi/Metal</button>
+            <button class="chip" data-filter="sektor-otomotiv">🚗 Otomotiv</button>
+            <button class="chip" data-filter="sektor-gyo">🏗 GYO</button>
+            <button class="chip" data-filter="sektor-sigorta">🛡 Sigorta</button>
+            <button class="chip" data-filter="sektor-gida">🌾 Gıda/İçecek</button>
+            <button class="chip" data-filter="sektor-ilaç">💊 İlaç/Sağlık</button>
+            <button class="chip" data-filter="sektor-insaat">🏠 İnşaat/Çimento</button>
+          </div>
+        </div>
+        <div class="search-row" style="margin-bottom:0">
+          <input
+            class="search-input"
+            id="searchInput"
+            placeholder="Hisse kodu veya şirket ara... (listede yoksa Enter'a bas)"
+            autocomplete="off"
+          >
+        </div>
       </div>
       <div class="hisse-grid" id="hisseGrid"></div>
     </div>

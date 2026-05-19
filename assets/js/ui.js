@@ -566,6 +566,23 @@ export function renderDashboard() {
 // HİSSE LİSTESİ (GRID)
 // ─────────────────────────────────────────────
 
+// Sektör → hisse kodu eşlemesi
+const SEKTOR_MAP = {
+  'sektor-banka':    new Set(['AKBNK','GARAN','YKBNK','ISCTR','HALKB','VAKBN','ALBRK','QNBFB','SKBNK','KLNMA','TSKB','ODEAB']),
+  'sektor-holding':  new Set(['KCHOL','SAHOL','SISE','TKFEN','TAVHL','DOHOL','ALCAR','MPARK','ULKER','OYAKC','KRDMB']),
+  'sektor-enerji':   new Set(['TUPRS','AYGAZ','AKSA','ZOREN','AKSEN','IPEKE','ENKAI','KEINV','ASELS','TURSG','TPAO','PETKM']),
+  'sektor-havaci':   new Set(['THYAO','PGSUS','CLEBI','UCAK','HAVAS','DURDO','EGEEN']),
+  'sektor-perakende':new Set(['BIMAS','MGROS','SOKM','BIZIM','MAVI','LCWGR','PRKME','CRFSA','FONET']),
+  'sektor-telekom':  new Set(['TCELL','TTKOM','NETAS','ARENA','LINK','LOGO','INDES']),
+  'sektor-sanayi':   new Set(['EREGL','KARSN','CEMTS','ISDMR','KOZAL','KRDMD','KARTN','BAGFS','BRSAN','DMSAS','ERBOS']),
+  'sektor-otomotiv': new Set(['TOASO','FROTO','OTKAR','DOAS','TTRAK','TMPOL','EGEEN','PARSN']),
+  'sektor-gyo':      new Set(['ISGYO','EKGYO','RYGYO','HLGYO','TRGYO','SNGYO','MRGYO','ALGYO','DGGYO','OZKGY']),
+  'sektor-sigorta':  new Set(['AKGRT','ANSGR','RAYSG','GUSGF','AVTUR']),
+  'sektor-gida':     new Set(['ULKER','TATGD','KERVT','PNSUT','AEFES','CCOLA','FMIZP','SELEC','BANVT','MIGROS']),
+  'sektor-ilaç':     new Set(['ECILC','ECZYT','DEVA','SELEC','BFREN','KLSER','PSGYO','MEPET']),
+  'sektor-insaat':   new Set(['AKCNS','BOLUC','CIMSA','MRDIN','KONYA','UNYEC','ANACM','TRKCM','SISE']),
+};
+
 export function renderHisseler() {
   const { veriler, takipEdilen, portfoy, aktifFilter: filtre } = state;
   const q    = (el('searchInput')?.value || '').toLowerCase();
@@ -582,6 +599,7 @@ export function renderHisseler() {
       if (filtre === 'portfoy' && !portfoy[k])         return false;
       if (filtre === 'bist30'  && !BIST30.has(k))      return false;
       if (filtre === 'bist100' && !BIST100.has(k))     return false;
+      if (filtre && filtre.startsWith('sektor-') && SEKTOR_MAP[filtre] && !SEKTOR_MAP[filtre].has(k)) return false;
       if (q && !k.toLowerCase().includes(q) && !a.toLowerCase().includes(q)) return false;
       return true;
     })
