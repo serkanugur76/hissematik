@@ -2254,11 +2254,45 @@ window.loadTokenIstatistik = async () => {
     const toplamToken   = buAy.reduce((s, d) => s + d.toplamToken, 0);
     const toplamMaliyet = buAy.reduce((s, d) => s + d.maliyet, 0);
     const toplamIstek   = buAy.reduce((s, d) => s + d.istekSayisi, 0);
+
+    const satirlar = buAy.map((d, i) => {
+      const yuzde = toplamToken > 0 ? (d.toplamToken / toplamToken * 100).toFixed(1) : 0;
+      return `<tr>
+        <td style="padding:0.5rem 0.75rem;color:var(--muted);font-size:0.75rem">${i + 1}</td>
+        <td style="padding:0.5rem 0.75rem">
+          <div style="font-weight:500;font-size:0.85rem">${d.ad || '—'}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">${d.email || ''}</div>
+        </td>
+        <td style="padding:0.5rem 0.75rem;text-align:right;font-family:monospace;font-size:0.85rem">${d.toplamToken.toLocaleString()}</td>
+        <td style="padding:0.5rem 0.75rem;text-align:right;font-family:monospace;font-size:0.85rem">$${d.maliyet.toFixed(4)}</td>
+        <td style="padding:0.5rem 0.75rem;text-align:right;font-family:monospace;font-size:0.85rem">${d.istekSayisi}</td>
+        <td style="padding:0.5rem 0.75rem;min-width:100px">
+          <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
+            <div style="background:var(--accent);width:${yuzde}%;height:100%"></div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);text-align:right;margin-top:2px">%${yuzde}</div>
+        </td>
+      </tr>`;
+    }).join('');
+
     container.innerHTML =
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.25rem">' +
         '<div class="card" style="text-align:center"><div class="card-title">Toplam Token</div><div class="card-value mono" style="font-size:1.1rem">' + toplamToken.toLocaleString() + '</div></div>' +
         '<div class="card" style="text-align:center"><div class="card-title">Tahmini Maliyet</div><div class="card-value mono" style="font-size:1.1rem">$' + toplamMaliyet.toFixed(4) + '</div></div>' +
         '<div class="card" style="text-align:center"><div class="card-title">İstek Sayısı</div><div class="card-value mono" style="font-size:1.1rem">' + toplamIstek + '</div></div>' +
+      '</div>' +
+      '<div style="overflow-x:auto">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:0.82rem">' +
+          '<thead><tr style="border-bottom:1px solid var(--border);color:var(--muted);font-size:0.72rem">' +
+            '<th style="padding:0.4rem 0.75rem;text-align:left;font-weight:500">#</th>' +
+            '<th style="padding:0.4rem 0.75rem;text-align:left;font-weight:500">Kullanıcı</th>' +
+            '<th style="padding:0.4rem 0.75rem;text-align:right;font-weight:500">Token</th>' +
+            '<th style="padding:0.4rem 0.75rem;text-align:right;font-weight:500">Maliyet</th>' +
+            '<th style="padding:0.4rem 0.75rem;text-align:right;font-weight:500">İstek</th>' +
+            '<th style="padding:0.4rem 0.75rem;text-align:right;font-weight:500">Pay</th>' +
+          '</tr></thead>' +
+          '<tbody>' + satirlar + '</tbody>' +
+        '</table>' +
       '</div>';
   } catch (e) {
     if (container) container.innerHTML = '<div style="color:var(--red)">Yükleme hatası: ' + e.message + '</div>';
