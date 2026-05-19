@@ -1503,7 +1503,7 @@ function _kapPollingBaslat() {
 
   _kapPollingTimer = setInterval(async () => {
     // Sadece KAP paneli görünürken çalış
-    if (!el('panel-kap')?.classList.contains('active')) return;
+    if (!el('kesfet-sp-kap')?.classList.contains('active')) return;
 
     try {
       const sonIndex = kapSonIndexAl();
@@ -1798,8 +1798,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.hisseAra(el('searchInput')?.value || '');
   });
 
+  // Haberler yenile
+  el('btnHaberleriYenile')?.addEventListener('click', async () => {
+    setState({ haberlerYuklendi: false });
+    await _loadHaberler();
+  });
+
   // Sözlük
-  el('sozlukAraInput')?.addEventListener('keydown', (e) => {
+  el('sozlukSearch')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const q = e.target.value.trim();
       if (!q) { showToast('Terim girin', 'error'); return; }
@@ -1807,7 +1813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   el('btnTerimiSor')?.addEventListener('click', () => {
-    const q = el('sozlukAraInput')?.value.trim();
+    const q = el('sozlukSearch')?.value.trim();
     if (!q) { showToast('Terim girin', 'error'); return; }
     terimSorAPI(q);
   });
