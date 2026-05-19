@@ -110,6 +110,8 @@ export const state = {
   veriler:    {},
   takipEdilen: new Set(),
   portfoy:    {},
+  portfoyAltin: {},
+  portfoyDoviz: {},
 
   // ── Sinyal Geçmişi ─────────────────────────
   sinyalGecmisi: [],
@@ -151,6 +153,8 @@ export function resetState() {
   state.veriler         = {};
   state.takipEdilen     = new Set();
   state.portfoy         = {};
+  state.portfoyAltin    = {};
+  state.portfoyDoviz    = {};
   state.sinyalGecmisi   = [];
   state.dogrulamaGun    = DOGRULAMA_GUN_VARSAYILAN;
   state.piyasaVerisi    = {};

@@ -879,6 +879,168 @@ export function portfoyModalAc(k, a) {
 }
 
 // ─────────────────────────────────────────────
+// PORTFÖY — ALTIN
+// ─────────────────────────────────────────────
+
+export function renderPortfoyAltin() {
+  const wrapper = el('portfoyAltinContent');
+  if (!wrapper) return;
+  const pv = state.piyasaVerisi;
+  const altin = state.portfoyAltin || {};
+
+  const turler = [
+    { key: 'gram',   etiket: 'Gram Altın',   guncelFiyat: pv.altin?.gramTL   || 0 },
+    { key: 'ceyrek', etiket: 'Çeyrek Altın', guncelFiyat: pv.altin?.ceyrekTL || 0 },
+    { key: 'yarim',  etiket: 'Yarım Altın',  guncelFiyat: pv.altin?.yarimTL  || 0 },
+    { key: 'tam',    etiket: 'Tam Altın',    guncelFiyat: pv.altin?.tamTL    || 0 },
+  ];
+
+  const pozisyonlar = turler.flatMap(t => (altin[t.key] || []).map((p, i) => ({ ...t, p, i })));
+
+  let totMaliyet = 0, totDeger = 0;
+  pozisyonlar.forEach(({ guncelFiyat, p }) => {
+    totMaliyet += p.miktar * p.alisFiyati;
+    totDeger   += p.miktar * (guncelFiyat || p.alisFiyati);
+  });
+  const kz  = totDeger - totMaliyet;
+  const kzp = totMaliyet > 0 ? (kz / totMaliyet * 100) : 0;
+
+  if (pozisyonlar.length === 0) {
+    wrapper.innerHTML =
+      '<div style="text-align:center;padding:4rem;color:var(--muted)">' +
+        '<div style="font-size:2.5rem;margin-bottom:1rem">🥇</div>' +
+        '<div style="margin-bottom:0.5rem;color:var(--text)">Altın pozisyonunuz yok</div>' +
+        '<div style="font-size:0.8rem;margin-bottom:1.5rem">Gram, çeyrek, yarım veya tam altın ekleyin</div>' +
+        '<button class="btn" onclick="window.altinModalAc()">+ Altın Ekle</button>' +
+      '</div>';
+    return;
+  }
+
+  const degisimRenk = (pv.altin?.degisim || 0) >= 0 ? 'var(--accent)' : 'var(--red)';
+
+  const rows = pozisyonlar.map(({ key, etiket, guncelFiyat, p, i }) => {
+    const mal    = p.miktar * p.alisFiyati;
+    const deg    = p.miktar * (guncelFiyat || p.alisFiyati);
+    const kzSat  = deg - mal;
+    const kzpSat = mal > 0 ? (kzSat / mal * 100) : 0;
+    return '<tr>' +
+      '<td><span style="font-weight:600;color:var(--yellow)">🥇</span> ' + etiket + '</td>' +
+      '<td class="mono">' + p.miktar + '</td>' +
+      '<td class="mono">' + p.alisFiyati.toFixed(0) + ' ₺</td>' +
+      '<td class="mono">' + (guncelFiyat ? guncelFiyat.toFixed(0) + ' ₺' : '—') + '</td>' +
+      '<td class="mono">' + mal.toFixed(0) + ' ₺</td>' +
+      '<td class="mono">' + (deg ? deg.toFixed(0) + ' ₺' : '—') + '</td>' +
+      '<td class="mono ' + (kzSat >= 0 ? 'pos' : 'neg') + '">' + (kzSat >= 0 ? '+' : '') + kzSat.toFixed(0) + ' ₺ <span style="font-size:0.72rem">(' + (kzpSat >= 0 ? '+' : '') + kzpSat.toFixed(1) + '%)</span></td>' +
+      '<td><button class="btn danger" onclick="window.altinCikar(\'' + key + '\',' + i + ')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>' +
+      '</tr>';
+  }).join('');
+
+  const altinDegisimStr = pv.altin?.degisim != null
+    ? '<span style="color:' + degisimRenk + '">' + (pv.altin.degisim >= 0 ? '+' : '') + pv.altin.degisim.toFixed(2) + '%</span>'
+    : '';
+
+  wrapper.innerHTML =
+    '<div class="portfoy-summary">' +
+      '<div class="grid-4" style="margin-bottom:0">' +
+        '<div><div class="card-title">Toplam Maliyet</div><div class="card-value" style="font-size:1.2rem">' + totMaliyet.toFixed(0) + ' ₺</div></div>' +
+        '<div><div class="card-title">Güncel Değer</div><div class="card-value" style="font-size:1.2rem">' + totDeger.toFixed(0) + ' ₺</div></div>' +
+        '<div><div class="card-title">Toplam K/Z</div><div class="card-value ' + (kz >= 0 ? 'green' : 'red') + '" style="font-size:1.2rem">' + (kz >= 0 ? '+' : '') + kz.toFixed(0) + ' ₺</div></div>' +
+        '<div><div class="card-title">Getiri</div><div class="card-value ' + (kzp >= 0 ? 'green' : 'red') + '" style="font-size:1.2rem">' + (kzp >= 0 ? '+' : '') + kzp.toFixed(1) + '%</div></div>' +
+      '</div>' +
+      '<div style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted)">Gram: ' + (pv.altin?.gramTL?.toFixed(0) || '—') + ' ₺ ' + altinDegisimStr + ' &nbsp;|&nbsp; Çeyrek: ' + (pv.altin?.ceyrekTL?.toFixed(0) || '—') + ' ₺ &nbsp;|&nbsp; Yarım: ' + (pv.altin?.yarimTL?.toFixed(0) || '—') + ' ₺ &nbsp;|&nbsp; Tam: ' + (pv.altin?.tamTL?.toFixed(0) || '—') + ' ₺</div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">' +
+      '<button class="btn" onclick="window.altinModalAc()">+ Altın Ekle</button>' +
+    '</div>' +
+    '<div class="card"><div class="table-wrap"><table>' +
+      '<thead><tr><th>Tür</th><th>Miktar</th><th>Alış Fiyatı</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table></div></div>';
+}
+
+// ─────────────────────────────────────────────
+// PORTFÖY — DÖVİZ
+// ─────────────────────────────────────────────
+
+export function renderPortfoyDoviz() {
+  const wrapper = el('portfoyDovizContent');
+  if (!wrapper) return;
+  const pv = state.piyasaVerisi;
+  const doviz = state.portfoyDoviz || {};
+
+  const turler = [
+    { key: 'usd', etiket: 'ABD Doları',        sembol: '$', guncelKur: pv.usdtry?.fiyat || 0, degisim: pv.usdtry?.degisim || 0 },
+    { key: 'eur', etiket: 'Euro',               sembol: '€', guncelKur: pv.eurtry?.fiyat || 0, degisim: pv.eurtry?.degisim || 0 },
+    { key: 'cny', etiket: 'Çin Yuanı',          sembol: '¥', guncelKur: pv.cnytry?.fiyat || 0, degisim: pv.cnytry?.degisim || 0 },
+    { key: 'gbp', etiket: 'İngiliz Sterlini',   sembol: '£', guncelKur: pv.gbptry?.fiyat || 0, degisim: pv.gbptry?.degisim || 0 },
+  ];
+
+  const pozisyonlar = turler.flatMap(t => (doviz[t.key] || []).map((p, i) => ({ ...t, p, i })));
+
+  let totMaliyet = 0, totDeger = 0;
+  pozisyonlar.forEach(({ guncelKur, p }) => {
+    totMaliyet += p.miktar * p.alisFiyati;
+    totDeger   += p.miktar * (guncelKur || p.alisFiyati);
+  });
+  const kz  = totDeger - totMaliyet;
+  const kzp = totMaliyet > 0 ? (kz / totMaliyet * 100) : 0;
+
+  if (pozisyonlar.length === 0) {
+    wrapper.innerHTML =
+      '<div style="text-align:center;padding:4rem;color:var(--muted)">' +
+        '<div style="font-size:2.5rem;margin-bottom:1rem">💱</div>' +
+        '<div style="margin-bottom:0.5rem;color:var(--text)">Döviz pozisyonunuz yok</div>' +
+        '<div style="font-size:0.8rem;margin-bottom:1.5rem">USD, EUR, CNY veya GBP ekleyin</div>' +
+        '<button class="btn" onclick="window.dovizModalAc()">+ Döviz Ekle</button>' +
+      '</div>';
+    return;
+  }
+
+  const rows = pozisyonlar.map(({ key, etiket, sembol, guncelKur, p, i }) => {
+    const mal    = p.miktar * p.alisFiyati;
+    const deg    = p.miktar * (guncelKur || p.alisFiyati);
+    const kzSat  = deg - mal;
+    const kzpSat = mal > 0 ? (kzSat / mal * 100) : 0;
+    return '<tr>' +
+      '<td><span style="font-weight:600">' + sembol + '</span> ' + etiket + '</td>' +
+      '<td class="mono">' + p.miktar.toLocaleString('tr-TR') + ' ' + sembol + '</td>' +
+      '<td class="mono">' + p.alisFiyati.toFixed(4) + ' ₺</td>' +
+      '<td class="mono">' + (guncelKur ? guncelKur.toFixed(4) + ' ₺' : '—') + '</td>' +
+      '<td class="mono">' + mal.toFixed(0) + ' ₺</td>' +
+      '<td class="mono">' + (deg ? deg.toFixed(0) + ' ₺' : '—') + '</td>' +
+      '<td class="mono ' + (kzSat >= 0 ? 'pos' : 'neg') + '">' + (kzSat >= 0 ? '+' : '') + kzSat.toFixed(0) + ' ₺ <span style="font-size:0.72rem">(' + (kzpSat >= 0 ? '+' : '') + kzpSat.toFixed(1) + '%)</span></td>' +
+      '<td><button class="btn danger" onclick="window.dovizCikar(\'' + key + '\',' + i + ')" style="font-size:0.72rem;padding:0.3rem 0.6rem">Çıkar</button></td>' +
+      '</tr>';
+  }).join('');
+
+  const kurOzeti = turler.map(t => {
+    const k = t.guncelKur;
+    const d = t.degisim;
+    if (!k) return null;
+    const renk = d >= 0 ? 'var(--accent)' : 'var(--red)';
+    return t.sembol + ' ' + k.toFixed(2) + ' ₺ <span style="color:' + renk + '">(' + (d >= 0 ? '+' : '') + d.toFixed(2) + '%)</span>';
+  }).filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+  wrapper.innerHTML =
+    '<div class="portfoy-summary">' +
+      '<div class="grid-4" style="margin-bottom:0">' +
+        '<div><div class="card-title">Toplam Maliyet</div><div class="card-value" style="font-size:1.2rem">' + totMaliyet.toFixed(0) + ' ₺</div></div>' +
+        '<div><div class="card-title">Güncel Değer</div><div class="card-value" style="font-size:1.2rem">' + totDeger.toFixed(0) + ' ₺</div></div>' +
+        '<div><div class="card-title">Toplam K/Z</div><div class="card-value ' + (kz >= 0 ? 'green' : 'red') + '" style="font-size:1.2rem">' + (kz >= 0 ? '+' : '') + kz.toFixed(0) + ' ₺</div></div>' +
+        '<div><div class="card-title">Getiri</div><div class="card-value ' + (kzp >= 0 ? 'green' : 'red') + '" style="font-size:1.2rem">' + (kzp >= 0 ? '+' : '') + kzp.toFixed(1) + '%</div></div>' +
+      '</div>' +
+      '<div style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted)">' + kurOzeti + '</div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">' +
+      '<button class="btn" onclick="window.dovizModalAc()">+ Döviz Ekle</button>' +
+    '</div>' +
+    '<div class="card"><div class="table-wrap"><table>' +
+      '<thead><tr><th>Döviz</th><th>Miktar</th><th>Alış Kuru</th><th>Güncel</th><th>Maliyet</th><th>Değer</th><th>K/Z</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table></div></div>';
+}
+
+// ─────────────────────────────────────────────
 // HİSSE DETAY MODALI
 // ─────────────────────────────────────────────
 

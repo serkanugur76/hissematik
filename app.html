@@ -339,8 +339,20 @@
   ════════════════════════════════════════ -->
   <main class="panel" id="panel-portfoy">
     <div class="ticker-bar"></div>
-    <!-- js tarafından tamamen doldurulur -->
-    <div id="portfoyContent"></div>
+    <div class="sub-tab-bar">
+      <button class="sub-tab active" data-portfoy-subtab="hisse">📈 Hisse Senedi</button>
+      <button class="sub-tab" data-portfoy-subtab="altin">🥇 Altın</button>
+      <button class="sub-tab" data-portfoy-subtab="doviz">💱 Döviz</button>
+    </div>
+    <div class="portfoy-sub-panel active" id="portfoy-sp-hisse">
+      <div id="portfoyContent"></div>
+    </div>
+    <div class="portfoy-sub-panel" id="portfoy-sp-altin">
+      <div id="portfoyAltinContent"></div>
+    </div>
+    <div class="portfoy-sub-panel" id="portfoy-sp-doviz">
+      <div id="portfoyDovizContent"></div>
+    </div>
   </main>
 
 
@@ -1034,6 +1046,76 @@
               indicators.js, ui.js
 ══════════════════════════════════════════ -->
 <script type="module" src="assets/js/app.js"></script>
+
+<!-- Altın Ekle Modal -->
+<div class="modal-overlay" id="altinModal">
+  <div class="modal-box">
+    <div class="modal-title">🥇 Altın Ekle</div>
+    <div class="modal-sub">Altın türünü seçin ve pozisyon bilgilerini girin</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Altın Türü</label>
+        <select id="altinTur" class="form-input">
+          <option value="gram">Gram Altın</option>
+          <option value="ceyrek">Çeyrek Altın</option>
+          <option value="yarim">Yarım Altın</option>
+          <option value="tam">Tam Altın</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Miktar (adet/gram)</label>
+        <input type="number" id="altinMiktar" class="form-input" placeholder="ör: 10" min="0.001" step="0.001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alış Fiyatı (₺)</label>
+        <input type="number" id="altinAlisFiyati" class="form-input" placeholder="ör: 2850.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alış Tarihi</label>
+        <input type="date" id="altinTarihi" class="form-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="window.altinKaydet()">Kaydet</button>
+      <button class="btn" data-modal-close="altinModal">İptal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Döviz Ekle Modal -->
+<div class="modal-overlay" id="dovizModal">
+  <div class="modal-box">
+    <div class="modal-title">💱 Döviz Ekle</div>
+    <div class="modal-sub">Döviz türünü seçin ve pozisyon bilgilerini girin</div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Döviz</label>
+        <select id="dovizTur" class="form-input">
+          <option value="usd">🇺🇸 ABD Doları (USD)</option>
+          <option value="eur">🇪🇺 Euro (EUR)</option>
+          <option value="cny">🇨🇳 Çin Yuanı (CNY)</option>
+          <option value="gbp">🇬🇧 İngiliz Sterlini (GBP)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Miktar</label>
+        <input type="number" id="dovizMiktar" class="form-input" placeholder="ör: 1000" min="0.01" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alış Kuru (₺)</label>
+        <input type="number" id="dovizAlisFiyati" class="form-input" placeholder="ör: 32.50" min="0" step="0.0001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alış Tarihi</label>
+        <input type="date" id="dovizTarihi" class="form-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="window.dovizKaydet()">Kaydet</button>
+      <button class="btn" data-modal-close="dovizModal">İptal</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

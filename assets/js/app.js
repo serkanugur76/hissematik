@@ -78,7 +78,7 @@ import {
   showToast, closeModal, openModal,
   renderTopbar, renderPiyasaKartlari, renderPiyasaKartlariSabit, renderSummary,
   renderDashboard, renderHisseler, renderSinyalGecmisi, renderKorelasyonMatrisi,
-  renderPortfoy, portfoyModalAc,
+  renderPortfoy, renderPortfoyAltin, renderPortfoyDoviz, portfoyModalAc,
   renderHisseDetay, renderDetayOzet, renderDetayTeknik, renderHisseAnalizSonucu,
   renderHaberler, renderHaberAnaliz,
   renderSozluk, renderPopularTerimler,
@@ -324,8 +324,10 @@ onAuthStateChanged(auth, async (user) => {
     isAdmin,
     anthropicKey,
     takipEdilen:  new Set(userDoc.takipEdilen || []),
-    portfoy:      userDoc.portfoy  || {},
-    veriler:      userDoc.veriler  || {},
+    portfoy:      userDoc.portfoy      || {},
+    portfoyAltin: userDoc.portfoyAltin || {},
+    portfoyDoviz: userDoc.portfoyDoviz || {},
+    veriler:      userDoc.veriler      || {},
   });
 
   // UI
@@ -398,7 +400,7 @@ async function _switchTab(name, btn) {
   if (name === 'haberler')  await _loadHaberler();
   if (name === 'sozluk')    await _loadSozluk();
   // sinyaller sekmesi kaldırıldı — içerik hisseler sekmesinde
-  if (name === 'portfoy')   renderPortfoy();
+  if (name === 'portfoy')   { renderPortfoy(); renderPortfoyAltin(); renderPortfoyDoviz(); }
   if (name === 'kap')       await _loadKapBildirimleri();
   if (name === 'hisseler')  { renderDashboard(); renderSummary(); }
 }
@@ -495,9 +497,11 @@ window.verileriGuncelle = async () => {
   try {
     await saveUserData({
       db, currentUser: state.currentUser,
-      takipEdilen: state.takipEdilen,
-      portfoy:     state.portfoy,
-      veriler:     state.veriler,
+      takipEdilen:  state.takipEdilen,
+      portfoy:      state.portfoy,
+      portfoyAltin: state.portfoyAltin,
+      portfoyDoviz: state.portfoyDoviz,
+      veriler:      state.veriler,
     });
   } catch (e) {
     console.warn('verileriGuncelle: saveUserData başarısız', e?.code || e?.message);
@@ -561,7 +565,7 @@ async function _piyasaVerisiCek() {
   try {
     const [data, xu100Kapanis, xu030Kapanis, altinKapanis, brentKapanis, wtiKapanis,
            sp500Kapanis, nasdaqKapanis, daxKapanis, ftseKapanis, nikkeiKapanis,
-           usdtryKapanis, eurtryKapanis, eurusdKapanis] = await Promise.all([
+           usdtryKapanis, eurtryKapanis, eurusdKapanis, cnytryKapanis, gbptryKapanis] = await Promise.all([
       fetchPiyasaVerisi(),
       fetchEndeksGecmisi('XU100.IS'),
       fetchEndeksGecmisi('XU030.IS'),
@@ -576,6 +580,8 @@ async function _piyasaVerisiCek() {
       fetchEndeksGecmisi('USDTRY=X'),
       fetchEndeksGecmisi('EURTRY=X'),
       fetchEndeksGecmisi('EURUSD=X'),
+      fetchEndeksGecmisi('CNYTRY=X'),
+      fetchEndeksGecmisi('GBPTRY=X'),
     ]);
     if (!data) return;
 
@@ -610,6 +616,18 @@ async function _piyasaVerisiCek() {
     if (eurusdResult) {
       const { fiyat, degisim } = _metaFiyatParse(eurusdResult);
       pv.eurusd = { fiyat, degisim, kapanis: eurusdKapanis };
+    }
+
+    const cnytryResult = data['CNYTRY=X']?.chart?.result?.[0];
+    if (cnytryResult) {
+      const { fiyat, degisim } = _metaFiyatParse(cnytryResult);
+      pv.cnytry = { fiyat, degisim, kapanis: cnytryKapanis };
+    }
+
+    const gbptryResult = data['GBPTRY=X']?.chart?.result?.[0];
+    if (gbptryResult) {
+      const { fiyat, degisim } = _metaFiyatParse(gbptryResult);
+      pv.gbptry = { fiyat, degisim, kapanis: gbptryKapanis };
     }
 
     // Altın fiyatlarını anlık Türk kaynağından çek
@@ -724,14 +742,14 @@ async function toggleTakip(k) {
   } else {
     state.takipEdilen.add(k);
   }
-  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, veriler: state.veriler });
+  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
   renderHisseler();
   renderSummary();
 }
 
 window.takibiKaldir = () => {
   state.takipEdilen.clear();
-  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, veriler: state.veriler });
+  saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
   renderHisseler();
   renderSummary();
 };
@@ -774,7 +792,7 @@ window.portfoyKaydet = async () => {
   if (!state.takipEdilen.has(k)) state.takipEdilen.add(k);
 
   try {
-    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, veriler: state.veriler });
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
     closeModal('portfoyModal');
     renderHisseler();
     renderPortfoy();
@@ -787,11 +805,93 @@ window.portfoyKaydet = async () => {
 async function portfoyCikar(k) {
   if (!confirm(k + ' portföyden çıkarılsın mı?')) return;
   delete state.portfoy[k];
-  await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, veriler: state.veriler });
+  await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
   renderPortfoy();
   renderHisseler();
   showToast(k + ' portföyden çıkarıldı');
 }
+
+// ─────────────────────────────────────────────
+// PORTFÖY — ALTIN & DÖVİZ CRUD
+// ─────────────────────────────────────────────
+
+// Altın
+window.altinModalAc = () => {
+  el('altinAlisFiyati').value = '';
+  el('altinMiktar').value = '';
+  el('altinTur').value = 'gram';
+  openModal('altinModal');
+};
+
+window.altinKaydet = async () => {
+  const tur    = el('altinTur').value;
+  const miktar = Number(el('altinMiktar').value);
+  const fiyat  = Number(el('altinAlisFiyati').value);
+  const tarih  = el('altinTarihi').value;
+  if (!miktar || !fiyat) { showToast('Miktar ve fiyat zorunlu!', 'error'); return; }
+
+  if (!state.portfoyAltin[tur]) state.portfoyAltin[tur] = [];
+  state.portfoyAltin[tur].push({ miktar, alisFiyati: fiyat, eklemeTarihi: tarih || new Date().toISOString().split('T')[0] });
+
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    closeModal('altinModal');
+    renderPortfoyAltin();
+    showToast('Altın pozisyonu eklendi ✓');
+  } catch (e) {
+    showToast('Kaydedilemedi: ' + (e?.message || 'Hata'), 'error');
+  }
+};
+
+window.altinCikar = async (tur, idx) => {
+  if (!confirm('Bu altın pozisyonu silinsin mi?')) return;
+  state.portfoyAltin[tur]?.splice(idx, 1);
+  if (!state.portfoyAltin[tur]?.length) delete state.portfoyAltin[tur];
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    renderPortfoyAltin();
+    showToast('Altın pozisyonu silindi');
+  } catch (e) { showToast('Silinemedi', 'error'); }
+};
+
+// Döviz
+window.dovizModalAc = () => {
+  el('dovizAlisFiyati').value = '';
+  el('dovizMiktar').value = '';
+  el('dovizTur').value = 'usd';
+  openModal('dovizModal');
+};
+
+window.dovizKaydet = async () => {
+  const tur    = el('dovizTur').value;
+  const miktar = Number(el('dovizMiktar').value);
+  const fiyat  = Number(el('dovizAlisFiyati').value);
+  const tarih  = el('dovizTarihi').value;
+  if (!miktar || !fiyat) { showToast('Miktar ve kur zorunlu!', 'error'); return; }
+
+  if (!state.portfoyDoviz[tur]) state.portfoyDoviz[tur] = [];
+  state.portfoyDoviz[tur].push({ miktar, alisFiyati: fiyat, eklemeTarihi: tarih || new Date().toISOString().split('T')[0] });
+
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    closeModal('dovizModal');
+    renderPortfoyDoviz();
+    showToast('Döviz pozisyonu eklendi ✓');
+  } catch (e) {
+    showToast('Kaydedilemedi: ' + (e?.message || 'Hata'), 'error');
+  }
+};
+
+window.dovizCikar = async (tur, idx) => {
+  if (!confirm('Bu döviz pozisyonu silinsin mi?')) return;
+  state.portfoyDoviz[tur]?.splice(idx, 1);
+  if (!state.portfoyDoviz[tur]?.length) delete state.portfoyDoviz[tur];
+  try {
+    await saveUserData({ db, currentUser: state.currentUser, takipEdilen: state.takipEdilen, portfoy: state.portfoy, portfoyAltin: state.portfoyAltin, portfoyDoviz: state.portfoyDoviz, veriler: state.veriler });
+    renderPortfoyDoviz();
+    showToast('Döviz pozisyonu silindi');
+  } catch (e) { showToast('Silinemedi', 'error'); }
+};
 
 // ─────────────────────────────────────────────
 // HİSSE DETAY
@@ -1221,6 +1321,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('[data-tab]');
     if (!btn) return;
     _switchTab(btn.dataset.tab, btn);
+  });
+
+  // Portföy alt sekme navigasyonu
+  document.getElementById('panel-portfoy')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-portfoy-subtab]');
+    if (!btn) return;
+    const tab = btn.dataset.portfoySubtab;
+    document.querySelectorAll('[data-portfoy-subtab]').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.portfoy-sub-panel').forEach(p => p.classList.toggle('active', p.id === 'portfoy-sp-' + tab));
+    if (tab === 'altin')  renderPortfoyAltin();
+    if (tab === 'doviz')  renderPortfoyDoviz();
   });
 
   // Alt sekme navigasyonu (Hisseler paneli içi)

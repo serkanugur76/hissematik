@@ -2027,3 +2027,5 @@ tr:last-child td { border-bottom:none; }
 .sub-panel.active {
   display: block;
 }
+.portfoy-sub-panel { display: none; }
+.portfoy-sub-panel.active { display: block; }
