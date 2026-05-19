@@ -456,7 +456,7 @@ export async function aiPortfoyAnalizYap({ key, veriler, takipEdilen, sinyalGecm
 // CLAUDE AI — HİSSE ANALİZİ
 // ─────────────────────────────────────────────
 
-export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piyasaVerisi = {}, portfoy = {}, haberlerData = [], bistListesi = [], currentUser = null }) {
+export async function aiHisseAnalizEt({ key, kod, veri, temelVeri = null, sinyalGecmisi = [], piyasaVerisi = {}, portfoy = {}, haberlerData = [], bistListesi = [], currentUser = null }) {
   if (!key || !veri) return null;
 
   const gecmis = sinyalGecmisi.filter(s => s.sembol === kod).slice(0, 5)
@@ -469,15 +469,36 @@ export async function aiHisseAnalizEt({ key, kod, veri, sinyalGecmisi = [], piya
   const ilgiliHaberler  = haberlerData.filter(h => h.baslik?.includes(kod) || h.aciklama?.includes(kod))
     .slice(0, 2).map(h => '• ' + h.baslik).join('\n');
 
+  // Temel veri bloğu — mevcutsa prompt'a ekle
+  let temelBlok = '';
+  if (temelVeri) {
+    const t = temelVeri;
+    const satirlar = [
+      t.fk         != null ? 'F/K: ' + t.fk + 'x'                  : null,
+      t.ileriFK    != null ? 'İleri F/K: ' + t.ileriFK + 'x'       : null,
+      t.pddd       != null ? 'PD/DD: ' + t.pddd + 'x'              : null,
+      t.roe        != null ? 'ROE: %' + t.roe                       : null,
+      t.netKarMarji!= null ? 'Net Kâr Marjı: %' + t.netKarMarji    : null,
+      t.borcOzkaynak!=null ? 'Borç/Özkaynak: %' + t.borcOzkaynak   : null,
+      t.temettuVerimi!=null? 'Temettü Verimi: %' + t.temettuVerimi  : null,
+      t.gelirBuyume!= null ? 'Gelir Büyümesi: %' + t.gelirBuyume   : null,
+      t.karBuyume  != null ? 'Kâr Büyümesi: %' + t.karBuyume       : null,
+      t.beta       != null ? 'Beta: ' + t.beta                      : null,
+      t.sektorTR              ? 'Sektör: ' + t.sektorTR             : null,
+    ].filter(Boolean);
+    if (satirlar.length) temelBlok = 'TEMEL ANALİZ:\n' + satirlar.join(' | ') + '\n\n';
+  }
+
   const prompt =
     'HİSSE: ' + kod + '\nFiyat: ' + veri.fiyat + '₺ (' + (veri.degisim >= 0 ? '+' : '') + veri.degisim + '%)\n' +
     'RSI: ' + (veri.rsi?.toFixed(1) ?? '—') + '\nMACD Hist: ' + (veri.macdHist?.toFixed(3) ?? '—') + '\n' +
     'MA20/MA50: ' + (veri.ma20 ?? '—') + ' / ' + (veri.ma50 ?? '—') + '\n' +
     'Bollinger %: ' + (veri.bollinger?.yuzde?.toFixed(1) ?? '—') + '\nHacim Farkı: ' + veri.hacimFark + '%\n' +
     'Mevcut Sinyal: ' + veri.sinyal + '\n' + portfoyBilgi + '\n\n' +
+    temelBlok +
     (gecmis ? 'GEÇMİŞ SİNYALLER:\n' + gecmis + '\n\n' : '') +
     (ilgiliHaberler ? 'İLGİLİ HABERLER:\n' + ilgiliHaberler + '\n\n' : '') +
-    'Kısa ve net teknik analiz yap. Risk ve fırsatları belirt. Türkçe, max 4 madde.';
+    'Teknik ve temel verileri birlikte değerlendirerek kısa ve net analiz yap. Risk ve fırsatları belirt. Türkçe, max 4 madde.';
 
   try {
     const { text, tokens } = await claudeIste(key, [{ role: 'user', content: prompt }], 900);

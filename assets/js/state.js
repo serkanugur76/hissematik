@@ -108,6 +108,7 @@ export const state = {
 
   // ── Hisse Verileri ─────────────────────────
   veriler:    {},
+  temelVeriler: {},   // { [kod]: veri } — /api/temel önbelleği
   takipEdilen: new Set(),
   portfoy:    {},
   portfoyAltin: {},
@@ -154,6 +155,7 @@ export function resetState() {
   state.isAdmin         = false;
   state.anthropicKey    = '';
   state.veriler         = {};
+  state.temelVeriler    = {};
   state.takipEdilen     = new Set();
   state.portfoy         = {};
   state.portfoyAltin    = {};

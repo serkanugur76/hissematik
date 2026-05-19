@@ -1272,9 +1272,20 @@ window.hisseAiAnalizEt = async () => {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...'; }
 
   try {
+    // Temel veri: önce önbellekten, yoksa sessizce çek
+    let temelVeri = state.temelVeriler[kod] || null;
+    if (!temelVeri) {
+      try {
+        const tr = await fetch(`https://hissematik.vercel.app/api/temel?sembol=${encodeURIComponent(kod)}`);
+        const tj = await tr.json();
+        if (tr.ok && !tj.hata) { state.temelVeriler[kod] = tj.veri; temelVeri = tj.veri; }
+      } catch (_) { /* temel veri olmadan devam et */ }
+    }
+
     const analiz = await aiHisseAnalizEt({
       key, kod,
       veri:          state.veriler[kod],
+      temelVeri,
       sinyalGecmisi: state.sinyalGecmisi,
       piyasaVerisi:  state.piyasaVerisi,
       portfoy:       state.portfoy,
@@ -1884,6 +1895,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res  = await fetch(`https://hissematik.vercel.app/api/temel?sembol=${encodeURIComponent(kod)}`);
       const json = await res.json();
       if (!res.ok || json.hata) throw new Error(json.hata || 'API hatası');
+      state.temelVeriler[kod] = json.veri;   // önbelleğe al
       renderTemelAnaliz(json.veri);
       if (btn) { btn.disabled = false; btn.textContent = '🔄 Yenile'; }
     } catch (e) {
