@@ -1205,6 +1205,12 @@ async function hisseDetayAc(kod) {
   const _grafikBtn = el('btnGrafikAnaliz');
   if (_grafikBtn) { _grafikBtn.disabled = false; _grafikBtn.textContent = '📈 Bu Grafiği AI ile Analiz Et'; }
 
+  // Temel analiz bölümünü sıfırla — eski hissenin verisi kalmasın
+  const _temelEl = el('detayTemel');
+  if (_temelEl) _temelEl.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:0.5rem 0">Temel verileri görmek için Yükle\'ye bas.</div>';
+  const _temelBtn = el('btnTemelYukle');
+  if (_temelBtn) { _temelBtn.disabled = false; _temelBtn.textContent = 'Yükle'; }
+
   // Modal önce açılmalı — aksi hâlde canvas display:none içinde kalır,
   // offsetWidth=0 döner ve grafik doğru çizilemez.
   openModal('hisseDetayModal');
