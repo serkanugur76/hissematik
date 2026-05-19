@@ -338,6 +338,7 @@ onAuthStateChanged(auth, async (user) => {
     hisseNotlari:   userDoc.hisseNotlari   || {},
     temettu:        userDoc.temettu        || [],
     veriler:        userDoc.veriler        || {},
+    sonAiTarih:     userDoc.sonAiTarih     || null,
   });
 
   // UI
@@ -513,6 +514,7 @@ window.verileriGuncelle = async () => {
       fiyatAlarmlari: state.fiyatAlarmlari,
       hisseNotlari:   state.hisseNotlari,
       veriler:        state.veriler,
+      sonAiTarih:     state.sonAiTarih,
     });
   } catch (e) {
     console.warn('verileriGuncelle: saveUserData başarısız', e?.code || e?.message);

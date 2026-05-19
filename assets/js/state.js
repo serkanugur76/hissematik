@@ -200,15 +200,17 @@ export function aiGerekliMi() {
   const saat = new Date().getHours();
   if (saat >= 9 && saat <= 10) return true;
 
-  // Kritik sinyal var mı?
+  // Kritik sinyal var mı? Takip listesinin %30'u etkileniyorsa tetikle
+  let kritikSayisi = 0;
   for (const k of state.takipEdilen) {
     const v = state.veriler[k];
     if (!v) continue;
-    if (v.rsi < 25 || v.rsi > 75)                            return true;
-    if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') return true;
-    if (Math.abs(v.degisim) >= 5)                             return true;
+    if (v.rsi < 25 || v.rsi > 75)                            kritikSayisi++;
+    else if (v.sinyal === 'GÜÇLÜ AL' || v.sinyal === 'GÜÇLÜ SAT') kritikSayisi++;
+    else if (Math.abs(v.degisim) >= 5)                        kritikSayisi++;
   }
-  return false;
+  const esik = Math.max(1, Math.ceil(state.takipEdilen.size * 0.3));
+  return kritikSayisi >= esik;
 }
 
 /** AI çalıştı — tarihi state'e yaz */
