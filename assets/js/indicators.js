@@ -616,3 +616,109 @@ export function backtestHesapla(kapanis, ufuk = 5) {
     equityCurve,
   };
 }
+
+
+// ─────────────────────────────────────────────
+// ATR (Average True Range proxy — kapanis only)
+// ─────────────────────────────────────────────
+
+export function calcATR(kapanis, periyot = 14) {
+  if (!kapanis || kapanis.length < periyot + 1) return null;
+  const tr = [];
+  for (let i = 1; i < kapanis.length; i++)
+    tr.push(Math.abs(kapanis[i] - kapanis[i - 1]));
+  const slice = tr.slice(-periyot);
+  return +(slice.reduce((s, v) => s + v, 0) / slice.length).toFixed(2);
+}
+
+
+// ─────────────────────────────────────────────
+// PORTFÖY RİSK ANALİZİ
+// VaR(95%), Sharpe, Max Drawdown, Korelasyon
+// ─────────────────────────────────────────────
+
+export function portfoyRiskHesapla(veriler, portfoy) {
+  const holdings = Object.entries(portfoy)
+    .map(([kod, p]) => {
+      const v = veriler[kod];
+      if (!v?.kapanis?.length || v.kapanis.length < 20) return null;
+      const fiyat = v.fiyat || p.alisFiyati;
+      return { kod, adet: p.adet, alisFiyati: p.alisFiyati, fiyat, kapanis: v.kapanis };
+    })
+    .filter(Boolean);
+
+  if (holdings.length === 0) return null;
+
+  // Günlük getiri serileri
+  const returnMatrix = holdings.map(h => {
+    const r = [];
+    for (let i = 1; i < h.kapanis.length; i++)
+      r.push((h.kapanis[i] - h.kapanis[i - 1]) / h.kapanis[i - 1]);
+    return r;
+  });
+
+  // Portföy ağırlıkları (piyasa değerine göre)
+  const totalValue = holdings.reduce((s, h) => s + h.adet * h.fiyat, 0);
+  const weights    = holdings.map(h => (h.adet * h.fiyat) / totalValue);
+
+  // Ortak uzunluğa hizala
+  const minLen  = Math.min(...returnMatrix.map(r => r.length));
+  const aligned = returnMatrix.map(r => r.slice(-minLen));
+
+  // Portföy günlük getirileri
+  const portReturns = Array.from({ length: minLen }, (_, i) =>
+    aligned.reduce((s, r, j) => s + weights[j] * r[i], 0)
+  );
+
+  // VaR %95 (günlük)
+  const sorted = [...portReturns].sort((a, b) => a - b);
+  const var95  = +(sorted[Math.floor(sorted.length * 0.05)] * 100).toFixed(2);
+
+  // Sharpe (yıllıklandırılmış, risksiz oran = 0)
+  const mean     = portReturns.reduce((s, r) => s + r, 0) / portReturns.length;
+  const variance = portReturns.reduce((s, r) => s + (r - mean) ** 2, 0) / portReturns.length;
+  const sharpe   = variance > 0 ? +((mean / Math.sqrt(variance)) * Math.sqrt(252)).toFixed(2) : 0;
+
+  // Max Drawdown
+  let peak = 1, equity = 1, maxDD = 0;
+  portReturns.forEach(r => {
+    equity *= (1 + r);
+    if (equity > peak) peak = equity;
+    const dd = (equity - peak) / peak;
+    if (dd < maxDD) maxDD = dd;
+  });
+
+  // Korelasyon matrisi
+  const corrMatrix = holdings.map((_, i) =>
+    holdings.map((_, j) => {
+      if (i === j) return 1;
+      const ri = aligned[i], rj = aligned[j];
+      const mI = ri.reduce((s, x) => s + x, 0) / ri.length;
+      const mJ = rj.reduce((s, x) => s + x, 0) / rj.length;
+      let num = 0, dI = 0, dJ = 0;
+      for (let k = 0; k < ri.length; k++) {
+        const di = ri[k] - mI, dj = rj[k] - mJ;
+        num += di * dj; dI += di * di; dJ += dj * dj;
+      }
+      return dI && dJ ? +(num / Math.sqrt(dI * dJ)).toFixed(2) : 0;
+    })
+  );
+
+  // Ortalama korelasyon (çeşitlendirme skoru)
+  let corrSum = 0, corrCount = 0;
+  for (let i = 0; i < holdings.length; i++)
+    for (let j = i + 1; j < holdings.length; j++)
+      { corrSum += corrMatrix[i][j]; corrCount++; }
+  const avgCorr = corrCount > 0 ? +(corrSum / corrCount).toFixed(2) : 0;
+
+  return {
+    holdings, weights, totalValue,
+    var95,
+    sharpe,
+    maxDD: +(maxDD * 100).toFixed(1),
+    corrMatrix,
+    avgCorr,
+    gunSayisi: minLen,
+  };
+}
+}

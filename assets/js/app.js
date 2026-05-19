@@ -19,7 +19,7 @@ import {
   hisseAdi,
 } from './state.js';
 
-import { parseYahooVeri } from './indicators.js';
+import { parseYahooVeri, calcATR, portfoyRiskHesapla } from './indicators.js';
 import { kampanyaKoduDogrula } from './kampanya.js';
 
 import {
@@ -97,6 +97,8 @@ import {
   renderSektorPerformans,
   renderBacktest,
   renderTemelAnaliz,
+  renderDetaySeviyeler,
+  renderPortfoyRisk,
 } from './ui.js';
 
 setApiToast(showToast);
@@ -1111,8 +1113,33 @@ window.rrModalAc = (giris, sl, tp) => {
   if (giris) el('rrGiris').value = giris;
   if (sl)    el('rrSl').value    = sl;
   if (tp)    el('rrTp').value    = tp;
+
+  // ATR stop önerisi — hisse detayından açıldıysa
+  const kod = state.detayKod;
+  const kapanis = kod ? state.veriler[kod]?.kapanis : null;
+  const atrOneriEl = el('rrAtrOneri');
+  const atrDegerEl = el('rrAtrDeger');
+  if (atrOneriEl && atrDegerEl && kapanis?.length) {
+    const atr = calcATR(kapanis);
+    if (atr && giris) {
+      const stopOnerisi = +(Number(giris) - atr * 2).toFixed(2);
+      atrDegerEl.textContent = stopOnerisi;
+      atrOneriEl.style.display = 'inline';
+      atrOneriEl.dataset.stopVal = stopOnerisi;
+    } else {
+      atrOneriEl.style.display = 'none';
+    }
+  } else if (atrOneriEl) {
+    atrOneriEl.style.display = 'none';
+  }
+
   window.rrHesapla();
   openModal('rrModal');
+};
+
+window.rrAtrUygula = () => {
+  const v = el('rrAtrOneri')?.dataset.stopVal;
+  if (v && el('rrSl')) { el('rrSl').value = v; window.rrHesapla(); }
 };
 
 window.rrSermayeKaydet = () => {
@@ -1289,6 +1316,7 @@ async function hisseDetayAc(kod) {
   const veri = state.veriler[kod] || {};
   renderHisseDetay(kod, veri);
   renderDetayTeknik(kod, veri);
+  renderDetaySeviyeler(kod);
   // Notu yükle
   const not = state.hisseNotlari[kod];
   if (el('detayNot')) el('detayNot').value = not?.metin || '';
@@ -1743,6 +1771,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tab === 'doviz')  renderPortfoyDoviz();
     if (tab === 'grafik') renderPortfoyGrafik();
     if (tab === 'temettu') renderTemettu();
+    if (tab === 'risk') {
+      const sonuc = portfoyRiskHesapla(state.veriler, state.portfoy);
+      renderPortfoyRisk(sonuc);
+    }
   });
 
   // Keşfet alt sekme navigasyonu (Haberler / KAP / Sözlük)

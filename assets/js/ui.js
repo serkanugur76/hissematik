@@ -2846,6 +2846,193 @@ export function renderBacktest(kod, veriler, ufuk) {
 // renderTemelAnaliz — hisse detay modalında
 // temel analiz verilerini gösterir
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// renderDetaySeviyeler — Pivot + Fibonacci
+// fiyat seviyeleri tablosu, hisse detay modalı
+// ─────────────────────────────────────────────
+export function renderDetaySeviyeler(kod) {
+  const container = el('detaySeviyeler');
+  const blok      = el('detaySeviyelerBlok');
+  if (!container) return;
+
+  const v = state.veriler[kod];
+  if (!v?.fiyat) { if (blok) blok.style.display = 'none'; return; }
+  if (blok) blok.style.display = '';
+
+  const fiyat = v.fiyat;
+  const pivot = v.pivot || {};
+  const fib   = v.fib   || {};
+
+  // Tüm seviyeleri tek dizide topla ve sırala
+  const seviyeler = [
+    pivot.r2  != null && { etiket: 'Direnç 2',   deger: pivot.r2,  tip: 'direnc', renk: 'var(--red)'    },
+    pivot.r1  != null && { etiket: 'Direnç 1',   deger: pivot.r1,  tip: 'direnc', renk: '#ff8080'       },
+    pivot.pivot!=null && { etiket: 'Pivot',       deger: pivot.pivot,tip:'pivot',  renk: 'var(--muted)'  },
+    fib.f236  != null && { etiket: 'Fib %23.6',  deger: fib.f236,  tip: 'fib',    renk: '#a78bfa'       },
+    fib.f382  != null && { etiket: 'Fib %38.2',  deger: fib.f382,  tip: 'fib',    renk: '#a78bfa'       },
+    fib.f500  != null && { etiket: 'Fib %50.0',  deger: fib.f500,  tip: 'fib',    renk: '#c084fc'       },
+    fib.f618  != null && { etiket: 'Fib %61.8',  deger: fib.f618,  tip: 'fib',    renk: '#a78bfa'       },
+    pivot.s1  != null && { etiket: 'Destek 1',   deger: pivot.s1,  tip: 'destek', renk: '#4ade80'       },
+    pivot.s2  != null && { etiket: 'Destek 2',   deger: pivot.s2,  tip: 'destek', renk: 'var(--green)'  },
+  ].filter(Boolean).sort((a, b) => b.deger - a.deger);
+
+  if (!seviyeler.length) { if (blok) blok.style.display = 'none'; return; }
+
+  const satirlar = seviyeler.map(s => {
+    const uzaklik = (((s.deger - fiyat) / fiyat) * 100).toFixed(1);
+    const isaretli = Math.abs(parseFloat(uzaklik)) < 0.5;
+    const onOff    = parseFloat(uzaklik) >= 0 ? '+' : '';
+    const bg       = isaretli ? 'background:rgba(255,255,255,0.06);' : '';
+    return `<tr style="border-bottom:1px solid var(--border);${bg}">
+      <td style="padding:0.38rem 0.6rem;color:${s.renk};font-size:0.8rem;font-weight:500">${s.etiket}</td>
+      <td style="padding:0.38rem 0.6rem;font-family:monospace;font-size:0.82rem">${s.deger.toFixed(2)} ₺</td>
+      <td style="padding:0.38rem 0.6rem;font-size:0.78rem;color:${parseFloat(uzaklik) >= 0 ? 'var(--red)' : 'var(--green)'};text-align:right">${onOff}${uzaklik}%</td>
+      <td style="padding:0.38rem 0.6rem;font-size:0.72rem;color:var(--muted);text-align:right">${isaretli ? '← şu an yakın' : ''}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="font-size:0.72rem;color:var(--muted);border-bottom:1px solid var(--border)">
+        <th style="padding:0.3rem 0.6rem;text-align:left">Seviye</th>
+        <th style="padding:0.3rem 0.6rem;text-align:left">Fiyat</th>
+        <th style="padding:0.3rem 0.6rem;text-align:right">Uzaklık</th>
+        <th style="padding:0.3rem 0.6rem"></th>
+      </tr></thead>
+      <tbody>${satirlar}</tbody>
+    </table>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem">
+      Mevcut fiyat: <strong style="color:var(--fg)">${fiyat.toFixed(2)} ₺</strong>
+      ${v.hafta52H ? ` · 52H: ${v.hafta52H} ₺ / ${v.hafta52L} ₺` : ''}
+    </div>`;
+}
+
+
+// ─────────────────────────────────────────────
+// renderPortfoyRisk — Portföy Risk Dashboard
+// VaR, Sharpe, Max Drawdown, Korelasyon Matrisi
+// ─────────────────────────────────────────────
+export function renderPortfoyRisk(sonuc) {
+  const container = el('portfoyRiskContent');
+  if (!container) return;
+
+  if (!sonuc) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⚠️</div>
+      <div class="empty-title">Veri yetersiz</div>
+      <div class="empty-sub">Risk analizi için portföydeki hisselerin fiyat geçmişi gerekli.<br>Önce güncelle butonuna bas.</div>
+    </div>`;
+    return;
+  }
+
+  const { holdings, weights, totalValue, var95, sharpe, maxDD, corrMatrix, avgCorr, gunSayisi } = sonuc;
+
+  // Renk yardımcıları
+  const varRenk   = var95 < -3  ? 'var(--red)'    : var95 < -1.5 ? 'var(--yellow)' : 'var(--green)';
+  const sharpeRenk= sharpe > 1  ? 'var(--green)'  : sharpe > 0   ? 'var(--yellow)' : 'var(--red)';
+  const ddRenk    = maxDD < -15 ? 'var(--red)'    : maxDD < -8   ? 'var(--yellow)' : 'var(--green)';
+  const corrRenk  = avgCorr > 0.7 ? 'var(--red)'  : avgCorr > 0.4 ? 'var(--yellow)' : 'var(--green)';
+
+  // Çeşitlendirme yorumu
+  const cesitlYorum = avgCorr > 0.7
+    ? '⚠️ Yüksek korelasyon — portföy yeterince çeşitlendirilmemiş'
+    : avgCorr > 0.4
+      ? '⚡ Orta korelasyon — çeşitlendirme iyileştirilebilir'
+      : '✅ Düşük korelasyon — iyi çeşitlendirilmiş';
+
+  // Sharpe yorumu
+  const sharpeYorum = sharpe > 2 ? 'Mükemmel' : sharpe > 1 ? 'İyi' : sharpe > 0 ? 'Kabul edilebilir' : 'Zayıf';
+
+  // Özet kartlar
+  const kartlar = `
+    <div class="grid-4" style="margin-bottom:1.25rem">
+      <div class="card" style="text-align:center">
+        <div class="card-title">VaR %95 (günlük)</div>
+        <div class="card-value mono" style="color:${varRenk}">${var95}%</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">Günlük max beklenen kayıp</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">Sharpe Oranı</div>
+        <div class="card-value mono" style="color:${sharpeRenk}">${sharpe}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">${sharpeYorum} · ${gunSayisi}g veri</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">Max Drawdown</div>
+        <div class="card-value mono" style="color:${ddRenk}">${maxDD}%</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">En büyük tepe-dip düşüşü</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title">Ort. Korelasyon</div>
+        <div class="card-value mono" style="color:${corrRenk}">${avgCorr}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem">0=bağımsız · 1=aynı</div>
+      </div>
+    </div>
+    <div style="font-size:0.8rem;color:${corrRenk};margin-bottom:1rem;padding:0.6rem 0.85rem;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border)">
+      ${cesitlYorum}
+    </div>`;
+
+  // Ağırlık tablosu
+  const agirlikTablosu = `
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:0.5rem;letter-spacing:0.04em">📊 PORTFÖY AĞIRLIKLARI</div>
+      ${holdings.map((h, i) => {
+        const pct = (weights[i] * 100).toFixed(1);
+        const kz  = ((h.fiyat - h.alisFiyati) / h.alisFiyati * 100).toFixed(1);
+        const kzRenk = parseFloat(kz) >= 0 ? 'var(--green)' : 'var(--red)';
+        return `<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem">
+          <div style="width:42px;font-size:0.78rem;font-weight:600">${h.kod}</div>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:8px">
+            <div style="width:${pct}%;background:var(--accent);border-radius:4px;height:8px;min-width:2px"></div>
+          </div>
+          <div style="width:36px;font-size:0.78rem;text-align:right;font-family:monospace">%${pct}</div>
+          <div style="width:48px;font-size:0.75rem;text-align:right;color:${kzRenk};font-family:monospace">${parseFloat(kz) >= 0 ? '+' : ''}${kz}%</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // Korelasyon matrisi
+  function corrRenkBg(v) {
+    if (v >= 0.7)  return 'rgba(239,68,68,0.25)';
+    if (v >= 0.4)  return 'rgba(251,191,36,0.18)';
+    if (v >= 0.1)  return 'rgba(99,102,241,0.12)';
+    if (v >= -0.1) return 'rgba(255,255,255,0.04)';
+    return 'rgba(52,211,153,0.12)';
+  }
+
+  const corrHead = holdings.map(h =>
+    `<th style="padding:0.3rem 0.5rem;text-align:center;font-size:0.72rem;color:var(--muted)">${h.kod}</th>`
+  ).join('');
+
+  const corrRows = holdings.map((h, i) =>
+    `<tr>
+      <td style="padding:0.35rem 0.5rem;font-size:0.78rem;font-weight:600;white-space:nowrap">${h.kod}</td>
+      ${holdings.map((_, j) => {
+        const v = corrMatrix[i][j];
+        const bg = corrRenkBg(v);
+        const bold = i === j ? 'font-weight:700' : '';
+        return `<td style="padding:0.35rem 0.5rem;text-align:center;font-size:0.78rem;font-family:monospace;background:${bg};${bold}">${v.toFixed(2)}</td>`;
+      }).join('')}
+    </tr>`
+  ).join('');
+
+  const corrTablo = holdings.length >= 2 ? `
+    <div>
+      <div style="font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:0.5rem;letter-spacing:0.04em">🔗 KORELASYON MATRİSİ</div>
+      <div style="overflow-x:auto">
+        <table style="border-collapse:collapse;width:100%;font-size:0.8rem">
+          <thead><tr><th style="padding:0.3rem 0.5rem"></th>${corrHead}</tr></thead>
+          <tbody>${corrRows}</tbody>
+        </table>
+      </div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.4rem">
+        🟥 >0.7 Yüksek · 🟨 0.4–0.7 Orta · ◻️ <0.4 Düşük korelasyon
+      </div>
+    </div>` : '<div style="color:var(--muted);font-size:0.8rem">Korelasyon için en az 2 hisse gerekli.</div>';
+
+  container.innerHTML = kartlar + agirlikTablosu + corrTablo;
+}
+
+
 export function renderTemelAnaliz(veri) {
   const container = el('detayTemel');
   if (!container) return;

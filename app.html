@@ -408,6 +408,7 @@
       <button class="sub-tab" data-portfoy-subtab="doviz">💱 Döviz</button>
       <button class="sub-tab" data-portfoy-subtab="grafik">📊 Performans</button>
       <button class="sub-tab" data-portfoy-subtab="temettu">💰 Temettü</button>
+      <button class="sub-tab" data-portfoy-subtab="risk">⚠️ Risk</button>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn" onclick="window.rrModalAc()" data-tooltip="Pozisyon büyüklüğü ve risk oranı hesapla">⚖️ Risk/Ödül Hesaplayıcı</button></div>
     <div class="portfoy-sub-panel active" id="portfoy-sp-hisse">
@@ -424,6 +425,9 @@
     </div>
     <div class="portfoy-sub-panel" id="portfoy-sp-temettu">
       <div id="portfoyTemettuContent"></div>
+    </div>
+    <div class="portfoy-sub-panel" id="portfoy-sp-risk">
+      <div id="portfoyRiskContent"></div>
     </div>
   </main>
 
@@ -879,6 +883,12 @@
         <div class="micro-grid" id="detayTeknik"></div>
       </section>
 
+      <!-- Fiyat Seviyeleri -->
+      <section class="detay-bolum" id="detaySeviyelerBlok">
+        <div class="detay-bolum-baslik">📐 Fiyat Seviyeleri</div>
+        <div id="detaySeviyeler"></div>
+      </section>
+
       <!-- Piyasa bağlamı -->
       <section class="detay-bolum">
         <div class="detay-bolum-baslik">Piyasa Bağlamı</div>
@@ -1295,7 +1305,10 @@
           <input type="number" id="rrGiris" class="form-input" placeholder="45.20" step="0.01" oninput="window.rrHesapla()">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Stop Loss (₺)</label>
+          <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+            Stop Loss (₺)
+            <span id="rrAtrOneri" style="font-size:0.7rem;color:var(--accent);cursor:pointer;display:none" onclick="window.rrAtrUygula()">ATR Önerisi: <span id="rrAtrDeger">—</span> ₺ ↓</span>
+          </label>
           <input type="number" id="rrSl" class="form-input" placeholder="40.00" step="0.01" oninput="window.rrHesapla()">
         </div>
         <div class="form-group" style="margin-bottom:0">
