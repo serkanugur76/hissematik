@@ -194,9 +194,12 @@ window.logout = async () => {
 };
 
 // Redirect tabanlı giriş sonucunu yakala (COOP hatası önlemi)
-getRedirectResult(auth).catch(() => {});
+getRedirectResult(auth)
+  .then(r => { if (r) console.log('[AUTH] redirectResult OK:', r.user?.email); })
+  .catch(e => console.warn('[AUTH] redirectResult hata:', e.code, e.message));
 
 onAuthStateChanged(auth, async (user) => {
+  console.log('[AUTH] onAuthStateChanged:', user ? user.email : 'null');
   el('loadingScreen').classList.add('hide');
 
   if (!user) {
@@ -207,6 +210,7 @@ onAuthStateChanged(auth, async (user) => {
 
   // Erişim kontrolü
   const isAdmin = ADMIN_EMAILS.includes(user.email);
+  console.log('[AUTH] isAdmin:', isAdmin, '| email:', user.email);
   let userSnap;
   let userRef;
   try {
