@@ -176,6 +176,12 @@ if (!navigator.onLine) _offlineBannerGoster();
 
 window.googleLogin = async () => {
   try {
+    const kod = (el('authKampanyaKod')?.value || '').trim().toUpperCase();
+    if (kod) {
+      localStorage.setItem('hm_auth_kampanya_kod', kod);
+    } else {
+      localStorage.removeItem('hm_auth_kampanya_kod');
+    }
     await signInWithRedirect(auth, provider);
   } catch (e) {
     showToast('Giriş başarısız: ' + e.message, 'error');
@@ -213,8 +219,11 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Kampanya kodu auth ekranından alındıysa doğrula
-  const _authKampanyaKod = (el('authKampanyaKod')?.value || '').trim().toUpperCase();
+  // Kampanya kodu auth ekranından veya localStorage'dan alındıysa doğrula
+  let _authKampanyaKod = (el('authKampanyaKod')?.value || '').trim().toUpperCase();
+  if (!_authKampanyaKod) {
+    _authKampanyaKod = (localStorage.getItem('hm_auth_kampanya_kod') || '').trim().toUpperCase();
+  }
   let _kampanyaGecerli = false;
   if (_authKampanyaKod) {
     const dogrulamaS = kampanyaKoduDogrula(_authKampanyaKod);
@@ -266,9 +275,11 @@ onAuthStateChanged(auth, async (user) => {
       } catch (_) {}
       // Kampanya API key'ini otomatik ata
       await kampanyaApiKeyAta({ uid: user.uid });
+      localStorage.removeItem('hm_auth_kampanya_kod');
       showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
       // Devam et — aşağıdaki flow giriş yapacak
     } else {
+      localStorage.removeItem('hm_auth_kampanya_kod');
       showToast('Erişim talebiniz alındı. Admin onayı bekleniyor.', 'error');
       await signOut(auth);
       el('authScreen').style.display = 'flex';
@@ -288,6 +299,7 @@ onAuthStateChanged(auth, async (user) => {
           uid: user.uid, email: user.email, usedAt: serverTimestamp(),
         });
         await kampanyaApiKeyAta({ uid: user.uid });
+        localStorage.removeItem('hm_auth_kampanya_kod');
         showToast('Kampanya kodu aktive edildi! Hoş geldin 🎉', 'success');
         // Yeniden yükle — userSnap güncel değil, sayfayı yenile
         window.location.reload();
@@ -296,6 +308,7 @@ onAuthStateChanged(auth, async (user) => {
         showToast('Aktivasyon hatası: ' + e.message, 'error');
       }
     } else {
+      localStorage.removeItem('hm_auth_kampanya_kod');
       showToast('Hesabınız henüz onaylanmadı. Lütfen bekleyin.', 'error');
       await signOut(auth);
       el('authScreen').style.display = 'flex';
@@ -303,6 +316,7 @@ onAuthStateChanged(auth, async (user) => {
     }
   }
 
+  localStorage.removeItem('hm_auth_kampanya_kod');
   const userDoc = userSnap.exists() ? userSnap.data() : {};
 
   // Admin kaydı yoksa oluştur
