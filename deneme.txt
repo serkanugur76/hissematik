@@ -1,0 +1,4 @@
+Antigravity test başarılı!
+yeni satırı IDE tarafında ben yazdım 
+t=input("test yaz)
+print(t)

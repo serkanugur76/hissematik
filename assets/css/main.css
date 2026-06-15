@@ -39,6 +39,8 @@
   --muted: #6b6b80;
   --accent: #00e5a0;
   --accent-dim: rgba(0,229,160,0.12);
+  --green: var(--accent);
+  --green-dim: var(--accent-dim);
   --red: #ff4560;
   --red-dim: rgba(255,69,96,0.12);
   --yellow: #ffd166;
